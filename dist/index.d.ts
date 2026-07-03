@@ -1,7 +1,8 @@
 import { Map } from 'maplibre-gl';
 
 type PatternType = "solid" | "stipple" | "hachures" | "cross" | "grid" | "dots";
-type TileSize = 8 | 16 | 32;
+/** Tile edge length in px. Any size works (MapLibre doesn't require power-of-two fill-pattern images) — larger tiles read as a lower-density pattern. */
+type TileSize = number;
 type HachureAngle = 0 | 45 | 90 | -45;
 /** Raw RGBA pixel buffer ready for `map.addImage` / `map.updateImage`. */
 interface TileImage {
@@ -37,10 +38,12 @@ interface MakeTileOptions {
     };
 }
 /**
- * Renders one seamless, power-of-two pattern tile as a raw RGBA buffer ready
- * for `map.addImage` / `map.updateImage`. Runs unchanged in the browser
+ * Renders one seamless pattern tile (any pixel size — MapLibre's
+ * `fill-pattern` doesn't require power-of-two images) as a raw RGBA buffer
+ * ready for `map.addImage` / `map.updateImage`. Runs unchanged in the browser
  * (native canvas) or in Node (pure-JS {@link createMiniContext} rasterizer) —
- * same output shape either way.
+ * same output shape either way. Larger tiles read as a lower-density pattern
+ * (fewer repeats per unit area); use `size` as the density control.
  *
  * The pattern's visual parameters (angle, density, weight) only ever live in
  * this generated image, never in the style.json — regenerate with the exact

@@ -24,10 +24,12 @@ function defaultContextFactory(size: number): { ctx: TileContext; toTileImage: (
 }
 
 /**
- * Renders one seamless, power-of-two pattern tile as a raw RGBA buffer ready
- * for `map.addImage` / `map.updateImage`. Runs unchanged in the browser
+ * Renders one seamless pattern tile (any pixel size — MapLibre's
+ * `fill-pattern` doesn't require power-of-two images) as a raw RGBA buffer
+ * ready for `map.addImage` / `map.updateImage`. Runs unchanged in the browser
  * (native canvas) or in Node (pure-JS {@link createMiniContext} rasterizer) —
- * same output shape either way.
+ * same output shape either way. Larger tiles read as a lower-density pattern
+ * (fewer repeats per unit area); use `size` as the density control.
  *
  * The pattern's visual parameters (angle, density, weight) only ever live in
  * this generated image, never in the style.json — regenerate with the exact
@@ -97,8 +99,10 @@ export function makeTile(
     }
     case "stipple": {
       // Offset grid of dots ("scatter" look) — deterministic, so seamless.
+      // Cell count scales with tile size so density stays smooth across the
+      // whole size range, rather than jumping only at a few breakpoints.
       const r = weight * 0.6;
-      const cells = size <= 8 ? 2 : size <= 16 ? 3 : 4;
+      const cells = Math.max(2, Math.round(size / 6));
       const s = size / cells;
       for (let i = 0; i < cells; i++) {
         for (let j = 0; j < cells; j++) {
