@@ -303,7 +303,7 @@ function discFitsInside(x, y, radius, rings, samples) {
   return true;
 }
 function scatterPointsInPolygon(rings, options) {
-  const { radius, density = 1, seed = 1, samples = 12, rotationJitterDeg = 0 } = options;
+  const { radius, density = 1, seed = 1, samples = 12, rotationJitterDeg = 0, scaleJitter = 0 } = options;
   const exterior = rings[0] ?? [];
   if (exterior.length === 0) return [];
   let minX = Infinity;
@@ -325,7 +325,8 @@ function scatterPointsInPolygon(rings, options) {
       const jx = x + (rand() - 0.5) * cell * 0.9;
       const jy = y + (rand() - 0.5) * cell * 0.9;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
-      if (discFitsInside(jx, jy, radius, rings, samples)) points.push({ x: jx, y: jy, rotation });
+      const scale = 1 + (rand() * 2 - 1) * scaleJitter;
+      if (discFitsInside(jx, jy, radius * scale, rings, samples)) points.push({ x: jx, y: jy, rotation, scale });
     }
   }
   return points;
@@ -537,7 +538,7 @@ function toRings(polygon) {
   return polygon.type === "Polygon" ? polygon.coordinates : polygon.coordinates.flat();
 }
 function scatterIconPoints(options) {
-  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg } = options;
+  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter } = options;
   const pixelRings = toRings(polygon).map(
     (ring) => ring.map(([lng, lat]) => {
       const p = map.project([lng, lat]);
@@ -549,14 +550,15 @@ function scatterIconPoints(options) {
     density,
     seed,
     samples,
-    rotationJitterDeg
+    rotationJitterDeg,
+    scaleJitter
   });
-  const features = points.map(({ x, y, rotation }) => {
+  const features = points.map(({ x, y, rotation, scale }) => {
     const lngLat = map.unproject([x, y]);
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [lngLat.lng, lngLat.lat] },
-      properties: { rotation }
+      properties: { rotation, scale }
     };
   });
   return { type: "FeatureCollection", features };
@@ -564,11 +566,9 @@ function scatterIconPoints(options) {
 
 // src/maplibre/svgIconScatter.ts
 async function installSvgIconScatter(map, options) {
-  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg } = options;
-  if (!map.hasImage(iconId)) {
-    await addSvgIcon(map, { id: iconId, svg, size });
-  }
-  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg });
+  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg, scaleJitter } = options;
+  await addSvgIcon(map, { id: iconId, svg, size });
+  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg, scaleJitter });
   const existingSource = map.getSource(sourceId);
   if (existingSource) {
     existingSource.setData(points);
@@ -580,7 +580,12 @@ async function installSvgIconScatter(map, options) {
       id: layerId,
       type: "symbol",
       source: sourceId,
-      layout: { "icon-image": iconId, "icon-rotate": ["get", "rotation"], "icon-allow-overlap": true }
+      layout: {
+        "icon-image": iconId,
+        "icon-rotate": ["get", "rotation"],
+        "icon-size": ["get", "scale"],
+        "icon-allow-overlap": true
+      }
     });
   }
 }
