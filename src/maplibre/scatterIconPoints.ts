@@ -9,7 +9,7 @@ export type PolygonGeometry =
 export interface PointFeature {
   type: "Feature";
   geometry: { type: "Point"; coordinates: [number, number] };
-  properties: { rotation: number };
+  properties: { rotation: number; scale: number };
 }
 
 export interface PointFeatureCollection {
@@ -31,6 +31,8 @@ export interface ScatterIconPointsOptions {
   samples?: number;
   /** +/- rotation jitter per point, in degrees. Default 0. */
   rotationJitterDeg?: number;
+  /** +/- scale jitter per point (fraction of `iconRadiusPx`). Default 0. */
+  scaleJitter?: number;
 }
 
 function toRings(polygon: PolygonGeometry): number[][][] {
@@ -45,7 +47,7 @@ function toRings(polygon: PolygonGeometry): number[][][] {
  * current view: recompute after pan/zoom if the layout should track it.
  */
 export function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatureCollection {
-  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg } = options;
+  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter } = options;
 
   const pixelRings: Ring[] = toRings(polygon).map((ring) =>
     ring.map(([lng, lat]) => {
@@ -60,14 +62,15 @@ export function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatu
     seed,
     samples,
     rotationJitterDeg,
+    scaleJitter,
   });
 
-  const features: PointFeature[] = points.map(({ x, y, rotation }) => {
+  const features: PointFeature[] = points.map(({ x, y, rotation, scale }) => {
     const lngLat = map.unproject([x, y]);
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [lngLat.lng, lngLat.lat] },
-      properties: { rotation },
+      properties: { rotation, scale },
     };
   });
 

@@ -17,6 +17,8 @@ export interface InstallSvgIconScatterOptions {
   density?: number;
   seed?: number | string;
   rotationJitterDeg?: number;
+  /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
+  scaleJitter?: number;
 }
 
 /**
@@ -27,13 +29,13 @@ export interface InstallSvgIconScatterOptions {
  * current, same as any screen-space scatter.
  */
 export async function installSvgIconScatter(map: MaplibreMap, options: InstallSvgIconScatterOptions): Promise<void> {
-  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg } = options;
+  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg, scaleJitter } = options;
 
-  if (!map.hasImage(iconId)) {
-    await addSvgIcon(map, { id: iconId, svg, size });
-  }
+  // Always (re)rasterize: `size` may have changed since the icon id was last
+  // installed, and addSvgIcon's own removeImage+addImage is cheap.
+  await addSvgIcon(map, { id: iconId, svg, size });
 
-  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg });
+  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg, scaleJitter });
 
   const existingSource = map.getSource(sourceId) as GeoJSONSource | undefined;
   if (existingSource) {
@@ -47,7 +49,12 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
       id: layerId,
       type: "symbol",
       source: sourceId,
-      layout: { "icon-image": iconId, "icon-rotate": ["get", "rotation"], "icon-allow-overlap": true },
+      layout: {
+        "icon-image": iconId,
+        "icon-rotate": ["get", "rotation"],
+        "icon-size": ["get", "scale"],
+        "icon-allow-overlap": true,
+      },
     });
   }
 }

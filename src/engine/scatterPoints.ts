@@ -8,10 +8,12 @@ export interface ScatteredPoint {
   y: number;
   /** Seeded rotation in degrees, for icon-rotate variety — 0 unless `rotationJitterDeg` is set. */
   rotation: number;
+  /** Seeded scale multiplier, for icon-size variety — 1 unless `scaleJitter` is set. */
+  scale: number;
 }
 
 export interface ScatterPointsOptions {
-  /** Required clearance from any edge (including holes) for a point to qualify. */
+  /** Required clearance from any edge (including holes) for a point to qualify, at scale 1. */
   radius: number;
   /** Approx. points per 100x100 unit area. Default 1. */
   density?: number;
@@ -21,6 +23,8 @@ export interface ScatterPointsOptions {
   samples?: number;
   /** +/- rotation jitter applied to each point, in degrees. Default 0. */
   rotationJitterDeg?: number;
+  /** +/- scale jitter applied to each point (as a fraction of `radius`). Default 0. The erosion test uses each point's actual scaled radius, so a bigger icon still never pokes outside the polygon. */
+  scaleJitter?: number;
 }
 
 function isInsideRings(x: number, y: number, rings: Ring[]): boolean {
@@ -63,7 +67,7 @@ function discFitsInside(x: number, y: number, radius: number, rings: Ring[], sam
  * consistent with `radius`).
  */
 export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[] {
-  const { radius, density = 1, seed = 1, samples = 12, rotationJitterDeg = 0 } = options;
+  const { radius, density = 1, seed = 1, samples = 12, rotationJitterDeg = 0, scaleJitter = 0 } = options;
   const exterior = rings[0] ?? [];
   if (exterior.length === 0) return [];
 
@@ -88,7 +92,10 @@ export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOpti
       const jx = x + (rand() - 0.5) * cell * 0.9;
       const jy = y + (rand() - 0.5) * cell * 0.9;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
-      if (discFitsInside(jx, jy, radius, rings, samples)) points.push({ x: jx, y: jy, rotation });
+      const scale = 1 + (rand() * 2 - 1) * scaleJitter;
+      // Erosion test uses this point's actual scaled radius, so a
+      // bigger-than-average icon still can't poke past the boundary.
+      if (discFitsInside(jx, jy, radius * scale, rings, samples)) points.push({ x: jx, y: jy, rotation, scale });
     }
   }
   return points;

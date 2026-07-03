@@ -546,6 +546,7 @@
       density: state.svgFill.density,
       seed: state.svgFill.seed,
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
+      scaleJitter: state.svgFill.scaleJitter,
     });
   }
 
@@ -802,7 +803,7 @@
   });
   $("svgScaleJitter").addEventListener("input", (e) => {
     state.svgFill.scaleJitter = +e.target.value; $("svgScaleJitterVal").textContent = "±" + state.svgFill.scaleJitter.toFixed(2);
-    if (state.svgFill.on && !state.svgFill.noCut) syncSvgTexture();
+    if (state.svgFill.on) syncSvgFill();
   });
   $("svgSeed").addEventListener("change", (e) => { state.svgFill.seed = e.target.value; if (state.svgFill.on) syncSvgFill(); });
 

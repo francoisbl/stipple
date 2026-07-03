@@ -75,9 +75,11 @@ interface ScatteredPoint {
     y: number;
     /** Seeded rotation in degrees, for icon-rotate variety — 0 unless `rotationJitterDeg` is set. */
     rotation: number;
+    /** Seeded scale multiplier, for icon-size variety — 1 unless `scaleJitter` is set. */
+    scale: number;
 }
 interface ScatterPointsOptions {
-    /** Required clearance from any edge (including holes) for a point to qualify. */
+    /** Required clearance from any edge (including holes) for a point to qualify, at scale 1. */
     radius: number;
     /** Approx. points per 100x100 unit area. Default 1. */
     density?: number;
@@ -87,6 +89,8 @@ interface ScatterPointsOptions {
     samples?: number;
     /** +/- rotation jitter applied to each point, in degrees. Default 0. */
     rotationJitterDeg?: number;
+    /** +/- scale jitter applied to each point (as a fraction of `radius`). Default 0. The erosion test uses each point's actual scaled radius, so a bigger icon still never pokes outside the polygon. */
+    scaleJitter?: number;
 }
 /**
  * Scatters points inside a (possibly holed) polygon such that a disc of
@@ -251,6 +255,7 @@ interface PointFeature {
     };
     properties: {
         rotation: number;
+        scale: number;
     };
 }
 interface PointFeatureCollection {
@@ -271,6 +276,8 @@ interface ScatterIconPointsOptions {
     samples?: number;
     /** +/- rotation jitter per point, in degrees. Default 0. */
     rotationJitterDeg?: number;
+    /** +/- scale jitter per point (fraction of `iconRadiusPx`). Default 0. */
+    scaleJitter?: number;
 }
 /**
  * Computes scatter points inside a polygon, in the map's current screen
@@ -295,6 +302,8 @@ interface InstallSvgIconScatterOptions {
     density?: number;
     seed?: number | string;
     rotationJitterDeg?: number;
+    /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
+    scaleJitter?: number;
 }
 /**
  * The no-cut alternative to {@link installSvgPatternFill}: instead of a
