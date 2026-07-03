@@ -14,12 +14,16 @@ package generates that image for you:
 - **Geometric fills** — solid, stipple, hachures, crosshatch, grid, dots.
   Angle, weight, colour and tile size (the density control — any pixel size
   works, seamless either way) are all configurable.
-- **SVG scatter fills** — turn any SVG into an organic, tileable fill (grass,
-  foliage, water, shapes...) by scattering many rotation/scale-jittered copies
-  of it into a large seamless meta-tile. The jitter is seeded, so the same
-  seed always reproduces the same texture. The demo ships 14 sample fills
-  across four categories (vegetation, trees, water, shapes) as a starting
-  point — swap in your own SVG the same way.
+- **SVG scatter fills** — turn any SVG into a tileable fill by repeating it
+  into a large seamless meta-tile. Defaults to a regular, lightly staggered
+  grid (`stagger`) — the classic cartographic symbol layout used for
+  official map fills (orchard, marsh...) — rather than a chaotic scatter;
+  raise `rotationJitterDeg`/`scaleJitter`/`positionJitter` for a more
+  natural, organic look instead (grass, foliage...). Everything is seeded,
+  so the same seed always reproduces the same texture. The demo ships 14
+  sample fills across four categories (vegetation, trees, water, shapes) as
+  a starting point — swap in your own SVG the same way, or paste/upload one
+  directly in the demo.
 - **SVG point icons** — rasterize an SVG once via `addImage` and use it as
   `icon-image` on a `symbol` layer, with the icon's rendered scale controlled
   by MapLibre's native `icon-size` (no re-rasterization needed).

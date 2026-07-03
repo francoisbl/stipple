@@ -15,20 +15,24 @@ export interface SvgPatternOptions {
   density?: number;
   /** Deterministic variation seed — same seed always gives the same tile. */
   seed?: number | string;
-  /** +/- rotation jitter per stamp, in degrees. Default 25. */
+  /** +/- rotation jitter per stamp, in degrees. Default 0 (regular grid). */
   rotationJitterDeg?: number;
-  /** +/- scale jitter per stamp, as a fraction of stampSize. Default 0.25. */
+  /** +/- scale jitter per stamp, as a fraction of stampSize. Default 0 (regular grid). */
   scaleJitter?: number;
+  /** +/- position jitter per stamp, as a fraction of the grid cell. Default 0.15 — a light irregularity, not a full organic scatter. 0 = exact grid. */
+  positionJitter?: number;
+  /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout (orchard/marsh map fills). Default true. */
+  stagger?: boolean;
 }
 
 /**
- * Rasterizes an SVG into a large seamless "meta-tile" scattered with many
- * slightly rotated/scaled repetitions (seeded, so deterministic). Spreading
- * many stamps across a tile much bigger than any single stamp pushes the
- * visible repeat period out, avoiding the "wallpaper" look that a single
- * small tiled SVG produces on organic motifs (grass, foliage...). Stamps
- * near an edge are additionally drawn wrapped on the opposite side so the
- * tile still repeats seamlessly.
+ * Rasterizes an SVG into a large seamless "meta-tile" repeated on a grid
+ * (seeded jitter, so deterministic). Defaults to a regular, lightly
+ * staggered cartographic grid — the classic look of official map symbology
+ * (orchard/marsh fills) — rather than a fully organic scatter; raise
+ * `rotationJitterDeg`/`scaleJitter`/`positionJitter` for a more natural,
+ * irregular look (grass, foliage...). Stamps near an edge are additionally
+ * drawn wrapped on the opposite side so the tile still repeats seamlessly.
  *
  * Uses the browser's native SVG rasterizer (`Image` + canvas) — no SVG
  * parsing of our own, per MapLibre's own `addImage` pipeline.
@@ -40,8 +44,10 @@ export async function createSvgScatterTile(options: SvgPatternOptions): Promise<
     stampSize = 28,
     density = 1.4,
     seed = 1,
-    rotationJitterDeg = 25,
-    scaleJitter = 0.25,
+    rotationJitterDeg = 0,
+    scaleJitter = 0,
+    positionJitter = 0.15,
+    stagger = true,
   } = options;
 
   const image = await loadSvgImage(svg);
@@ -55,7 +61,10 @@ export async function createSvgScatterTile(options: SvgPatternOptions): Promise<
   const rand = mulberry32(seedNum);
   const cell = 100 / Math.sqrt(density); // average spacing for the target density
   const cols = Math.ceil(tileSize / cell);
-  const rows = Math.ceil(tileSize / cell);
+  // An even row count keeps the quincunx offset consistent across the
+  // tile's own repeat boundary (two rows bring the stagger back to zero).
+  let rows = Math.ceil(tileSize / cell);
+  if (stagger && rows % 2 !== 0) rows += 1;
   const margin = stampSize;
 
   const stamp = (cx: number, cy: number) => {
@@ -70,10 +79,11 @@ export async function createSvgScatterTile(options: SvgPatternOptions): Promise<
   };
 
   for (let row = 0; row < rows; row++) {
+    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
     for (let col = 0; col < cols; col++) {
-      const jitterX = (rand() - 0.5) * cell * 0.8;
-      const jitterY = (rand() - 0.5) * cell * 0.8;
-      const cx = col * cell + cell / 2 + jitterX;
+      const jitterX = (rand() - 0.5) * cell * positionJitter;
+      const jitterY = (rand() - 0.5) * cell * positionJitter;
+      const cx = col * cell + cell / 2 + rowOffset + jitterX;
       const cy = row * cell + cell / 2 + jitterY;
 
       stamp(cx, cy);

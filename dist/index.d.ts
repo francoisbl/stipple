@@ -91,6 +91,10 @@ interface ScatterPointsOptions {
     rotationJitterDeg?: number;
     /** +/- scale jitter applied to each point (as a fraction of `radius`). Default 0. The erosion test uses each point's actual scaled radius, so a bigger icon still never pokes outside the polygon. */
     scaleJitter?: number;
+    /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15 — a light irregularity, not a full organic scatter. 0 = exact grid. */
+    positionJitter?: number;
+    /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
+    stagger?: boolean;
 }
 /**
  * Scatters points inside a (possibly holed) polygon such that a disc of
@@ -273,19 +277,23 @@ interface SvgPatternOptions {
     density?: number;
     /** Deterministic variation seed — same seed always gives the same tile. */
     seed?: number | string;
-    /** +/- rotation jitter per stamp, in degrees. Default 25. */
+    /** +/- rotation jitter per stamp, in degrees. Default 0 (regular grid). */
     rotationJitterDeg?: number;
-    /** +/- scale jitter per stamp, as a fraction of stampSize. Default 0.25. */
+    /** +/- scale jitter per stamp, as a fraction of stampSize. Default 0 (regular grid). */
     scaleJitter?: number;
+    /** +/- position jitter per stamp, as a fraction of the grid cell. Default 0.15 — a light irregularity, not a full organic scatter. 0 = exact grid. */
+    positionJitter?: number;
+    /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout (orchard/marsh map fills). Default true. */
+    stagger?: boolean;
 }
 /**
- * Rasterizes an SVG into a large seamless "meta-tile" scattered with many
- * slightly rotated/scaled repetitions (seeded, so deterministic). Spreading
- * many stamps across a tile much bigger than any single stamp pushes the
- * visible repeat period out, avoiding the "wallpaper" look that a single
- * small tiled SVG produces on organic motifs (grass, foliage...). Stamps
- * near an edge are additionally drawn wrapped on the opposite side so the
- * tile still repeats seamlessly.
+ * Rasterizes an SVG into a large seamless "meta-tile" repeated on a grid
+ * (seeded jitter, so deterministic). Defaults to a regular, lightly
+ * staggered cartographic grid — the classic look of official map symbology
+ * (orchard/marsh fills) — rather than a fully organic scatter; raise
+ * `rotationJitterDeg`/`scaleJitter`/`positionJitter` for a more natural,
+ * irregular look (grass, foliage...). Stamps near an edge are additionally
+ * drawn wrapped on the opposite side so the tile still repeats seamlessly.
  *
  * Uses the browser's native SVG rasterizer (`Image` + canvas) — no SVG
  * parsing of our own, per MapLibre's own `addImage` pipeline.
@@ -352,6 +360,10 @@ interface ScatterIconPointsOptions {
     rotationJitterDeg?: number;
     /** +/- scale jitter per point (fraction of `iconRadiusPx`). Default 0. */
     scaleJitter?: number;
+    /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15. 0 = exact grid. */
+    positionJitter?: number;
+    /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
+    stagger?: boolean;
 }
 /**
  * Computes scatter points inside a polygon, in the map's current screen
@@ -378,6 +390,10 @@ interface InstallSvgIconScatterOptions {
     rotationJitterDeg?: number;
     /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
     scaleJitter?: number;
+    /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15. 0 = exact grid. */
+    positionJitter?: number;
+    /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
+    stagger?: boolean;
 }
 /**
  * The no-cut alternative to {@link installSvgPatternFill}: instead of a

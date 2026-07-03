@@ -236,13 +236,19 @@
         <input type="range" id="svgDensity" min="0.1" max="6" step="0.1" value="1.4" />
         <label>Stamp size <span class="val" id="svgStampSizeVal">28 px</span></label>
         <input type="range" id="svgStampSize" min="10" max="60" step="1" value="28" />
-        <label>Rotation jitter <span class="val" id="svgRotJitterVal">±25°</span></label>
-        <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="25" />
-        <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.25</span></label>
-        <input type="range" id="svgScaleJitter" min="0" max="0.8" step="0.05" value="0.25" />
+        <div class="switch" style="margin-top:9px">
+          <label style="margin:0">Stagger rows (quincunx grid)</label>
+          <input type="checkbox" id="svgStagger" checked />
+        </div>
+        <label>Position jitter <span class="val" id="svgPosJitterVal">±0.15</span></label>
+        <input type="range" id="svgPosJitter" min="0" max="1" step="0.05" value="0.15" />
+        <label>Rotation jitter <span class="val" id="svgRotJitterVal">±0°</span></label>
+        <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="0" />
+        <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.00</span></label>
+        <input type="range" id="svgScaleJitter" min="0" max="0.8" step="0.05" value="0" />
         <label>Seed (deterministic variation)</label>
         <input type="text" id="svgSeed" value="1" />
-        <p class="hint">Rasterized once via the browser's native SVG renderer, then scattered with seeded rotation/scale jitter into a large seamless meta-tile — avoids the "wallpaper" look you'd get tiling a single small SVG stamp.</p>
+        <p class="hint">Rasterized once via the browser's native SVG renderer, then repeated on a regular, lightly staggered grid — the classic cartographic symbol layout (orchard/marsh map fills). Raise the jitters for a more natural, organic scatter instead.</p>
       </fieldset>
 
       <fieldset id="bgFieldset">
@@ -514,7 +520,7 @@
     tile: 16,
     bg: { on: true, color: "#e4d9c3", opacity: 0.35 },
     line: { on: true, color: "#7c3d1c", width: 1.5, dash: [] },
-    svgFill: { on: false, noCut: false, sample: "grass-tuft", customSvg: "", density: 1.4, stampSize: 28, rotationJitterDeg: 25, scaleJitter: 0.25, seed: "1" },
+    svgFill: { on: false, noCut: false, sample: "grass-tuft", customSvg: "", density: 1.4, stampSize: 28, stagger: true, positionJitter: 0.15, rotationJitterDeg: 0, scaleJitter: 0, seed: "1" },
     pointIcon: { sample: "round-canopy", customSvg: "", size: 32, rotation: 0 },
   };
 
@@ -588,6 +594,8 @@
       imageId: svgImageId(), svg,
       stampSize: state.svgFill.stampSize,
       density: state.svgFill.density,
+      stagger: state.svgFill.stagger,
+      positionJitter: state.svgFill.positionJitter,
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
       scaleJitter: state.svgFill.scaleJitter,
       seed: state.svgFill.seed,
@@ -613,6 +621,8 @@
       size: state.svgFill.stampSize,
       density: state.svgFill.density,
       seed: state.svgFill.seed,
+      stagger: state.svgFill.stagger,
+      positionJitter: state.svgFill.positionJitter,
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
       scaleJitter: state.svgFill.scaleJitter,
     });
@@ -932,6 +942,14 @@
     state.svgFill.stampSize = +e.target.value; $("svgStampSizeVal").textContent = state.svgFill.stampSize + " px";
     if (state.svgFill.on) syncSvgFill();
   });
+  $("svgStagger").addEventListener("change", (e) => {
+    state.svgFill.stagger = e.target.checked;
+    if (state.svgFill.on) syncSvgFill();
+  });
+  $("svgPosJitter").addEventListener("input", (e) => {
+    state.svgFill.positionJitter = +e.target.value; $("svgPosJitterVal").textContent = "±" + state.svgFill.positionJitter.toFixed(2);
+    if (state.svgFill.on) syncSvgFill();
+  });
   $("svgRotJitter").addEventListener("input", (e) => {
     state.svgFill.rotationJitterDeg = +e.target.value; $("svgRotJitterVal").textContent = "±" + state.svgFill.rotationJitterDeg + "°";
     if (state.svgFill.on) syncSvgFill();
@@ -1093,6 +1111,8 @@ map.on("load", () => {
     $("svgFillCustomText").value = state.svgFill.customSvg;
     $("svgDensity").value = state.svgFill.density; $("svgDensityVal").textContent = state.svgFill.density.toFixed(2);
     $("svgStampSize").value = state.svgFill.stampSize; $("svgStampSizeVal").textContent = state.svgFill.stampSize + " px";
+    $("svgStagger").checked = state.svgFill.stagger;
+    $("svgPosJitter").value = state.svgFill.positionJitter; $("svgPosJitterVal").textContent = "±" + state.svgFill.positionJitter.toFixed(2);
     $("svgRotJitter").value = state.svgFill.rotationJitterDeg; $("svgRotJitterVal").textContent = "±" + state.svgFill.rotationJitterDeg + "°";
     $("svgScaleJitter").value = state.svgFill.scaleJitter; $("svgScaleJitterVal").textContent = "±" + state.svgFill.scaleJitter.toFixed(2);
     $("svgSeed").value = state.svgFill.seed;
