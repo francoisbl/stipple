@@ -33,6 +33,10 @@ export interface ScatterIconPointsOptions {
   rotationJitterDeg?: number;
   /** +/- scale jitter per point (fraction of `iconRadiusPx`). Default 0. */
   scaleJitter?: number;
+  /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15. 0 = exact grid. */
+  positionJitter?: number;
+  /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
+  stagger?: boolean;
 }
 
 function toRings(polygon: PolygonGeometry): number[][][] {
@@ -47,7 +51,7 @@ function toRings(polygon: PolygonGeometry): number[][][] {
  * current view: recompute after pan/zoom if the layout should track it.
  */
 export function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatureCollection {
-  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter } = options;
+  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
 
   const pixelRings: Ring[] = toRings(polygon).map((ring) =>
     ring.map(([lng, lat]) => {
@@ -63,6 +67,8 @@ export function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatu
     samples,
     rotationJitterDeg,
     scaleJitter,
+    positionJitter,
+    stagger,
   });
 
   const features: PointFeature[] = points.map(({ x, y, rotation, scale }) => {

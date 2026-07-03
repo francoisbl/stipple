@@ -25,6 +25,10 @@ export interface ScatterPointsOptions {
   rotationJitterDeg?: number;
   /** +/- scale jitter applied to each point (as a fraction of `radius`). Default 0. The erosion test uses each point's actual scaled radius, so a bigger icon still never pokes outside the polygon. */
   scaleJitter?: number;
+  /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15 — a light irregularity, not a full organic scatter. 0 = exact grid. */
+  positionJitter?: number;
+  /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
+  stagger?: boolean;
 }
 
 function isInsideRings(x: number, y: number, rings: Ring[]): boolean {
@@ -67,7 +71,10 @@ function discFitsInside(x: number, y: number, radius: number, rings: Ring[], sam
  * consistent with `radius`).
  */
 export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[] {
-  const { radius, density = 1, seed = 1, samples = 12, rotationJitterDeg = 0, scaleJitter = 0 } = options;
+  const {
+    radius, density = 1, seed = 1, samples = 12,
+    rotationJitterDeg = 0, scaleJitter = 0, positionJitter = 0.15, stagger = true,
+  } = options;
   const exterior = rings[0] ?? [];
   if (exterior.length === 0) return [];
 
@@ -87,10 +94,12 @@ export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOpti
   const cell = 100 / Math.sqrt(density);
   const points: ScatteredPoint[] = [];
 
-  for (let y = minY; y <= maxY; y += cell) {
+  let row = 0;
+  for (let y = minY; y <= maxY; y += cell, row++) {
+    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
     for (let x = minX; x <= maxX; x += cell) {
-      const jx = x + (rand() - 0.5) * cell * 0.9;
-      const jy = y + (rand() - 0.5) * cell * 0.9;
+      const jx = x + rowOffset + (rand() - 0.5) * cell * positionJitter;
+      const jy = y + (rand() - 0.5) * cell * positionJitter;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
       // Erosion test uses this point's actual scaled radius, so a

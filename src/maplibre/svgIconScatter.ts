@@ -19,6 +19,10 @@ export interface InstallSvgIconScatterOptions {
   rotationJitterDeg?: number;
   /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
   scaleJitter?: number;
+  /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15. 0 = exact grid. */
+  positionJitter?: number;
+  /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
+  stagger?: boolean;
 }
 
 /**
@@ -32,13 +36,13 @@ export interface InstallSvgIconScatterOptions {
  * `map.on('moveend', () => installSvgIconScatter(map, options))`.
  */
 export async function installSvgIconScatter(map: MaplibreMap, options: InstallSvgIconScatterOptions): Promise<void> {
-  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg, scaleJitter } = options;
+  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
 
   // Always (re)rasterize: `size` may have changed since the icon id was last
   // installed, and addSvgIcon's own removeImage+addImage is cheap.
   await addSvgIcon(map, { id: iconId, svg, size });
 
-  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg, scaleJitter });
+  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg, scaleJitter, positionJitter, stagger });
 
   const existingSource = map.getSource(sourceId) as GeoJSONSource | undefined;
   if (existingSource) {

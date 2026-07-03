@@ -306,7 +306,16 @@ function discFitsInside(x, y, radius, rings, samples) {
   return true;
 }
 function scatterPointsInPolygon(rings, options) {
-  const { radius, density = 1, seed = 1, samples = 12, rotationJitterDeg = 0, scaleJitter = 0 } = options;
+  const {
+    radius,
+    density = 1,
+    seed = 1,
+    samples = 12,
+    rotationJitterDeg = 0,
+    scaleJitter = 0,
+    positionJitter = 0.15,
+    stagger = true
+  } = options;
   const exterior = rings[0] ?? [];
   if (exterior.length === 0) return [];
   let minX = Infinity;
@@ -323,10 +332,12 @@ function scatterPointsInPolygon(rings, options) {
   const rand = mulberry32(seedNum);
   const cell = 100 / Math.sqrt(density);
   const points = [];
-  for (let y = minY; y <= maxY; y += cell) {
+  let row = 0;
+  for (let y = minY; y <= maxY; y += cell, row++) {
+    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
     for (let x = minX; x <= maxX; x += cell) {
-      const jx = x + (rand() - 0.5) * cell * 0.9;
-      const jy = y + (rand() - 0.5) * cell * 0.9;
+      const jx = x + rowOffset + (rand() - 0.5) * cell * positionJitter;
+      const jy = y + (rand() - 0.5) * cell * positionJitter;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
       if (discFitsInside(jx, jy, radius * scale, rings, samples)) points.push({ x: jx, y: jy, rotation, scale });
@@ -537,8 +548,10 @@ async function createSvgScatterTile(options) {
     stampSize = 28,
     density = 1.4,
     seed = 1,
-    rotationJitterDeg = 25,
-    scaleJitter = 0.25
+    rotationJitterDeg = 0,
+    scaleJitter = 0,
+    positionJitter = 0.15,
+    stagger = true
   } = options;
   const image = await loadSvgImage(svg);
   const canvas = document.createElement("canvas");
@@ -550,7 +563,8 @@ async function createSvgScatterTile(options) {
   const rand = mulberry32(seedNum);
   const cell = 100 / Math.sqrt(density);
   const cols = Math.ceil(tileSize / cell);
-  const rows = Math.ceil(tileSize / cell);
+  let rows = Math.ceil(tileSize / cell);
+  if (stagger && rows % 2 !== 0) rows += 1;
   const margin = stampSize;
   const stamp = (cx, cy) => {
     const rotation = (rand() * 2 - 1) * rotationJitterDeg * (Math.PI / 180);
@@ -563,10 +577,11 @@ async function createSvgScatterTile(options) {
     ctx.restore();
   };
   for (let row = 0; row < rows; row++) {
+    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
     for (let col = 0; col < cols; col++) {
-      const jitterX = (rand() - 0.5) * cell * 0.8;
-      const jitterY = (rand() - 0.5) * cell * 0.8;
-      const cx = col * cell + cell / 2 + jitterX;
+      const jitterX = (rand() - 0.5) * cell * positionJitter;
+      const jitterY = (rand() - 0.5) * cell * positionJitter;
+      const cx = col * cell + cell / 2 + rowOffset + jitterX;
       const cy = row * cell + cell / 2 + jitterY;
       stamp(cx, cy);
       const nearLeft = cx < margin;
@@ -598,7 +613,7 @@ function toRings(polygon) {
   return polygon.type === "Polygon" ? polygon.coordinates : polygon.coordinates.flat();
 }
 function scatterIconPoints(options) {
-  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter } = options;
+  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
   const pixelRings = toRings(polygon).map(
     (ring) => ring.map(([lng, lat]) => {
       const p = map.project([lng, lat]);
@@ -611,7 +626,9 @@ function scatterIconPoints(options) {
     seed,
     samples,
     rotationJitterDeg,
-    scaleJitter
+    scaleJitter,
+    positionJitter,
+    stagger
   });
   const features = points.map(({ x, y, rotation, scale }) => {
     const lngLat = map.unproject([x, y]);
@@ -626,9 +643,9 @@ function scatterIconPoints(options) {
 
 // src/maplibre/svgIconScatter.ts
 async function installSvgIconScatter(map, options) {
-  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg, scaleJitter } = options;
+  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
   await addSvgIcon(map, { id: iconId, svg, size });
-  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg, scaleJitter });
+  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg, scaleJitter, positionJitter, stagger });
   const existingSource = map.getSource(sourceId);
   if (existingSource) {
     existingSource.setData(points);
