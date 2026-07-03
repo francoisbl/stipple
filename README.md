@@ -12,12 +12,14 @@ MapLibre's `fill-pattern` needs an image installed via `map.addImage`. This
 package generates that image for you:
 
 - **Geometric fills** — solid, stipple, hachures, crosshatch, grid, dots.
-  Angle, density, weight and colour are all configurable; tiles are seamless
-  power-of-two canvases (8/16/32px).
+  Angle, weight, colour and tile size (the density control — any pixel size
+  works, seamless either way) are all configurable.
 - **SVG scatter fills** — turn any SVG into an organic, tileable fill (grass,
-  foliage, reeds...) by scattering many rotation/scale-jittered copies of it
-  into a large seamless meta-tile. The jitter is seeded, so the same seed
-  always reproduces the same texture.
+  foliage, water, shapes...) by scattering many rotation/scale-jittered copies
+  of it into a large seamless meta-tile. The jitter is seeded, so the same
+  seed always reproduces the same texture. The demo ships 14 sample fills
+  across four categories (vegetation, trees, water, shapes) as a starting
+  point — swap in your own SVG the same way.
 - **SVG point icons** — rasterize an SVG once via `addImage` and use it as
   `icon-image` on a `symbol` layer, with the icon's rendered scale controlled
   by MapLibre's native `icon-size` (no re-rasterization needed).

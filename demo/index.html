@@ -168,12 +168,9 @@
         <label>Stroke weight <span class="val" id="weightVal">2.00 px</span></label>
         <input type="range" id="weight" min="0.1" max="8" step="0.1" value="2" />
 
-        <label>Density — tile size</label>
-        <div class="seg" id="tileSizeSeg">
-          <button data-s="8">8px</button>
-          <button data-s="16" class="active">16px</button>
-          <button data-s="32">32px</button>
-        </div>
+        <label>Density — tile size <span class="val" id="tileVal">16 px</span></label>
+        <input type="range" id="tile" min="4" max="72" step="1" value="16" />
+        <p class="hint">Smaller tile = denser repeat. Any pixel size tiles seamlessly — not limited to powers of two.</p>
       </fieldset>
 
       <fieldset>
@@ -184,12 +181,31 @@
         </div>
         <label>Sample</label>
         <select id="svgFillSample">
-          <option value="grass-tuft">Grass tuft</option>
-          <option value="tree-canopy">Tree canopy</option>
-          <option value="reeds">Reeds</option>
+          <optgroup label="Vegetation">
+            <option value="grass-tuft">Grass tuft</option>
+            <option value="fern">Fern</option>
+            <option value="wildflower">Wildflower</option>
+            <option value="small-bush">Small bush</option>
+          </optgroup>
+          <optgroup label="Trees">
+            <option value="round-canopy">Round canopy</option>
+            <option value="conifer">Conifer</option>
+            <option value="palm">Palm</option>
+          </optgroup>
+          <optgroup label="Water">
+            <option value="reeds">Reeds</option>
+            <option value="ripple">Ripple</option>
+            <option value="wave-lines">Wave lines</option>
+            <option value="droplet">Droplet</option>
+          </optgroup>
+          <optgroup label="Shapes">
+            <option value="triangles">Triangles</option>
+            <option value="hexagon">Hexagon</option>
+            <option value="confetti">Confetti</option>
+          </optgroup>
         </select>
         <label>Density (stamps / 100×100px) <span class="val" id="svgDensityVal">1.40</span></label>
-        <input type="range" id="svgDensity" min="0.3" max="4" step="0.1" value="1.4" />
+        <input type="range" id="svgDensity" min="0.1" max="6" step="0.1" value="1.4" />
         <label>Stamp size <span class="val" id="svgStampSizeVal">28 px</span></label>
         <input type="range" id="svgStampSize" min="10" max="60" step="1" value="28" />
         <label>Rotation jitter <span class="val" id="svgRotJitterVal">±25°</span></label>
@@ -297,6 +313,7 @@
   // server: browsers block fetch() of local files, but a checked-in string
   // constant has no such restriction).
   const SVG_PATTERN_SAMPLES = {
+    // Vegetation
     "grass-tuft": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <g fill="none" stroke="#3f7d3f" stroke-width="4" stroke-linecap="round">
         <path d="M16 56 C14 40 20 28 24 18" />
@@ -305,12 +322,61 @@
         <path d="M48 56 C50 42 46 30 44 20" />
       </g>
     </svg>`,
-    "tree-canopy": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+    "fern": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#3f7d3f" stroke-width="3" stroke-linecap="round">
+        <path d="M32 58 L32 10" />
+        <path d="M32 46 L20 38" />
+        <path d="M32 46 L44 38" />
+        <path d="M32 36 L21 29" />
+        <path d="M32 36 L43 29" />
+        <path d="M32 26 L22 20" />
+        <path d="M32 26 L42 20" />
+        <path d="M32 16 L24 11" />
+        <path d="M32 16 L40 11" />
+      </g>
+    </svg>`,
+    "wildflower": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <path d="M32 58 L32 30" stroke="#4a8a4f" stroke-width="3" stroke-linecap="round" fill="none" />
+      <g fill="#e8a33d">
+        <circle cx="32" cy="16" r="6" />
+        <circle cx="22" cy="22" r="6" />
+        <circle cx="42" cy="22" r="6" />
+        <circle cx="24" cy="32" r="6" />
+        <circle cx="40" cy="32" r="6" />
+      </g>
+      <circle cx="32" cy="24" r="5" fill="#c1622f" />
+    </svg>`,
+    "small-bush": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="#4a8a4f">
+        <circle cx="24" cy="40" r="14" />
+        <circle cx="40" cy="40" r="14" />
+        <circle cx="32" cy="30" r="15" />
+      </g>
+    </svg>`,
+    // Trees
+    "round-canopy": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="29" y="40" width="6" height="20" fill="#6b4a30" />
       <circle cx="32" cy="26" r="18" fill="#2f6b3c" />
       <circle cx="20" cy="34" r="12" fill="#377a45" />
       <circle cx="44" cy="34" r="12" fill="#377a45" />
     </svg>`,
+    "conifer": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect x="29" y="48" width="6" height="12" fill="#6b4a30" />
+      <path d="M32 6 L46 28 L18 28 Z" fill="#2d5f3f" />
+      <path d="M32 18 L48 40 L16 40 Z" fill="#356f47" />
+      <path d="M32 30 L50 52 L14 52 Z" fill="#3d7d51" />
+    </svg>`,
+    "palm": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <path d="M31 60 C29 44 30 34 34 24" stroke="#8a6a3f" stroke-width="4" stroke-linecap="round" fill="none" />
+      <g fill="none" stroke="#3f8a52" stroke-width="4" stroke-linecap="round">
+        <path d="M34 22 C24 16 14 16 8 22" />
+        <path d="M34 22 C26 10 18 6 10 6" />
+        <path d="M34 22 C34 12 32 6 30 2" />
+        <path d="M34 22 C42 10 50 6 58 6" />
+        <path d="M34 22 C44 16 54 16 60 22" />
+      </g>
+    </svg>`,
+    // Water
     "reeds": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <g fill="none" stroke="#5a8f4f" stroke-width="3" stroke-linecap="round">
         <path d="M12 60 L14 8" />
@@ -323,6 +389,42 @@
         <ellipse cx="22" cy="6" rx="2" ry="6" />
         <ellipse cx="38" cy="10" rx="2" ry="6" />
         <ellipse cx="50" cy="8" rx="2" ry="6" />
+      </g>
+    </svg>`,
+    "ripple": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#3f7fa0" stroke-width="2.5">
+        <circle cx="32" cy="32" r="8" />
+        <circle cx="32" cy="32" r="16" opacity="0.7" />
+        <circle cx="32" cy="32" r="24" opacity="0.4" />
+      </g>
+    </svg>`,
+    "wave-lines": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#3f7fa0" stroke-width="3" stroke-linecap="round">
+        <path d="M4 22 C12 16 20 28 28 22 C36 16 44 28 52 22 C56 20 58 20 60 21" />
+        <path d="M4 34 C12 28 20 40 28 34 C36 28 44 40 52 34 C56 32 58 32 60 33" />
+        <path d="M4 46 C12 40 20 52 28 46 C36 40 44 52 52 46 C56 44 58 44 60 45" />
+      </g>
+    </svg>`,
+    "droplet": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <path d="M32 6 C40 22 48 32 48 42 A16 16 0 1 1 16 42 C16 32 24 22 32 6 Z" fill="#3f7fa0" />
+    </svg>`,
+    // Shapes
+    "triangles": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="#c1622f">
+        <path d="M20 12 L30 12 L25 22 Z" />
+        <path d="M40 30 L52 30 L46 42 Z" transform="rotate(15 46 36)" />
+        <path d="M14 40 L24 40 L19 50 Z" transform="rotate(-10 19 45)" />
+      </g>
+    </svg>`,
+    "hexagon": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <path d="M32 6 L54 19 L54 45 L32 58 L10 45 L10 19 Z" fill="none" stroke="#2a251d" stroke-width="3" />
+    </svg>`,
+    "confetti": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="#c1622f">
+        <rect x="28" y="8" width="8" height="8" />
+        <circle cx="16" cy="40" r="5" />
+        <circle cx="48" cy="42" r="6" />
+        <rect x="40" y="14" width="6" height="6" transform="rotate(20 43 17)" />
       </g>
     </svg>`,
   };
@@ -622,10 +724,8 @@
     state.weight = +e.target.value; $("weightVal").textContent = state.weight.toFixed(2) + " px";
     renderPreview(); syncGeomTexture();
   });
-  $("tileSizeSeg").addEventListener("click", (e) => {
-    const s = e.target.dataset.s; if (!s) return;
-    state.tile = +s;
-    document.querySelectorAll("#tileSizeSeg button").forEach((b) => b.classList.toggle("active", b.dataset.s === s));
+  $("tile").addEventListener("input", (e) => {
+    state.tile = +e.target.value; $("tileVal").textContent = state.tile + " px";
     renderPreview(); syncGeomTexture();
   });
 
@@ -749,6 +849,7 @@ map.on("load", () => {
     $("patColor").value = $("patColorHex").value = state.patColor;
     $("patOpacity").value = state.patOpacity; $("patOpacityVal").textContent = (+state.patOpacity).toFixed(2);
     $("weight").value = state.weight; $("weightVal").textContent = (+state.weight).toFixed(2) + " px";
+    $("tile").value = state.tile; $("tileVal").textContent = state.tile + " px";
     $("bgColor").value = $("bgColorHex").value = state.bg.color;
     $("bgOpacity").value = state.bg.opacity; $("bgOpacityVal").textContent = (+state.bg.opacity).toFixed(2);
     $("bgToggle").checked = state.bg.on;
@@ -768,7 +869,6 @@ map.on("load", () => {
     $("iconSample").value = state.icons.sample;
     $("iconScale").value = state.icons.scale; $("iconScaleVal").textContent = state.icons.scale.toFixed(2) + "×";
     document.querySelectorAll("#patternPills .pill").forEach((el) => el.classList.toggle("active", el.dataset.p === state.pattern));
-    document.querySelectorAll("#tileSizeSeg button").forEach((b) => b.classList.toggle("active", +b.dataset.s === state.tile));
     document.querySelectorAll("#angleSeg button").forEach((b) => b.classList.toggle("active", +b.dataset.a === state.angle));
     renderPreview();
   }

@@ -194,7 +194,7 @@ function makeTile(pattern, size, color, weight, angle, options = {}) {
     }
     case "stipple": {
       const r = weight * 0.6;
-      const cells = size <= 8 ? 2 : size <= 16 ? 3 : 4;
+      const cells = Math.max(2, Math.round(size / 6));
       const s = size / cells;
       for (let i = 0; i < cells; i++) {
         for (let j = 0; j < cells; j++) {
