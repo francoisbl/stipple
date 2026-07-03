@@ -172,6 +172,66 @@ declare function buildStyleFragment(options: BuildStyleFragmentOptions): {
     layers: Record<string, unknown>[];
 };
 
+interface BuildLineStyleFragmentOptions {
+    /** Vector source id, e.g. `"urbanisme.voiries"`. */
+    source: string;
+    /** Source-layer name (the table/layer inside the vector source). */
+    sourceLayer: string;
+    /** Vector tile URL. Defaults to a `<url>/<source>` placeholder to fill in. */
+    sourceUrl?: string;
+    line: OutlineConfig;
+}
+/**
+ * Builds the sources+layers fragment for a single line-style layer.
+ * `line-dasharray` is a native declarative expression — unlike fill
+ * patterns there's nothing baked into a canvas image, so no metadata or
+ * runtime installer is needed for this one.
+ */
+declare function buildLineStyleFragment(options: BuildLineStyleFragmentOptions): {
+    sources: {
+        [x: string]: {
+            type: string;
+            url: string;
+        };
+    };
+    layers: Record<string, unknown>[];
+};
+
+interface IconStyleConfig {
+    /** Raw `<svg>...</svg>` markup. */
+    svg: string;
+    /** Rendered icon size in px. */
+    size: number;
+    /** Image id the layer's `icon-image` references — also passed to `addSvgIcon`. */
+    imageId: string;
+}
+interface BuildIconStyleFragmentOptions {
+    /** Vector source id, e.g. `"urbanisme.arbres"`. */
+    source: string;
+    /** Source-layer name (the table/layer inside the vector source). */
+    sourceLayer: string;
+    /** Vector tile URL. Defaults to a `<url>/<source>` placeholder to fill in. */
+    sourceUrl?: string;
+    icon: IconStyleConfig;
+    /** Static icon rotation in degrees, if any. */
+    rotationDeg?: number;
+}
+/**
+ * Builds the sources+layers fragment for a single SVG point-icon layer.
+ * The icon isn't baked into the paint properties — it's carried in
+ * `layer.metadata["enhanced:icon"]` so {@link installIconStyles} can
+ * rasterize the same icon at runtime via `addSvgIcon`.
+ */
+declare function buildIconStyleFragment(options: BuildIconStyleFragmentOptions): {
+    sources: {
+        [x: string]: {
+            type: string;
+            url: string;
+        };
+    };
+    layers: Record<string, unknown>[];
+};
+
 interface StyleLike {
     layers: Array<{
         metadata?: Record<string, unknown>;
@@ -186,6 +246,20 @@ interface StyleLike {
  * once after `map.on('load', ...)` (and again if you swap styles).
  */
 declare function installPatternFills(map: Map, style: StyleLike): void;
+
+interface IconStyleLike {
+    layers: Array<{
+        metadata?: Record<string, unknown>;
+    }>;
+}
+/**
+ * Scans a style (or `map.getStyle()`) for layers carrying the
+ * `enhanced:icon` metadata produced by {@link buildIconStyleFragment}, and
+ * rasterizes + installs the matching SVG icon for each. Mirrors
+ * {@link installPatternFills} for the point/symbol case — call once after
+ * `map.on('load', ...)` (and again if you swap styles).
+ */
+declare function installIconStyles(map: Map, style: IconStyleLike): Promise<void>;
 
 interface SvgPatternOptions {
     imageId: string;
@@ -317,4 +391,4 @@ interface InstallSvgIconScatterOptions {
  */
 declare function installSvgIconScatter(map: Map, options: InstallSvgIconScatterOptions): Promise<void>;
 
-export { type BackgroundFillConfig, type BuildStyleFragmentOptions, DASH_PRESETS, type HachureAngle, type InstallSvgIconScatterOptions, type MakeTileOptions, type OutlineConfig, type PatternFillConfig, type PatternType, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgIconOptions, type SvgPatternOptions, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, addSvgIcon, buildStyleFragment, createMiniContext, createSvgScatterTile, hashStringToSeed, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, scatterIconPoints, scatterPointsInPolygon, syncPatternTexture };
+export { type BackgroundFillConfig, type BuildIconStyleFragmentOptions, type BuildLineStyleFragmentOptions, type BuildStyleFragmentOptions, DASH_PRESETS, type HachureAngle, type IconStyleConfig, type IconStyleLike, type InstallSvgIconScatterOptions, type MakeTileOptions, type OutlineConfig, type PatternFillConfig, type PatternType, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgIconOptions, type SvgPatternOptions, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, addSvgIcon, buildIconStyleFragment, buildLineStyleFragment, buildStyleFragment, createMiniContext, createSvgScatterTile, hashStringToSeed, installIconStyles, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, scatterIconPoints, scatterPointsInPolygon, syncPatternTexture };

@@ -41,13 +41,14 @@
       font-size: 23px; margin: 0 0 2px; letter-spacing: -0.01em; color: var(--ink);
     }
     .squiggle { display: block; width: 108px; height: 8px; margin: 2px 0 8px; color: var(--accent); }
-    .sub { color: var(--ink-soft); font-size: 12.5px; margin: 0 0 16px; line-height: 1.45; }
+    .sub { color: var(--ink-soft); font-size: 12.5px; margin: 0 0 14px; line-height: 1.45; }
     fieldset {
       border: 1.5px solid var(--line-strong); border-radius: 10px 10px 10px 3px;
       padding: 11px 13px 13px; margin: 0 0 14px; background: var(--panel);
       box-shadow: 0 1px 0 rgba(42,37,29,.05), 0 8px 16px -12px rgba(42,37,29,.35);
     }
     fieldset.dimmed { opacity: .4; pointer-events: none; }
+    fieldset.hidden { display: none; }
     legend {
       font-family: "IBM Plex Mono", monospace; font-size: 10px; text-transform: uppercase;
       letter-spacing: .08em; color: var(--ink-soft); background: var(--panel-2);
@@ -65,6 +66,7 @@
     input[type=range] { width: 100%; accent-color: var(--accent); }
     input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
     input[type=color] { width: 44px; height: 28px; border: 1.5px solid var(--line-strong); border-radius: 6px; background: var(--panel-2); padding: 2px; vertical-align: middle; }
+    input[type=file] { font-family: "Work Sans"; font-size: 11.5px; color: var(--ink-soft); width: 100%; }
     .row { display: flex; gap: 8px; align-items: center; }
     .row > * { flex: 1; }
     .row.tight { gap: 6px; }
@@ -82,6 +84,7 @@
       border-radius: 6px; padding: 6px; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; cursor: pointer;
     }
     .seg button.active { border-color: var(--ink); background: var(--ink); color: var(--panel); }
+    .seg.geom-type button { font-family: "Work Sans"; font-weight: 600; font-size: 12.5px; padding: 8px; }
     .switch { display: flex; align-items: center; justify-content: space-between; }
     .val { color: var(--ink); font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: 11.5px; }
     button.action {
@@ -103,6 +106,11 @@
       width: 100%; height: 120px; background: var(--panel-2); color: var(--ink); border: 1.5px solid var(--line-strong);
       border-radius: 6px; font: 11px/1.5 "IBM Plex Mono", ui-monospace, monospace; padding: 9px;
     }
+    .custom-svg-panel {
+      margin-top: 8px; padding: 8px; border: 1.5px dashed var(--line-strong); border-radius: 6px; background: var(--panel-2);
+    }
+    .custom-svg-panel textarea { height: 64px; margin-bottom: 6px; }
+    .custom-svg-panel.hidden { display: none; }
     .toast {
       position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper);
       font-family: "Work Sans"; font-weight: 500; padding: 9px 16px; border-radius: 999px; font-size: 13px;
@@ -118,11 +126,17 @@
       <svg class="squiggle" viewBox="0 0 108 8" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M2 5.5C10 1 16 1 24 5.5C32 10 38 10 46 5.5C54 1 60 1 68 5.5C76 10 82 10 90 5.5C96 2 100 2 106 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
       </svg>
-      <p class="sub">Compose and live-preview textured fills, SVG scatter patterns and SVG point icons on test polygons.</p>
+      <p class="sub">Compose and live-preview polygon fills, line styles, and point icons for MapLibre GL JS.</p>
+
+      <div class="seg geom-type" id="geomTypeSeg" style="margin-bottom:14px">
+        <button data-g="polygon" class="active">Polygon</button>
+        <button data-g="line">Line</button>
+        <button data-g="point">Point</button>
+      </div>
 
       <fieldset>
-        <legend>Source (test polygons)</legend>
-        <label>Layer</label>
+        <legend>Source (test features)</legend>
+        <label>Feature</label>
         <div class="row tight">
           <select id="layerSelect"></select>
         </div>
@@ -173,7 +187,7 @@
         <p class="hint">Smaller tile = denser repeat. Any pixel size tiles seamlessly — not limited to powers of two.</p>
       </fieldset>
 
-      <fieldset>
+      <fieldset id="svgFillFieldset">
         <legend>SVG fill (organic patterns)</legend>
         <div class="switch">
           <label style="margin:0">Use SVG fill instead of geometric pattern</label>
@@ -208,7 +222,16 @@
             <option value="hexagon">Hexagon</option>
             <option value="confetti">Confetti</option>
           </optgroup>
+          <optgroup label="Custom">
+            <option value="custom">Custom SVG…</option>
+          </optgroup>
         </select>
+        <div class="custom-svg-panel hidden" id="svgFillCustomPanel">
+          <label style="margin-top:0">Paste SVG markup or upload a file</label>
+          <textarea id="svgFillCustomText" placeholder="<svg>...</svg>"></textarea>
+          <input type="file" id="svgFillCustomFile" accept=".svg,image/svg+xml" />
+          <button class="action ghost" id="svgFillCustomApply">Use this SVG</button>
+        </div>
         <label>Density (stamps / 100×100px) <span class="val" id="svgDensityVal">1.40</span></label>
         <input type="range" id="svgDensity" min="0.1" max="6" step="0.1" value="1.4" />
         <label>Stamp size <span class="val" id="svgStampSizeVal">28 px</span></label>
@@ -222,7 +245,7 @@
         <p class="hint">Rasterized once via the browser's native SVG renderer, then scattered with seeded rotation/scale jitter into a large seamless meta-tile — avoids the "wallpaper" look you'd get tiling a single small SVG stamp.</p>
       </fieldset>
 
-      <fieldset>
+      <fieldset id="bgFieldset">
         <legend>Tinted background (under the pattern)</legend>
         <div class="switch">
           <label style="margin:0">Enable background</label>
@@ -236,8 +259,8 @@
         <input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35" />
       </fieldset>
 
-      <fieldset>
-        <legend>Outline (line)</legend>
+      <fieldset id="lineFieldset">
+        <legend id="lineLegend">Outline (line)</legend>
         <div class="switch">
           <label style="margin:0">Enable outline</label>
           <input type="checkbox" id="lineToggle" checked />
@@ -259,28 +282,58 @@
         <p class="hint">Native <code>line-dasharray</code> expression — no canvas involved, stays a plain declarative style property.</p>
       </fieldset>
 
-      <fieldset>
-        <legend>Point icons (SVG)</legend>
-        <div class="switch">
-          <label style="margin:0">Show icon points</label>
-          <input type="checkbox" id="iconToggle" />
-        </div>
+      <fieldset id="pointIconFieldset" class="hidden">
+        <legend>Point icon (SVG)</legend>
         <label>Icon</label>
-        <select id="iconSample">
-          <option value="tree-marker">Tree</option>
-          <option value="pin-marker">Pin</option>
+        <select id="pointIconSample">
+          <optgroup label="Markers">
+            <option value="tree-marker">Tree marker</option>
+            <option value="pin-marker">Pin marker</option>
+          </optgroup>
+          <optgroup label="Vegetation">
+            <option value="grass-tuft">Grass tuft</option>
+            <option value="fern">Fern</option>
+            <option value="wildflower">Wildflower</option>
+            <option value="small-bush">Small bush</option>
+          </optgroup>
+          <optgroup label="Trees">
+            <option value="round-canopy">Round canopy</option>
+            <option value="conifer">Conifer</option>
+            <option value="palm">Palm</option>
+          </optgroup>
+          <optgroup label="Water">
+            <option value="reeds">Reeds</option>
+            <option value="ripple">Ripple</option>
+            <option value="wave-lines">Wave lines</option>
+            <option value="droplet">Droplet</option>
+          </optgroup>
+          <optgroup label="Shapes">
+            <option value="triangles">Triangles</option>
+            <option value="hexagon">Hexagon</option>
+            <option value="confetti">Confetti</option>
+          </optgroup>
+          <optgroup label="Custom">
+            <option value="custom">Custom SVG…</option>
+          </optgroup>
         </select>
-        <label>Scale <span class="val" id="iconScaleVal">1.00×</span></label>
-        <input type="range" id="iconScale" min="0.3" max="3" step="0.05" value="1" />
-        <p class="hint">The SVG is rasterized once via <code>addSvgIcon</code>; the scale slider drives the symbol layer's native <code>icon-size</code>, no re-rasterization needed.</p>
+        <div class="custom-svg-panel hidden" id="pointIconCustomPanel">
+          <label style="margin-top:0">Paste SVG markup or upload a file</label>
+          <textarea id="pointIconCustomText" placeholder="<svg>...</svg>"></textarea>
+          <input type="file" id="pointIconCustomFile" accept=".svg,image/svg+xml" />
+          <button class="action ghost" id="pointIconCustomApply">Use this SVG</button>
+        </div>
+        <label>Size <span class="val" id="pointIconSizeVal">32 px</span></label>
+        <input type="range" id="pointIconSize" min="12" max="80" step="1" value="32" />
+        <label>Rotation <span class="val" id="pointIconRotationVal">0°</span></label>
+        <input type="range" id="pointIconRotation" min="0" max="359" step="1" value="0" />
+        <p class="hint">One whole icon per point feature — rasterized once via <code>addSvgIcon</code>, scale driven by native <code>icon-size</code>. No scattering/tiling involved, that's a polygon-fill concept.</p>
       </fieldset>
 
       <button class="action" id="exportBtn">⬇ Export style.json</button>
       <button class="action" id="exportJsBtn">⬇ Export integration snippet</button>
       <button class="action ghost" id="copyConfigBtn">⧉ Copy config (preset)</button>
       <button class="action ghost" id="importConfigBtn">⤓ Load a config…</button>
-      <p class="hint">The geometric pattern's parameters (angle, density, weight) are baked into a canvas image, not the style.json.
-        In production, call <code>installPatternFills(map, style)</code> from the <code>maplibre-pattern-fills</code> package after the style loads — it regenerates the exact same texture from the <code>enhanced:pattern</code> metadata.</p>
+      <p class="hint">Export always reflects the single geometry type selected above — polygon fill, line style, or point icon — so it's always clear what you're shipping.</p>
       <textarea id="ioArea" placeholder="style.json / preset config output appears here. Paste a config and click “Load”."></textarea>
     </div>
     <div id="map"></div>
@@ -296,15 +349,17 @@
   //  pattern engine, MapLibre integration, and SVG rasterization all live in
   //  the package — see ../src/engine and ../src/maplibre.
   //
-  //  Three-layer stack per test feature (unchanged from the original prototype):
-  //    1. fill  "tinted background" semi-transparent  (id: <layer>__bg)
-  //    2. fill  "pattern" via fill-pattern             (id: <layer>__pat)
-  //    3. line  "outline" editable dasharray           (id: <layer>__line)
+  //  One geometry type is active at a time (Polygon / Line / Point), picked
+  //  at the top of the panel — test features and the exported style always
+  //  match it exactly, so it's never ambiguous what a given export produces:
+  //    Polygon → tinted background / fill pattern / outline (3-layer stack)
+  //    Line     → a single styled line layer
+  //    Point    → a single SVG icon per point feature
   // ───────────────────────────────────────────────────────────────────────────
 
   const {
-    makeTile, syncPatternTexture, buildStyleFragment,
-    installSvgPatternFill, addSvgIcon, installSvgIconScatter, DASH_PRESETS,
+    makeTile, syncPatternTexture, buildStyleFragment, buildLineStyleFragment, buildIconStyleFragment,
+    installSvgPatternFill, addSvgIcon, installSvgIconScatter, installIconStyles, DASH_PRESETS,
   } = window.MaplibrePatternFills;
 
   const $ = (id) => document.getElementById(id);
@@ -443,11 +498,15 @@
       <circle cx="16" cy="14" r="4.5" fill="#fff" />
     </svg>`,
   };
+  // Combined lookup for the Point mode's icon picker (markers + the same
+  // organic samples used as polygon fills also work fine as one-off icons).
+  const ALL_ICON_SAMPLES = { ...SVG_ICON_SAMPLES, ...SVG_PATTERN_SAMPLES };
 
   // State — serializable as-is as a "preset" config.
   const state = {
-    layer: null,           // { source } — id of the selected GeoJSON test source
-    pattern: "stipple",    // solid | stipple | hachures | cross | grid | dots
+    geometryType: "polygon", // polygon | line | point
+    layer: null,             // { source } — id of the selected GeoJSON test source
+    pattern: "stipple",      // solid | stipple | hachures | cross | grid | dots
     angle: 45,
     patColor: "#7c3d1c",
     patOpacity: 1,
@@ -455,9 +514,16 @@
     tile: 16,
     bg: { on: true, color: "#e4d9c3", opacity: 0.35 },
     line: { on: true, color: "#7c3d1c", width: 1.5, dash: [] },
-    svgFill: { on: false, noCut: false, sample: "grass-tuft", density: 1.4, stampSize: 28, rotationJitterDeg: 25, scaleJitter: 0.25, seed: "1" },
-    icons: { on: false, sample: "tree-marker", scale: 1 },
+    svgFill: { on: false, noCut: false, sample: "grass-tuft", customSvg: "", density: 1.4, stampSize: 28, rotationJitterDeg: 25, scaleJitter: 0.25, seed: "1" },
+    pointIcon: { sample: "round-canopy", customSvg: "", size: 32, rotation: 0 },
   };
+
+  function resolveSvgFillSample() {
+    return state.svgFill.sample === "custom" ? state.svgFill.customSvg : SVG_PATTERN_SAMPLES[state.svgFill.sample];
+  }
+  function resolvePointIconSample() {
+    return state.pointIcon.sample === "custom" ? state.pointIcon.customSvg : ALL_ICON_SAMPLES[state.pointIcon.sample];
+  }
 
   // ── Map ───────────────────────────────────────────────────────────────────
   // Self-contained basemap (no network dependency) — a flat background is
@@ -516,9 +582,10 @@
 
   async function syncSvgTexture() {
     if (!state.layer) return;
+    const svg = resolveSvgFillSample();
+    if (!svg) return toast("Paste a custom SVG first");
     await installSvgPatternFill(map, {
-      imageId: svgImageId(),
-      svg: SVG_PATTERN_SAMPLES[state.svgFill.sample],
+      imageId: svgImageId(), svg,
       stampSize: state.svgFill.stampSize,
       density: state.svgFill.density,
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
@@ -537,11 +604,12 @@
 
   async function syncSvgIconScatter() {
     if (!state.layer) return;
+    const svg = resolveSvgFillSample();
+    if (!svg) return toast("Paste a custom SVG first");
     const { source, layer, icon } = svgIconScatterIds();
-    const polygon = POLYGONS[state.layer.source].features[0].geometry;
+    const polygon = FEATURES[state.layer.source].features[0].geometry;
     await installSvgIconScatter(map, {
-      sourceId: source, layerId: layer, iconId: icon, polygon,
-      svg: SVG_PATTERN_SAMPLES[state.svgFill.sample],
+      sourceId: source, layerId: layer, iconId: icon, polygon, svg,
       size: state.svgFill.stampSize,
       density: state.svgFill.density,
       seed: state.svgFill.seed,
@@ -561,18 +629,12 @@
     if (state.svgFill.noCut) syncSvgIconScatter(); else syncSvgTexture();
   }
 
-  // ── (Re)build the three layers of the selected test feature ─────────────────
-  function rebuildLayers() {
-    if (!state.layer) return;
-    const { src, bg, pat, line } = ids();
-    [line, pat, bg].forEach((l) => { if (map.getLayer(l)) map.removeLayer(l); });
-    removeSvgIconScatter();
+  // ── Style layer builders, one per geometry type ─────────────────────────────
+  function rebuildPolygonLayers(id) {
+    const bg = `${id}__bg`, pat = `${id}__pat`, line = `${id}__line`;
 
     if (state.bg.on) {
-      map.addLayer({
-        id: bg, type: "fill", source: src,
-        paint: { "fill-color": state.bg.color, "fill-opacity": state.bg.opacity },
-      });
+      map.addLayer({ id: bg, type: "fill", source: id, paint: { "fill-color": state.bg.color, "fill-opacity": state.bg.opacity } });
     }
 
     if (state.svgFill.on && state.svgFill.noCut) {
@@ -580,35 +642,55 @@
       // fit entirely inside the polygon, so nothing is ever cut at the edge.
       syncSvgIconScatter();
     } else if (state.svgFill.on) {
-      syncSvgTexture().then(() => {
-        if (!map.getLayer(pat)) return; // layer may have been rebuilt again meanwhile
-      });
-      map.addLayer({
-        id: pat, type: "fill", source: src,
-        paint: { "fill-pattern": svgImageId(), "fill-opacity": state.patOpacity },
-      });
+      syncSvgTexture();
+      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": svgImageId(), "fill-opacity": state.patOpacity } });
     } else if (state.pattern === "solid") {
-      map.addLayer({
-        id: pat, type: "fill", source: src,
-        paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity },
-      });
+      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity } });
     } else {
       syncGeomTexture();
-      map.addLayer({
-        id: pat, type: "fill", source: src,
-        paint: { "fill-pattern": geomImageId(), "fill-opacity": state.patOpacity },
-      });
+      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": geomImageId(), "fill-opacity": state.patOpacity } });
     }
 
     if (state.line.on) {
       map.addLayer({
-        id: line, type: "line", source: src,
-        paint: {
-          "line-color": state.line.color, "line-width": state.line.width,
-          ...(state.line.dash.length ? { "line-dasharray": state.line.dash } : {}),
-        },
+        id: line, type: "line", source: id,
+        paint: { "line-color": state.line.color, "line-width": state.line.width, ...(state.line.dash.length ? { "line-dasharray": state.line.dash } : {}) },
       });
     }
+  }
+
+  function rebuildLineLayer(id) {
+    if (!state.line.on) return;
+    map.addLayer({
+      id: `${id}__line`, type: "line", source: id,
+      paint: { "line-color": state.line.color, "line-width": state.line.width, ...(state.line.dash.length ? { "line-dasharray": state.line.dash } : {}) },
+    });
+  }
+
+  async function rebuildPointLayer(id) {
+    const svg = resolvePointIconSample();
+    if (!svg) return toast("Paste a custom SVG first");
+    const iconId = `${id}__icon_img_${state.pointIcon.sample}`;
+    await addSvgIcon(map, { id: iconId, svg, size: state.pointIcon.size });
+    if (state.layer && state.layer.source !== id) return; // selection changed meanwhile
+    if (map.getLayer(`${id}__icon`)) map.removeLayer(`${id}__icon`);
+    map.addLayer({
+      id: `${id}__icon`, type: "symbol", source: id,
+      layout: {
+        "icon-image": iconId, "icon-allow-overlap": true,
+        ...(state.pointIcon.rotation ? { "icon-rotate": state.pointIcon.rotation } : {}),
+      },
+    });
+  }
+
+  // ── (Re)build the style layers of the selected test feature ─────────────────
+  function rebuildLayers() {
+    if (!state.layer) return;
+    const id = state.layer.source;
+    removeStyleLayers(id);
+    if (state.geometryType === "polygon") rebuildPolygonLayers(id);
+    else if (state.geometryType === "line") rebuildLineLayer(id);
+    else rebuildPointLayer(id);
   }
 
   // Lightweight paint updates for sliders (no layer rebuild).
@@ -630,7 +712,22 @@
   }
 
   // ── Export style.json (sources + layers, ready to paste) ────────────────────
+  // Always reflects the single active geometry type, never a mix.
   function buildExportedStyle() {
+    if (state.geometryType === "line") {
+      return buildLineStyleFragment({
+        source: "<source>", sourceLayer: "<source-layer>",
+        line: { enabled: state.line.on, color: state.line.color, width: state.line.width, dash: state.line.dash },
+      });
+    }
+    if (state.geometryType === "point") {
+      const svg = resolvePointIconSample();
+      return buildIconStyleFragment({
+        source: "<source>", sourceLayer: "<source-layer>",
+        icon: { svg: svg || "<!-- paste a custom SVG in the panel first -->", size: state.pointIcon.size, imageId: "<source>__icon_img" },
+        rotationDeg: state.pointIcon.rotation || undefined,
+      });
+    }
     return buildStyleFragment({
       source: "<source>",
       sourceLayer: "<source-layer>",
@@ -644,10 +741,9 @@
     });
   }
 
-  // ── Test polygons (random GeoJSON, no backend dependency) ───────────────────
-  const POLY_COUNT = 4;
-  const ICON_COUNT = 10;
-  const POLYGONS = {};
+  // ── Test features (random GeoJSON, no backend dependency) ───────────────────
+  const FEATURE_COUNT = 4;
+  const FEATURES = {};
 
   function randomPolygon(cx, cy, rBase) {
     const pts = [], n = 6 + Math.floor(Math.random() * 4);
@@ -660,79 +756,94 @@
     return { type: "Feature", geometry: { type: "Polygon", coordinates: [pts] }, properties: {} };
   }
 
-  function generatePolygons() {
+  function randomLine(cx, cy, rBase) {
+    const n = 5 + Math.floor(Math.random() * 3);
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const x = cx - rBase + t * rBase * 2;
+      const y = cy + Math.sin(t * Math.PI * 1.6 + Math.random() * 2) * rBase * 0.35 * (0.6 + Math.random() * 0.5);
+      pts.push([x, y]);
+    }
+    return { type: "Feature", geometry: { type: "LineString", coordinates: pts }, properties: {} };
+  }
+
+  function randomPointFeature(cx, cy) {
+    return { type: "Feature", geometry: { type: "Point", coordinates: [cx, cy] }, properties: {} };
+  }
+
+  function randomFeature(cx, cy, span) {
+    if (state.geometryType === "line") return randomLine(cx, cy, span);
+    if (state.geometryType === "point") return randomPointFeature(cx, cy);
+    return randomPolygon(cx, cy, span);
+  }
+
+  // Removes every style layer/image/aux-source a feature id could have
+  // across ANY geometry type, without touching its main GeoJSON source.
+  function removeStyleLayers(id) {
+    [`${id}__line`, `${id}__pat`, `${id}__bg`, `${id}__svgscatter_layer`, `${id}__icon`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
+    if (map.hasImage(`${id}__pat_img`)) map.removeImage(`${id}__pat_img`);
+    if (map.hasImage(`${id}__svg_img`)) map.removeImage(`${id}__svg_img`);
+    if (map.getSource(`${id}__svgscatter`)) map.removeSource(`${id}__svgscatter`);
+  }
+
+  function removeFeatureCompletely(id) {
+    removeStyleLayers(id);
+    if (map.getSource(id)) map.removeSource(id);
+  }
+
+  function generateFeatures() {
     const c = map.getCenter(), span = 0.03;
     const sel = $("layerSelect");
     sel.innerHTML = "";
-    for (let i = 0; i < POLY_COUNT; i++) {
-      const id = `polygon_${i + 1}`;
-      [`${id}__line`, `${id}__pat`, `${id}__bg`, `${id}__svgscatter_layer`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
-      if (map.hasImage(`${id}__pat_img`)) map.removeImage(`${id}__pat_img`);
-      if (map.hasImage(`${id}__svg_img`)) map.removeImage(`${id}__svg_img`);
-      if (map.getSource(id)) map.removeSource(id);
-      if (map.getSource(`${id}__svgscatter`)) map.removeSource(`${id}__svgscatter`);
+    for (let i = 0; i < FEATURE_COUNT; i++) {
+      const id = `feature_${i + 1}`;
+      removeFeatureCompletely(id);
 
       const col = i % 2, row = (i / 2) | 0;
       const cx = c.lng + (col - 0.5) * span * 2.2;
       const cy = c.lat + (0.5 - row) * span * 2.2;
-      const fc = { type: "FeatureCollection", features: [randomPolygon(cx, cy, span)] };
-      POLYGONS[id] = fc;
+      const fc = { type: "FeatureCollection", features: [randomFeature(cx, cy, span)] };
+      FEATURES[id] = fc;
       map.addSource(id, { type: "geojson", data: fc });
 
       const o = document.createElement("option");
-      o.value = id; o.textContent = `Polygon ${i + 1}`;
+      o.value = id; o.textContent = `Feature ${i + 1}`;
       sel.appendChild(o);
     }
     state.layer = null;
-    selectLayer("polygon_1");
+    selectLayer("feature_1");
 
-    const all = Object.values(POLYGONS).flatMap((fc) => fc.features[0].geometry.coordinates[0]);
-    const b = all.reduce((a, [x, y]) => [Math.min(a[0], x), Math.min(a[1], y), Math.max(a[2], x), Math.max(a[3], y)], [180, 90, -180, -90]);
-    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 60, duration: 0 });
-
-    generateIconPoints(b);
-  }
-
-  // Scatter test points across the polygons' bounding box for the icon demo.
-  function generateIconPoints(bounds) {
-    if (map.getLayer("icons__symbol")) map.removeLayer("icons__symbol");
-    if (map.getSource("icons")) map.removeSource("icons");
-    const features = [];
-    for (let i = 0; i < ICON_COUNT; i++) {
-      const lng = bounds[0] + Math.random() * (bounds[2] - bounds[0]);
-      const lat = bounds[1] + Math.random() * (bounds[3] - bounds[1]);
-      features.push({ type: "Feature", geometry: { type: "Point", coordinates: [lng, lat] }, properties: {} });
-    }
-    map.addSource("icons", { type: "geojson", data: { type: "FeatureCollection", features } });
-    if (state.icons.on) addIconLayer();
-  }
-
-  async function addIconLayer() {
-    if (!map.getSource("icons")) return;
-    const iconId = `icon_${state.icons.sample}`;
-    if (!map.hasImage(iconId)) {
-      await addSvgIcon(map, { id: iconId, svg: SVG_ICON_SAMPLES[state.icons.sample], size: 28 });
-    }
-    if (map.getLayer("icons__symbol")) map.removeLayer("icons__symbol");
-    map.addLayer({
-      id: "icons__symbol", type: "symbol", source: "icons",
-      layout: { "icon-image": iconId, "icon-size": state.icons.scale, "icon-allow-overlap": true },
+    const allCoords = Object.values(FEATURES).flatMap((fc) => {
+      const g = fc.features[0].geometry;
+      if (g.type === "Polygon") return g.coordinates[0];
+      if (g.type === "LineString") return g.coordinates;
+      return [g.coordinates];
     });
+    const b = allCoords.reduce((a, [x, y]) => [Math.min(a[0], x), Math.min(a[1], y), Math.max(a[2], x), Math.max(a[3], y)], [180, 90, -180, -90]);
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 60, duration: 0 });
   }
 
   function selectLayer(id) {
-    if (!id || !POLYGONS[id]) return;
-    if (state.layer) {
-      const old = ids();
-      [old.line, old.pat, old.bg].forEach((l) => map.getLayer(l) && map.removeLayer(l));
-      if (map.hasImage(geomImageId())) map.removeImage(geomImageId());
-      if (map.hasImage(svgImageId())) map.removeImage(svgImageId());
-      removeSvgIconScatter();
-    }
+    if (!id || !FEATURES[id]) return;
+    if (state.layer) removeStyleLayers(state.layer.source);
     state.layer = { source: id };
     $("layerSelect").value = id;
-    $("srcHint").textContent = `Test GeoJSON source: ${id}`;
+    $("srcHint").textContent = `Test GeoJSON source: ${id} (${FEATURES[id].features[0].geometry.type})`;
     rebuildLayers();
+  }
+
+  // ── Panel visibility: only the controls for the active geometry type ───────
+  function updatePanelVisibility() {
+    const isPolygon = state.geometryType === "polygon";
+    const isLine = state.geometryType === "line";
+    const isPoint = state.geometryType === "point";
+    $("geometricFieldset").classList.toggle("hidden", !isPolygon);
+    $("svgFillFieldset").classList.toggle("hidden", !isPolygon);
+    $("bgFieldset").classList.toggle("hidden", !isPolygon);
+    $("lineFieldset").classList.toggle("hidden", !(isPolygon || isLine));
+    $("pointIconFieldset").classList.toggle("hidden", !isPoint);
+    $("lineLegend").textContent = isLine ? "Line style" : "Outline (line)";
   }
 
   // ── UI wiring ────────────────────────────────────────────────────────────────
@@ -743,6 +854,30 @@
       if (/^#[0-9a-f]{6}$/i.test(hex.value)) { col.value = hex.value; apply(hex.value); }
     });
   }
+
+  function wireCustomSvgPanel({ selectId, panelId, textId, fileId, applyId, onApply }) {
+    $(selectId).addEventListener("change", (e) => {
+      $(panelId).classList.toggle("hidden", e.target.value !== "custom");
+    });
+    $(fileId).addEventListener("change", async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      $(textId).value = await file.text();
+    });
+    $(applyId).addEventListener("click", () => {
+      const text = $(textId).value.trim();
+      if (!text.startsWith("<svg")) return toast("Paste SVG markup starting with <svg>");
+      onApply(text);
+      toast("Custom SVG applied");
+    });
+  }
+
+  $("geomTypeSeg").addEventListener("click", (e) => {
+    const g = e.target.dataset.g; if (!g) return;
+    state.geometryType = g;
+    document.querySelectorAll("#geomTypeSeg button").forEach((b) => b.classList.toggle("active", b.dataset.g === g));
+    updatePanelVisibility();
+    generateFeatures(); // fresh test geometry matching the newly selected type
+  });
 
   $("patternPills").addEventListener("click", (e) => {
     const p = e.target.dataset.p; if (!p) return;
@@ -806,6 +941,13 @@
     if (state.svgFill.on) syncSvgFill();
   });
   $("svgSeed").addEventListener("change", (e) => { state.svgFill.seed = e.target.value; if (state.svgFill.on) syncSvgFill(); });
+  wireCustomSvgPanel({
+    selectId: "svgFillSample", panelId: "svgFillCustomPanel", textId: "svgFillCustomText", fileId: "svgFillCustomFile", applyId: "svgFillCustomApply",
+    onApply: (svg) => {
+      state.svgFill.customSvg = svg;
+      if (state.svgFill.on && state.svgFill.sample === "custom") syncSvgFill();
+    },
+  });
 
   // Background
   $("bgToggle").addEventListener("change", (e) => { state.bg.on = e.target.checked; rebuildLayers(); });
@@ -814,7 +956,7 @@
     state.bg.opacity = +e.target.value; $("bgOpacityVal").textContent = state.bg.opacity.toFixed(2); repaint();
   });
 
-  // Outline
+  // Outline / line style (shared between Polygon and Line modes)
   $("lineToggle").addEventListener("change", (e) => { state.line.on = e.target.checked; rebuildLayers(); });
   bindColor("lineColor", "lineColorHex", (v) => { state.line.color = v; repaint(); });
   $("lineWidth").addEventListener("input", (e) => {
@@ -832,33 +974,70 @@
     rebuildLayers();
   });
 
-  // Icons
-  $("iconToggle").addEventListener("change", (e) => {
-    state.icons.on = e.target.checked;
-    if (state.icons.on) addIconLayer();
-    else if (map.getLayer("icons__symbol")) map.removeLayer("icons__symbol");
+  // Point icon
+  $("pointIconSample").addEventListener("change", (e) => {
+    state.pointIcon.sample = e.target.value;
+    if (state.geometryType === "point") rebuildLayers();
   });
-  $("iconSample").addEventListener("change", (e) => { state.icons.sample = e.target.value; if (state.icons.on) addIconLayer(); });
-  $("iconScale").addEventListener("input", (e) => {
-    state.icons.scale = +e.target.value; $("iconScaleVal").textContent = state.icons.scale.toFixed(2) + "×";
-    if (map.getLayer("icons__symbol")) map.setLayoutProperty("icons__symbol", "icon-size", state.icons.scale);
+  $("pointIconSize").addEventListener("input", (e) => {
+    state.pointIcon.size = +e.target.value; $("pointIconSizeVal").textContent = state.pointIcon.size + " px";
+    if (state.geometryType === "point") rebuildLayers(); // size change needs re-rasterizing the icon
+  });
+  $("pointIconRotation").addEventListener("input", (e) => {
+    state.pointIcon.rotation = +e.target.value; $("pointIconRotationVal").textContent = state.pointIcon.rotation + "°";
+    if (state.layer && map.getLayer(`${state.layer.source}__icon`)) {
+      map.setLayoutProperty(`${state.layer.source}__icon`, "icon-rotate", state.pointIcon.rotation);
+    }
+  });
+  wireCustomSvgPanel({
+    selectId: "pointIconSample", panelId: "pointIconCustomPanel", textId: "pointIconCustomText", fileId: "pointIconCustomFile", applyId: "pointIconCustomApply",
+    onApply: (svg) => {
+      state.pointIcon.customSvg = svg;
+      if (state.geometryType === "point" && state.pointIcon.sample === "custom") rebuildLayers();
+    },
   });
 
   // Source
-  $("reloadCatalog").addEventListener("click", generatePolygons);
+  $("reloadCatalog").addEventListener("click", generateFeatures);
   $("layerSelect").addEventListener("change", (e) => selectLayer(e.target.value));
 
   // Export / config
   $("exportBtn").addEventListener("click", () => {
-    if (!state.layer) return toast("Select a layer first");
+    if (!state.layer) return toast("Select a feature first");
     $("ioArea").value = JSON.stringify(buildExportedStyle(), null, 2);
     navigator.clipboard?.writeText($("ioArea").value);
-    toast(state.svgFill.on
-      ? "style.json copied — note: SVG fills aren't in the metadata schema yet, wire installSvgPatternFill() manually for this layer"
-      : "style.json copied to clipboard");
+    if (state.geometryType === "polygon" && state.svgFill.on) {
+      toast(state.svgFill.noCut
+        ? "style.json copied — note: no-cut icon scatter needs live polygon geometry, so it isn't in the metadata schema; wire installSvgIconScatter() manually"
+        : "style.json copied — note: SVG fills aren't in the metadata schema yet, wire installSvgPatternFill() manually for this layer");
+    } else {
+      toast(`${state.geometryType} style.json copied to clipboard`);
+    }
   });
 
   function buildIntegrationSnippet() {
+    if (state.geometryType === "line") {
+      return `// Paste the exported style.json's sources+layers into your map style.
+// line-dasharray is a native declarative expression — nothing to install
+// at runtime, no canvas involved, unlike the polygon/point cases below.
+`;
+    }
+    if (state.geometryType === "point") {
+      return `// Paste the exported style.json's sources+layers into your map style,
+// then call installIconStyles once the style has loaded:
+
+import { installIconStyles } from "maplibre-pattern-fills";
+
+map.on("load", async () => {
+  await installIconStyles(map, style); // \`style\` = the object exported above,
+                                        // or { layers: map.getStyle().layers }
+});
+
+// No bundler? Use the UMD build instead:
+// <scr` + `ipt src="https://unpkg.com/maplibre-pattern-fills/dist/index.global.js"></scr` + `ipt>
+// <scr` + `ipt>MaplibrePatternFills.installIconStyles(map, style)</scr` + `ipt>
+`;
+    }
     return `// Paste the exported style.json's sources+layers into your map style,
 // then call installPatternFills once the style has loaded:
 
@@ -910,15 +1089,21 @@ map.on("load", () => {
     $("svgFillToggle").checked = state.svgFill.on;
     $("svgNoCutToggle").checked = state.svgFill.noCut;
     $("svgFillSample").value = state.svgFill.sample;
+    $("svgFillCustomPanel").classList.toggle("hidden", state.svgFill.sample !== "custom");
+    $("svgFillCustomText").value = state.svgFill.customSvg;
     $("svgDensity").value = state.svgFill.density; $("svgDensityVal").textContent = state.svgFill.density.toFixed(2);
     $("svgStampSize").value = state.svgFill.stampSize; $("svgStampSizeVal").textContent = state.svgFill.stampSize + " px";
     $("svgRotJitter").value = state.svgFill.rotationJitterDeg; $("svgRotJitterVal").textContent = "±" + state.svgFill.rotationJitterDeg + "°";
     $("svgScaleJitter").value = state.svgFill.scaleJitter; $("svgScaleJitterVal").textContent = "±" + state.svgFill.scaleJitter.toFixed(2);
     $("svgSeed").value = state.svgFill.seed;
     setGeometricFieldsetEnabled(!state.svgFill.on);
-    $("iconToggle").checked = state.icons.on;
-    $("iconSample").value = state.icons.sample;
-    $("iconScale").value = state.icons.scale; $("iconScaleVal").textContent = state.icons.scale.toFixed(2) + "×";
+    $("pointIconSample").value = state.pointIcon.sample;
+    $("pointIconCustomPanel").classList.toggle("hidden", state.pointIcon.sample !== "custom");
+    $("pointIconCustomText").value = state.pointIcon.customSvg;
+    $("pointIconSize").value = state.pointIcon.size; $("pointIconSizeVal").textContent = state.pointIcon.size + " px";
+    $("pointIconRotation").value = state.pointIcon.rotation; $("pointIconRotationVal").textContent = state.pointIcon.rotation + "°";
+    document.querySelectorAll("#geomTypeSeg button").forEach((b) => b.classList.toggle("active", b.dataset.g === state.geometryType));
+    updatePanelVisibility();
     document.querySelectorAll("#patternPills .pill").forEach((el) => el.classList.toggle("active", el.dataset.p === state.pattern));
     document.querySelectorAll("#angleSeg button").forEach((b) => b.classList.toggle("active", +b.dataset.a === state.angle));
     renderPreview();
@@ -928,15 +1113,13 @@ map.on("load", () => {
   // frozen as lng/lat — so they drift out of sync with the current zoom's
   // pixel density unless recomputed after each pan/zoom.
   map.on("moveend", () => {
-    if (state.svgFill.on && state.svgFill.noCut) syncSvgIconScatter();
+    if (state.geometryType === "polygon" && state.svgFill.on && state.svgFill.noCut) syncSvgIconScatter();
   });
 
   // ── Startup ──────────────────────────────────────────────────────────────────
   map.on("load", () => {
     applyStateToUI();
-    document.querySelectorAll("#patternPills .pill").forEach((el) => el.classList.toggle("active", el.dataset.p === state.pattern));
-    renderPreview();
-    generatePolygons();
+    generateFeatures();
   });
   </script>
 </body>
