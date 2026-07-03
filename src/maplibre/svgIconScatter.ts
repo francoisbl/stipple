@@ -25,8 +25,11 @@ export interface InstallSvgIconScatterOptions {
  * The no-cut alternative to {@link installSvgPatternFill}: instead of a
  * repeating texture (which always clips hard at the polygon edge),
  * places whole SVG icons only where they fit entirely inside the polygon.
- * Bound to the current view — call again after pan/zoom to keep the layout
- * current, same as any screen-space scatter.
+ *
+ * Points are computed in screen pixels at call time, then frozen as
+ * lng/lat — so density (icon count per screen area) drifts out of sync
+ * with the current zoom unless you recompute after each pan/zoom, e.g.
+ * `map.on('moveend', () => installSvgIconScatter(map, options))`.
  */
 export async function installSvgIconScatter(map: MaplibreMap, options: InstallSvgIconScatterOptions): Promise<void> {
   const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg, scaleJitter } = options;

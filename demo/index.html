@@ -924,6 +924,13 @@ map.on("load", () => {
     renderPreview();
   }
 
+  // No-cut icon positions are computed in screen pixels at call time, then
+  // frozen as lng/lat — so they drift out of sync with the current zoom's
+  // pixel density unless recomputed after each pan/zoom.
+  map.on("moveend", () => {
+    if (state.svgFill.on && state.svgFill.noCut) syncSvgIconScatter();
+  });
+
   // ── Startup ──────────────────────────────────────────────────────────────────
   map.on("load", () => {
     applyStateToUI();
