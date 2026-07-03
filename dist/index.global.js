@@ -28,9 +28,12 @@ var MaplibrePatternFills = (() => {
     createSvgScatterTile: () => createSvgScatterTile,
     hashStringToSeed: () => hashStringToSeed,
     installPatternFills: () => installPatternFills,
+    installSvgIconScatter: () => installSvgIconScatter,
     installSvgPatternFill: () => installSvgPatternFill,
     makeTile: () => makeTile,
     mulberry32: () => mulberry32,
+    scatterIconPoints: () => scatterIconPoints,
+    scatterPointsInPolygon: () => scatterPointsInPolygon,
     syncPatternTexture: () => syncPatternTexture
   });
 
@@ -276,6 +279,58 @@ var MaplibrePatternFills = (() => {
     return (h ^ h >>> 16) >>> 0;
   }
 
+  // src/engine/scatterPoints.ts
+  function isInsideRings(x, y, rings) {
+    let inside = false;
+    for (const ring of rings) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i];
+        const [xj, yj] = ring[j];
+        const crosses = yi > y !== yj > y && x < (xj - xi) * (y - yi) / (yj - yi) + xi;
+        if (crosses) inside = !inside;
+      }
+    }
+    return inside;
+  }
+  function discFitsInside(x, y, radius, rings, samples) {
+    if (!isInsideRings(x, y, rings)) return false;
+    for (let k = 0; k < samples; k++) {
+      const angle = k / samples * Math.PI * 2;
+      const px = x + Math.cos(angle) * radius;
+      const py = y + Math.sin(angle) * radius;
+      if (!isInsideRings(px, py, rings)) return false;
+    }
+    return true;
+  }
+  function scatterPointsInPolygon(rings, options) {
+    const { radius, density = 1, seed = 1, samples = 12, rotationJitterDeg = 0 } = options;
+    const exterior = rings[0] ?? [];
+    if (exterior.length === 0) return [];
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const [x, y] of exterior) {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    const seedNum = typeof seed === "string" ? hashStringToSeed(seed) : seed;
+    const rand = mulberry32(seedNum);
+    const cell = 100 / Math.sqrt(density);
+    const points = [];
+    for (let y = minY; y <= maxY; y += cell) {
+      for (let x = minX; x <= maxX; x += cell) {
+        const jx = x + (rand() - 0.5) * cell * 0.9;
+        const jy = y + (rand() - 0.5) * cell * 0.9;
+        const rotation = (rand() * 2 - 1) * rotationJitterDeg;
+        if (discFitsInside(jx, jy, radius, rings, samples)) points.push({ x: jx, y: jy, rotation });
+      }
+    }
+    return points;
+  }
+
   // src/maplibre/types.ts
   var DASH_PRESETS = {
     solid: [],
@@ -475,6 +530,59 @@ var MaplibrePatternFills = (() => {
     if (map.hasImage(id)) map.removeImage(id);
     map.addImage(id, tile, { pixelRatio });
     return { id, width: px, height: px };
+  }
+
+  // src/maplibre/scatterIconPoints.ts
+  function toRings(polygon) {
+    return polygon.type === "Polygon" ? polygon.coordinates : polygon.coordinates.flat();
+  }
+  function scatterIconPoints(options) {
+    const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg } = options;
+    const pixelRings = toRings(polygon).map(
+      (ring) => ring.map(([lng, lat]) => {
+        const p = map.project([lng, lat]);
+        return [p.x, p.y];
+      })
+    );
+    const points = scatterPointsInPolygon(pixelRings, {
+      radius: iconRadiusPx,
+      density,
+      seed,
+      samples,
+      rotationJitterDeg
+    });
+    const features = points.map(({ x, y, rotation }) => {
+      const lngLat = map.unproject([x, y]);
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lngLat.lng, lngLat.lat] },
+        properties: { rotation }
+      };
+    });
+    return { type: "FeatureCollection", features };
+  }
+
+  // src/maplibre/svgIconScatter.ts
+  async function installSvgIconScatter(map, options) {
+    const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg } = options;
+    if (!map.hasImage(iconId)) {
+      await addSvgIcon(map, { id: iconId, svg, size });
+    }
+    const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg });
+    const existingSource = map.getSource(sourceId);
+    if (existingSource) {
+      existingSource.setData(points);
+    } else {
+      map.addSource(sourceId, { type: "geojson", data: points });
+    }
+    if (!map.getLayer(layerId)) {
+      map.addLayer({
+        id: layerId,
+        type: "symbol",
+        source: sourceId,
+        layout: { "icon-image": iconId, "icon-rotate": ["get", "rotation"], "icon-allow-overlap": true }
+      });
+    }
   }
   return __toCommonJS(src_exports);
 })();

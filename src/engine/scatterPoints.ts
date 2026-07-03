@@ -1,0 +1,95 @@
+import { hashStringToSeed, mulberry32 } from "./seededRandom";
+
+/** A closed ring of [x, y] planar coordinates (any consistent unit — pixels, degrees, meters). */
+export type Ring = Array<[number, number]>;
+
+export interface ScatteredPoint {
+  x: number;
+  y: number;
+  /** Seeded rotation in degrees, for icon-rotate variety — 0 unless `rotationJitterDeg` is set. */
+  rotation: number;
+}
+
+export interface ScatterPointsOptions {
+  /** Required clearance from any edge (including holes) for a point to qualify. */
+  radius: number;
+  /** Approx. points per 100x100 unit area. Default 1. */
+  density?: number;
+  /** Deterministic variation seed. Default 1. */
+  seed?: number | string;
+  /** Points sampled around the disc boundary for the erosion test. Default 12 — higher is stricter but slower. */
+  samples?: number;
+  /** +/- rotation jitter applied to each point, in degrees. Default 0. */
+  rotationJitterDeg?: number;
+}
+
+function isInsideRings(x: number, y: number, rings: Ring[]): boolean {
+  let inside = false;
+  for (const ring of rings) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i];
+      const [xj, yj] = ring[j];
+      const crosses = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+      if (crosses) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+// Approximates "a disc of this radius fits entirely inside the polygon" by
+// checking the center plus points around the disc's edge. Cheap, no true
+// polygon-offset geometry required, good enough to keep icons off the edge.
+function discFitsInside(x: number, y: number, radius: number, rings: Ring[], samples: number): boolean {
+  if (!isInsideRings(x, y, rings)) return false;
+  for (let k = 0; k < samples; k++) {
+    const angle = (k / samples) * Math.PI * 2;
+    const px = x + Math.cos(angle) * radius;
+    const py = y + Math.sin(angle) * radius;
+    if (!isInsideRings(px, py, rings)) return false;
+  }
+  return true;
+}
+
+/**
+ * Scatters points inside a (possibly holed) polygon such that a disc of
+ * `radius` centered at each point stays entirely within it — so an icon of
+ * that radius placed at any returned point is never cut by the polygon
+ * boundary, unlike a repeating `fill-pattern` texture (which always clips
+ * hard at the edge). Deterministic for a given seed.
+ *
+ * `rings` should include the exterior ring first, followed by any hole
+ * rings; coordinates are unit-agnostic (pass pixels for on-screen icon
+ * placement — see {@link scatterIconPoints} — or any planar unit
+ * consistent with `radius`).
+ */
+export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[] {
+  const { radius, density = 1, seed = 1, samples = 12, rotationJitterDeg = 0 } = options;
+  const exterior = rings[0] ?? [];
+  if (exterior.length === 0) return [];
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const [x, y] of exterior) {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+
+  const seedNum = typeof seed === "string" ? hashStringToSeed(seed) : seed;
+  const rand = mulberry32(seedNum);
+  const cell = 100 / Math.sqrt(density);
+  const points: ScatteredPoint[] = [];
+
+  for (let y = minY; y <= maxY; y += cell) {
+    for (let x = minX; x <= maxX; x += cell) {
+      const jx = x + (rand() - 0.5) * cell * 0.9;
+      const jy = y + (rand() - 0.5) * cell * 0.9;
+      const rotation = (rand() * 2 - 1) * rotationJitterDeg;
+      if (discFitsInside(jx, jy, radius, rings, samples)) points.push({ x: jx, y: jy, rotation });
+    }
+  }
+  return points;
+}
