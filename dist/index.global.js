@@ -23,10 +23,13 @@ var MaplibrePatternFills = (() => {
   __export(src_exports, {
     DASH_PRESETS: () => DASH_PRESETS,
     addSvgIcon: () => addSvgIcon,
+    buildIconStyleFragment: () => buildIconStyleFragment,
+    buildLineStyleFragment: () => buildLineStyleFragment,
     buildStyleFragment: () => buildStyleFragment,
     createMiniContext: () => createMiniContext,
     createSvgScatterTile: () => createSvgScatterTile,
     hashStringToSeed: () => hashStringToSeed,
+    installIconStyles: () => installIconStyles,
     installPatternFills: () => installPatternFills,
     installSvgIconScatter: () => installSvgIconScatter,
     installSvgPatternFill: () => installSvgPatternFill,
@@ -421,6 +424,54 @@ var MaplibrePatternFills = (() => {
     };
   }
 
+  // src/maplibre/buildLineStyleFragment.ts
+  function buildLineStyleFragment(options) {
+    const { source, sourceLayer, sourceUrl, line } = options;
+    const layers = [];
+    if (line.enabled) {
+      layers.push({
+        id: `${source}__line`,
+        type: "line",
+        source,
+        "source-layer": sourceLayer,
+        paint: {
+          "line-color": line.color,
+          "line-width": line.width,
+          ...line.dash.length ? { "line-dasharray": line.dash } : {}
+        }
+      });
+    }
+    return {
+      sources: { [source]: { type: "vector", url: sourceUrl ?? `<url>/${source}` } },
+      layers
+    };
+  }
+
+  // src/maplibre/iconStyleFragment.ts
+  function buildIconStyleFragment(options) {
+    const { source, sourceLayer, sourceUrl, icon, rotationDeg } = options;
+    const layers = [
+      {
+        id: `${source}__icon`,
+        type: "symbol",
+        source,
+        "source-layer": sourceLayer,
+        layout: {
+          "icon-image": icon.imageId,
+          "icon-allow-overlap": true,
+          ...rotationDeg ? { "icon-rotate": rotationDeg } : {}
+        },
+        metadata: {
+          "enhanced:icon": { svg: icon.svg, size: icon.size, imageId: icon.imageId }
+        }
+      }
+    ];
+    return {
+      sources: { [source]: { type: "vector", url: sourceUrl ?? `<url>/${source}` } },
+      layers
+    };
+  }
+
   // src/maplibre/installPatternFills.ts
   function installPatternFills(map, style) {
     for (const layer of style.layers) {
@@ -448,6 +499,33 @@ var MaplibrePatternFills = (() => {
       return img;
     } finally {
       URL.revokeObjectURL(url);
+    }
+  }
+
+  // src/maplibre/svgIcon.ts
+  async function addSvgIcon(map, options) {
+    const { id, svg, size = 32, pixelRatio = 2 } = options;
+    const image = await loadSvgImage(svg);
+    const px = Math.round(size * pixelRatio);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = px;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("2D canvas context unavailable");
+    ctx.clearRect(0, 0, px, px);
+    ctx.drawImage(image, 0, 0, px, px);
+    const imageData = ctx.getImageData(0, 0, px, px);
+    const tile = { width: px, height: px, data: new Uint8Array(imageData.data.buffer) };
+    if (map.hasImage(id)) map.removeImage(id);
+    map.addImage(id, tile, { pixelRatio });
+    return { id, width: px, height: px };
+  }
+
+  // src/maplibre/installIconStyles.ts
+  async function installIconStyles(map, style) {
+    for (const layer of style.layers) {
+      const meta = layer.metadata?.["enhanced:icon"];
+      if (!meta) continue;
+      await addSvgIcon(map, { id: meta.imageId, svg: meta.svg, size: meta.size });
     }
   }
 
@@ -513,24 +591,6 @@ var MaplibrePatternFills = (() => {
     if (map.hasImage(options.imageId)) map.removeImage(options.imageId);
     map.addImage(options.imageId, tile);
     map.triggerRepaint();
-  }
-
-  // src/maplibre/svgIcon.ts
-  async function addSvgIcon(map, options) {
-    const { id, svg, size = 32, pixelRatio = 2 } = options;
-    const image = await loadSvgImage(svg);
-    const px = Math.round(size * pixelRatio);
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = px;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("2D canvas context unavailable");
-    ctx.clearRect(0, 0, px, px);
-    ctx.drawImage(image, 0, 0, px, px);
-    const imageData = ctx.getImageData(0, 0, px, px);
-    const tile = { width: px, height: px, data: new Uint8Array(imageData.data.buffer) };
-    if (map.hasImage(id)) map.removeImage(id);
-    map.addImage(id, tile, { pixelRatio });
-    return { id, width: px, height: px };
   }
 
   // src/maplibre/scatterIconPoints.ts
