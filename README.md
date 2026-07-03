@@ -28,7 +28,10 @@ package generates that image for you:
   overlapping part. `installSvgIconScatter` is the alternative: it places
   whole SVG icons only where they fit entirely inside the polygon (a cheap
   sampled "erosion" test, no heavy geometry dependency), so nothing is ever
-  cut — at the cost of a clear margin near the edge instead.
+  cut — at the cost of a clear margin near the edge instead. Points are
+  computed in screen pixels and frozen as lng/lat, so recompute on
+  `map.on('moveend', ...)` to keep density consistent as the user zooms
+  (the demo does this).
 - Flash-free live updates: colour/weight/angle changes call `updateImage`
   when the tile dimensions haven't changed, and fall back to
   `removeImage`/`addImage` only when they have.
