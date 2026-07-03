@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>maplibre-pattern-fills · Playground</title>
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <!-- Built by `npm run build` (tsup) — see ../dist. Committed so this demo stays
+       a single, buildless HTML file you can open directly (file://), fork, or
+       host as-is (e.g. GitHub Pages). Run `npm run build` again after editing
+       anything under ../src. -->
+  <script src="../dist/index.global.js"></script>
+  <style>
+    :root {
+      --bg: #0f1115; --panel: #171a21; --panel2: #1f242e; --line: #2c333f;
+      --text: #e6e9ef; --muted: #97a0b0; --accent: #4f9cff; --ok: #3ecf8e;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, sans-serif; color: var(--text); background: var(--bg); }
+    #app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
+    #map { height: 100%; }
+    #panel { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 14px; }
+    h1 { font-size: 15px; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 12px; margin: 0 0 14px; }
+    fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px 12px; margin: 0 0 12px; background: var(--panel2); }
+    fieldset.dimmed { opacity: .45; pointer-events: none; }
+    legend { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0 6px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+    select, input[type=text], input[type=number] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+    input[type=range] { width: 100%; }
+    input[type=color] { width: 44px; height: 28px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); padding: 2px; vertical-align: middle; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { flex: 1; }
+    .row.tight { gap: 6px; }
+    .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill { flex: 1 1 30%; text-align: center; padding: 6px 4px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; cursor: pointer; background: var(--bg); }
+    .pill.active { border-color: var(--accent); background: #1b2b44; color: #fff; }
+    .seg { display: flex; gap: 4px; }
+    .seg button { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px; font-size: 12px; cursor: pointer; }
+    .seg button.active { border-color: var(--accent); background: #1b2b44; }
+    .switch { display: flex; align-items: center; justify-content: space-between; }
+    .val { color: var(--text); font-variant-numeric: tabular-nums; font-size: 12px; }
+    button.action { width: 100%; padding: 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 6px; }
+    button.action.ghost { background: transparent; color: var(--text); }
+    .preview-canvas { image-rendering: pixelated; border: 1px solid var(--line); border-radius: 4px; background: #fff; width: 64px; height: 64px; }
+    .hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+    textarea { width: 100%; height: 120px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: 11px/1.4 ui-monospace, monospace; padding: 8px; }
+    .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ok); color: #04130c; padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="panel">
+      <h1>maplibre-pattern-fills</h1>
+      <p class="sub">Compose and live-preview textured fills, SVG scatter patterns and SVG point icons on test polygons.</p>
+
+      <fieldset>
+        <legend>Source (test polygons)</legend>
+        <label>Layer</label>
+        <div class="row tight">
+          <select id="layerSelect"></select>
+        </div>
+        <button class="action ghost" id="reloadCatalog">↻ Regenerate test features</button>
+        <div class="hint" id="srcHint"></div>
+      </fieldset>
+
+      <fieldset id="geometricFieldset">
+        <legend>Fill pattern (geometric)</legend>
+        <div class="pill-group" id="patternPills">
+          <div class="pill" data-p="solid">Solid</div>
+          <div class="pill" data-p="stipple">Stipple</div>
+          <div class="pill" data-p="hachures">Hachures</div>
+          <div class="pill" data-p="cross">Crosshatch</div>
+          <div class="pill" data-p="grid">Grid</div>
+          <div class="pill" data-p="dots">Dots</div>
+        </div>
+
+        <label>Hachure angle</label>
+        <div class="seg" id="angleSeg">
+          <button data-a="0">0°</button>
+          <button data-a="45" class="active">45°</button>
+          <button data-a="90">90°</button>
+          <button data-a="-45">-45°</button>
+        </div>
+
+        <div class="row" style="margin-top:10px; align-items:flex-start">
+          <div style="flex:0 0 auto">
+            <label>Tile preview</label>
+            <canvas class="preview-canvas" id="tilePreview" width="32" height="32"></canvas>
+          </div>
+          <div style="flex:1">
+            <label>Pattern colour</label>
+            <div class="row tight">
+              <input type="color" id="patColor" value="#1f4e79" style="flex:0 0 auto" />
+              <input type="text" id="patColorHex" value="#1f4e79" />
+            </div>
+            <label>Opacity <span class="val" id="patOpacityVal">1.00</span></label>
+            <input type="range" id="patOpacity" min="0" max="1" step="0.05" value="1" />
+          </div>
+        </div>
+
+        <label>Stroke weight <span class="val" id="weightVal">2.00 px</span></label>
+        <input type="range" id="weight" min="0.1" max="8" step="0.1" value="2" />
+
+        <label>Density — tile size</label>
+        <div class="seg" id="tileSizeSeg">
+          <button data-s="8">8px</button>
+          <button data-s="16" class="active">16px</button>
+          <button data-s="32">32px</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>SVG fill (organic patterns)</legend>
+        <div class="switch">
+          <label style="margin:0">Use SVG fill instead of geometric pattern</label>
+          <input type="checkbox" id="svgFillToggle" />
+        </div>
+        <label>Sample</label>
+        <select id="svgFillSample">
+          <option value="grass-tuft">Grass tuft</option>
+          <option value="tree-canopy">Tree canopy</option>
+          <option value="reeds">Reeds</option>
+        </select>
+        <label>Density (stamps / 100×100px) <span class="val" id="svgDensityVal">1.40</span></label>
+        <input type="range" id="svgDensity" min="0.3" max="4" step="0.1" value="1.4" />
+        <label>Stamp size <span class="val" id="svgStampSizeVal">28 px</span></label>
+        <input type="range" id="svgStampSize" min="10" max="60" step="1" value="28" />
+        <label>Rotation jitter <span class="val" id="svgRotJitterVal">±25°</span></label>
+        <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="25" />
+        <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.25</span></label>
+        <input type="range" id="svgScaleJitter" min="0" max="0.8" step="0.05" value="0.25" />
+        <label>Seed (deterministic variation)</label>
+        <input type="text" id="svgSeed" value="1" />
+        <p class="hint">Rasterized once via the browser's native SVG renderer, then scattered with seeded rotation/scale jitter into a large seamless meta-tile — avoids the "wallpaper" look you'd get tiling a single small SVG stamp.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Tinted background (under the pattern)</legend>
+        <div class="switch">
+          <label style="margin:0">Enable background</label>
+          <input type="checkbox" id="bgToggle" checked />
+        </div>
+        <div class="row tight" style="margin-top:8px">
+          <input type="color" id="bgColor" value="#9ec5e8" style="flex:0 0 auto" />
+          <input type="text" id="bgColorHex" value="#9ec5e8" />
+        </div>
+        <label>Background opacity <span class="val" id="bgOpacityVal">0.35</span></label>
+        <input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35" />
+      </fieldset>
+
+      <fieldset>
+        <legend>Outline (line)</legend>
+        <div class="switch">
+          <label style="margin:0">Enable outline</label>
+          <input type="checkbox" id="lineToggle" checked />
+        </div>
+        <div class="row tight" style="margin-top:8px">
+          <input type="color" id="lineColor" value="#1f4e79" style="flex:0 0 auto" />
+          <input type="text" id="lineColorHex" value="#1f4e79" />
+        </div>
+        <label>Width <span class="val" id="lineWidthVal">1.50 px</span></label>
+        <input type="range" id="lineWidth" min="0.1" max="6" step="0.1" value="1.5" />
+        <label>Dash style</label>
+        <div class="seg" id="dashSeg">
+          <button data-d="solid" class="active">Solid</button>
+          <button data-d="dotted">Dotted</button>
+          <button data-d="dashdot">Dash-dot</button>
+        </div>
+        <label>dasharray (editable, space separated)</label>
+        <input type="text" id="dashInput" value="" placeholder="e.g. 2 4  (empty = solid)" />
+        <p class="hint">Native <code>line-dasharray</code> expression — no canvas involved, stays a plain declarative style property.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Point icons (SVG)</legend>
+        <div class="switch">
+          <label style="margin:0">Show icon points</label>
+          <input type="checkbox" id="iconToggle" />
+        </div>
+        <label>Icon</label>
+        <select id="iconSample">
+          <option value="tree-marker">Tree</option>
+          <option value="pin-marker">Pin</option>
+        </select>
+        <label>Scale <span class="val" id="iconScaleVal">1.00×</span></label>
+        <input type="range" id="iconScale" min="0.3" max="3" step="0.05" value="1" />
+        <p class="hint">The SVG is rasterized once via <code>addSvgIcon</code>; the scale slider drives the symbol layer's native <code>icon-size</code>, no re-rasterization needed.</p>
+      </fieldset>
+
+      <button class="action" id="exportBtn">⬇ Export style.json</button>
+      <button class="action" id="exportJsBtn">⬇ Export integration snippet</button>
+      <button class="action ghost" id="copyConfigBtn">⧉ Copy config (preset)</button>
+      <button class="action ghost" id="importConfigBtn">⤓ Load a config…</button>
+      <p class="hint">The geometric pattern's parameters (angle, density, weight) are baked into a canvas image, not the style.json.
+        In production, call <code>installPatternFills(map, style)</code> from the <code>maplibre-pattern-fills</code> package after the style loads — it regenerates the exact same texture from the <code>enhanced:pattern</code> metadata.</p>
+      <textarea id="ioArea" placeholder="style.json / preset config output appears here. Paste a config and click “Load”."></textarea>
+    </div>
+    <div id="map"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+  // ───────────────────────────────────────────────────────────────────────────
+  //  maplibre-pattern-fills — playground / demo
+  //
+  //  This file is UI glue only: it wires the panel controls to the library
+  //  (window.MaplibrePatternFills, built from ../src by tsup). The actual
+  //  pattern engine, MapLibre integration, and SVG rasterization all live in
+  //  the package — see ../src/engine and ../src/maplibre.
+  //
+  //  Three-layer stack per test feature (unchanged from the original prototype):
+  //    1. fill  "tinted background" semi-transparent  (id: <layer>__bg)
+  //    2. fill  "pattern" via fill-pattern             (id: <layer>__pat)
+  //    3. line  "outline" editable dasharray           (id: <layer>__line)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const {
+    makeTile, syncPatternTexture, buildStyleFragment,
+    installSvgPatternFill, addSvgIcon, DASH_PRESETS,
+  } = window.MaplibrePatternFills;
+
+  const $ = (id) => document.getElementById(id);
+  const toast = (msg) => {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600);
+  };
+
+  // Bundled sample SVGs (kept in sync by hand with ./patterns/*.svg and
+  // ./icons/*.svg — inlined here so the demo works from file:// with zero
+  // server: browsers block fetch() of local files, but a checked-in string
+  // constant has no such restriction).
+  const SVG_PATTERN_SAMPLES = {
+    "grass-tuft": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#3f7d3f" stroke-width="4" stroke-linecap="round">
+        <path d="M16 56 C14 40 20 28 24 18" />
+        <path d="M28 56 C28 38 30 24 32 12" />
+        <path d="M40 56 C42 40 38 26 36 16" />
+        <path d="M48 56 C50 42 46 30 44 20" />
+      </g>
+    </svg>`,
+    "tree-canopy": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect x="29" y="40" width="6" height="20" fill="#6b4a30" />
+      <circle cx="32" cy="26" r="18" fill="#2f6b3c" />
+      <circle cx="20" cy="34" r="12" fill="#377a45" />
+      <circle cx="44" cy="34" r="12" fill="#377a45" />
+    </svg>`,
+    "reeds": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#5a8f4f" stroke-width="3" stroke-linecap="round">
+        <path d="M12 60 L14 8" />
+        <path d="M24 60 C24 40 20 24 22 6" />
+        <path d="M36 60 L38 10" />
+        <path d="M48 60 C48 42 52 26 50 8" />
+      </g>
+      <g fill="#7ea55a">
+        <ellipse cx="14" cy="8" rx="2" ry="6" />
+        <ellipse cx="22" cy="6" rx="2" ry="6" />
+        <ellipse cx="38" cy="10" rx="2" ry="6" />
+        <ellipse cx="50" cy="8" rx="2" ry="6" />
+      </g>
+    </svg>`,
+  };
+  const SVG_ICON_SAMPLES = {
+    "tree-marker": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <rect x="14" y="20" width="4" height="10" fill="#6b4a30" />
+      <circle cx="16" cy="14" r="10" fill="#2f6b3c" />
+    </svg>`,
+    "pin-marker": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <path d="M16 2c-6.6 0-12 5.4-12 12 0 9 12 16 12 16s12-7 12-16c0-6.6-5.4-12-12-12z" fill="#d4553a" />
+      <circle cx="16" cy="14" r="4.5" fill="#fff" />
+    </svg>`,
+  };
+
+  // State — serializable as-is as a "preset" config.
+  const state = {
+    layer: null,           // { source } — id of the selected GeoJSON test source
+    pattern: "stipple",    // solid | stipple | hachures | cross | grid | dots
+    angle: 45,
+    patColor: "#1f4e79",
+    patOpacity: 1,
+    weight: 2,
+    tile: 16,
+    bg: { on: true, color: "#9ec5e8", opacity: 0.35 },
+    line: { on: true, color: "#1f4e79", width: 1.5, dash: [] },
+    svgFill: { on: false, sample: "grass-tuft", density: 1.4, stampSize: 28, rotationJitterDeg: 25, scaleJitter: 0.25, seed: "1" },
+    icons: { on: false, sample: "tree-marker", scale: 1 },
+  };
+
+  // ── Map ───────────────────────────────────────────────────────────────────
+  // Self-contained basemap (no network dependency) — a flat background is
+  // enough to judge fill styles. Swap in a real basemap style if you like.
+  const map = new maplibregl.Map({
+    container: "map",
+    style: {
+      version: 8,
+      glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+      sources: {},
+      layers: [{ id: "bg", type: "background", paint: { "background-color": "#e9edf2" } }],
+    },
+    center: [4.62, 50.62], zoom: 12,
+  });
+  map.addControl(new maplibregl.NavigationControl());
+
+  // ── Tile preview canvas in the panel (2x2 tiled to show seams) ──────────────
+  function renderPreview() {
+    const pc = $("tilePreview");
+    const ctx = pc.getContext("2d");
+    ctx.clearRect(0, 0, 32, 32);
+    if (state.pattern === "solid") {
+      ctx.fillStyle = withOpacity(state.patColor, state.patOpacity);
+      ctx.fillRect(0, 0, 32, 32); return;
+    }
+    const tile = makeTile(state.pattern, state.tile, state.patColor, state.weight, state.angle);
+    const tmp = document.createElement("canvas"); tmp.width = tmp.height = state.tile;
+    tmp.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(tile.data), state.tile, state.tile), 0, 0);
+    const pat = ctx.createPattern(tmp, "repeat");
+    ctx.globalAlpha = state.patOpacity;
+    ctx.fillStyle = pat; ctx.fillRect(0, 0, 32, 32);
+    ctx.globalAlpha = 1;
+  }
+
+  function withOpacity(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
+  const geomImageId = () => `${state.layer.source}__pat_img`;
+  const svgImageId = () => `${state.layer.source}__svg_img`;
+  const ids = () => ({
+    src: state.layer.source,
+    bg: `${state.layer.source}__bg`,
+    pat: `${state.layer.source}__pat`,
+    line: `${state.layer.source}__line`,
+  });
+
+  function syncGeomTexture() {
+    if (!state.layer || state.pattern === "solid") return;
+    syncPatternTexture(map, {
+      imageId: geomImageId(), pattern: state.pattern, size: state.tile,
+      color: state.patColor, weight: state.weight, angle: state.angle,
+    });
+  }
+
+  async function syncSvgTexture() {
+    if (!state.layer) return;
+    await installSvgPatternFill(map, {
+      imageId: svgImageId(),
+      svg: SVG_PATTERN_SAMPLES[state.svgFill.sample],
+      stampSize: state.svgFill.stampSize,
+      density: state.svgFill.density,
+      rotationJitterDeg: state.svgFill.rotationJitterDeg,
+      scaleJitter: state.svgFill.scaleJitter,
+      seed: state.svgFill.seed,
+    });
+  }
+
+  // ── (Re)build the three layers of the selected test feature ─────────────────
+  function rebuildLayers() {
+    if (!state.layer) return;
+    const { src, bg, pat, line } = ids();
+    [line, pat, bg].forEach((l) => { if (map.getLayer(l)) map.removeLayer(l); });
+
+    if (state.bg.on) {
+      map.addLayer({
+        id: bg, type: "fill", source: src,
+        paint: { "fill-color": state.bg.color, "fill-opacity": state.bg.opacity },
+      });
+    }
+
+    if (state.svgFill.on) {
+      syncSvgTexture().then(() => {
+        if (!map.getLayer(pat)) return; // layer may have been rebuilt again meanwhile
+      });
+      map.addLayer({
+        id: pat, type: "fill", source: src,
+        paint: { "fill-pattern": svgImageId(), "fill-opacity": state.patOpacity },
+      });
+    } else if (state.pattern === "solid") {
+      map.addLayer({
+        id: pat, type: "fill", source: src,
+        paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity },
+      });
+    } else {
+      syncGeomTexture();
+      map.addLayer({
+        id: pat, type: "fill", source: src,
+        paint: { "fill-pattern": geomImageId(), "fill-opacity": state.patOpacity },
+      });
+    }
+
+    if (state.line.on) {
+      map.addLayer({
+        id: line, type: "line", source: src,
+        paint: {
+          "line-color": state.line.color, "line-width": state.line.width,
+          ...(state.line.dash.length ? { "line-dasharray": state.line.dash } : {}),
+        },
+      });
+    }
+  }
+
+  // Lightweight paint updates for sliders (no layer rebuild).
+  function repaint() {
+    if (!state.layer) return;
+    const { bg, pat, line } = ids();
+    if (map.getLayer(pat)) {
+      map.setPaintProperty(pat, "fill-opacity", state.patOpacity);
+      if (!state.svgFill.on && state.pattern === "solid") map.setPaintProperty(pat, "fill-color", state.patColor);
+    }
+    if (map.getLayer(bg)) {
+      map.setPaintProperty(bg, "fill-color", state.bg.color);
+      map.setPaintProperty(bg, "fill-opacity", state.bg.opacity);
+    }
+    if (map.getLayer(line)) {
+      map.setPaintProperty(line, "line-color", state.line.color);
+      map.setPaintProperty(line, "line-width", state.line.width);
+    }
+  }
+
+  // ── Export style.json (sources + layers, ready to paste) ────────────────────
+  function buildExportedStyle() {
+    return buildStyleFragment({
+      source: "<source>",
+      sourceLayer: "<source-layer>",
+      bg: { enabled: state.bg.on, color: state.bg.color, opacity: state.bg.opacity },
+      pattern: {
+        pattern: state.svgFill.on ? "hachures" : state.pattern, // SVG fills aren't (yet) expressible in the metadata schema — see hint below
+        tile: state.tile, color: state.patColor, opacity: state.patOpacity,
+        weight: state.weight, angle: state.angle,
+      },
+      line: { enabled: state.line.on, color: state.line.color, width: state.line.width, dash: state.line.dash },
+    });
+  }
+
+  // ── Test polygons (random GeoJSON, no backend dependency) ───────────────────
+  const POLY_COUNT = 4;
+  const ICON_COUNT = 10;
+  const POLYGONS = {};
+
+  function randomPolygon(cx, cy, rBase) {
+    const pts = [], n = 6 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const r = rBase * (0.6 + Math.random() * 0.7);
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.7]);
+    }
+    pts.push(pts[0]);
+    return { type: "Feature", geometry: { type: "Polygon", coordinates: [pts] }, properties: {} };
+  }
+
+  function generatePolygons() {
+    const c = map.getCenter(), span = 0.03;
+    const sel = $("layerSelect");
+    sel.innerHTML = "";
+    for (let i = 0; i < POLY_COUNT; i++) {
+      const id = `polygon_${i + 1}`;
+      [`${id}__line`, `${id}__pat`, `${id}__bg`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
+      if (map.hasImage(`${id}__pat_img`)) map.removeImage(`${id}__pat_img`);
+      if (map.hasImage(`${id}__svg_img`)) map.removeImage(`${id}__svg_img`);
+      if (map.getSource(id)) map.removeSource(id);
+
+      const col = i % 2, row = (i / 2) | 0;
+      const cx = c.lng + (col - 0.5) * span * 2.2;
+      const cy = c.lat + (0.5 - row) * span * 2.2;
+      const fc = { type: "FeatureCollection", features: [randomPolygon(cx, cy, span)] };
+      POLYGONS[id] = fc;
+      map.addSource(id, { type: "geojson", data: fc });
+
+      const o = document.createElement("option");
+      o.value = id; o.textContent = `Polygon ${i + 1}`;
+      sel.appendChild(o);
+    }
+    state.layer = null;
+    selectLayer("polygon_1");
+
+    const all = Object.values(POLYGONS).flatMap((fc) => fc.features[0].geometry.coordinates[0]);
+    const b = all.reduce((a, [x, y]) => [Math.min(a[0], x), Math.min(a[1], y), Math.max(a[2], x), Math.max(a[3], y)], [180, 90, -180, -90]);
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 60, duration: 0 });
+
+    generateIconPoints(b);
+  }
+
+  // Scatter test points across the polygons' bounding box for the icon demo.
+  function generateIconPoints(bounds) {
+    if (map.getLayer("icons__symbol")) map.removeLayer("icons__symbol");
+    if (map.getSource("icons")) map.removeSource("icons");
+    const features = [];
+    for (let i = 0; i < ICON_COUNT; i++) {
+      const lng = bounds[0] + Math.random() * (bounds[2] - bounds[0]);
+      const lat = bounds[1] + Math.random() * (bounds[3] - bounds[1]);
+      features.push({ type: "Feature", geometry: { type: "Point", coordinates: [lng, lat] }, properties: {} });
+    }
+    map.addSource("icons", { type: "geojson", data: { type: "FeatureCollection", features } });
+    if (state.icons.on) addIconLayer();
+  }
+
+  async function addIconLayer() {
+    if (!map.getSource("icons")) return;
+    const iconId = `icon_${state.icons.sample}`;
+    if (!map.hasImage(iconId)) {
+      await addSvgIcon(map, { id: iconId, svg: SVG_ICON_SAMPLES[state.icons.sample], size: 28 });
+    }
+    if (map.getLayer("icons__symbol")) map.removeLayer("icons__symbol");
+    map.addLayer({
+      id: "icons__symbol", type: "symbol", source: "icons",
+      layout: { "icon-image": iconId, "icon-size": state.icons.scale, "icon-allow-overlap": true },
+    });
+  }
+
+  function selectLayer(id) {
+    if (!id || !POLYGONS[id]) return;
+    if (state.layer) {
+      const old = ids();
+      [old.line, old.pat, old.bg].forEach((l) => map.getLayer(l) && map.removeLayer(l));
+      if (map.hasImage(geomImageId())) map.removeImage(geomImageId());
+      if (map.hasImage(svgImageId())) map.removeImage(svgImageId());
+    }
+    state.layer = { source: id };
+    $("layerSelect").value = id;
+    $("srcHint").textContent = `Test GeoJSON source: ${id}`;
+    rebuildLayers();
+  }
+
+  // ── UI wiring ────────────────────────────────────────────────────────────────
+  function bindColor(colorId, hexId, apply) {
+    const col = $(colorId), hex = $(hexId);
+    col.addEventListener("input", () => { hex.value = col.value; apply(col.value); });
+    hex.addEventListener("change", () => {
+      if (/^#[0-9a-f]{6}$/i.test(hex.value)) { col.value = hex.value; apply(hex.value); }
+    });
+  }
+
+  $("patternPills").addEventListener("click", (e) => {
+    const p = e.target.dataset.p; if (!p) return;
+    state.pattern = p;
+    document.querySelectorAll("#patternPills .pill").forEach((el) => el.classList.toggle("active", el.dataset.p === p));
+    renderPreview(); rebuildLayers();
+  });
+
+  $("angleSeg").addEventListener("click", (e) => {
+    const a = e.target.dataset.a; if (a === undefined) return;
+    state.angle = +a;
+    document.querySelectorAll("#angleSeg button").forEach((b) => b.classList.toggle("active", b.dataset.a === a));
+    renderPreview(); syncGeomTexture();
+  });
+
+  bindColor("patColor", "patColorHex", (v) => {
+    state.patColor = v; renderPreview();
+    if (state.pattern === "solid") repaint(); else syncGeomTexture();
+  });
+  $("patOpacity").addEventListener("input", (e) => {
+    state.patOpacity = +e.target.value; $("patOpacityVal").textContent = state.patOpacity.toFixed(2);
+    renderPreview(); repaint();
+  });
+  $("weight").addEventListener("input", (e) => {
+    state.weight = +e.target.value; $("weightVal").textContent = state.weight.toFixed(2) + " px";
+    renderPreview(); syncGeomTexture();
+  });
+  $("tileSizeSeg").addEventListener("click", (e) => {
+    const s = e.target.dataset.s; if (!s) return;
+    state.tile = +s;
+    document.querySelectorAll("#tileSizeSeg button").forEach((b) => b.classList.toggle("active", b.dataset.s === s));
+    renderPreview(); syncGeomTexture();
+  });
+
+  // SVG fill
+  function setGeometricFieldsetEnabled(enabled) {
+    $("geometricFieldset").classList.toggle("dimmed", !enabled);
+  }
+  $("svgFillToggle").addEventListener("change", (e) => {
+    state.svgFill.on = e.target.checked;
+    setGeometricFieldsetEnabled(!state.svgFill.on);
+    rebuildLayers();
+  });
+  $("svgFillSample").addEventListener("change", (e) => { state.svgFill.sample = e.target.value; if (state.svgFill.on) rebuildLayers(); });
+  $("svgDensity").addEventListener("input", (e) => {
+    state.svgFill.density = +e.target.value; $("svgDensityVal").textContent = state.svgFill.density.toFixed(2);
+    if (state.svgFill.on) syncSvgTexture();
+  });
+  $("svgStampSize").addEventListener("input", (e) => {
+    state.svgFill.stampSize = +e.target.value; $("svgStampSizeVal").textContent = state.svgFill.stampSize + " px";
+    if (state.svgFill.on) syncSvgTexture();
+  });
+  $("svgRotJitter").addEventListener("input", (e) => {
+    state.svgFill.rotationJitterDeg = +e.target.value; $("svgRotJitterVal").textContent = "±" + state.svgFill.rotationJitterDeg + "°";
+    if (state.svgFill.on) syncSvgTexture();
+  });
+  $("svgScaleJitter").addEventListener("input", (e) => {
+    state.svgFill.scaleJitter = +e.target.value; $("svgScaleJitterVal").textContent = "±" + state.svgFill.scaleJitter.toFixed(2);
+    if (state.svgFill.on) syncSvgTexture();
+  });
+  $("svgSeed").addEventListener("change", (e) => { state.svgFill.seed = e.target.value; if (state.svgFill.on) syncSvgTexture(); });
+
+  // Background
+  $("bgToggle").addEventListener("change", (e) => { state.bg.on = e.target.checked; rebuildLayers(); });
+  bindColor("bgColor", "bgColorHex", (v) => { state.bg.color = v; repaint(); });
+  $("bgOpacity").addEventListener("input", (e) => {
+    state.bg.opacity = +e.target.value; $("bgOpacityVal").textContent = state.bg.opacity.toFixed(2); repaint();
+  });
+
+  // Outline
+  $("lineToggle").addEventListener("change", (e) => { state.line.on = e.target.checked; rebuildLayers(); });
+  bindColor("lineColor", "lineColorHex", (v) => { state.line.color = v; repaint(); });
+  $("lineWidth").addEventListener("input", (e) => {
+    state.line.width = +e.target.value; $("lineWidthVal").textContent = state.line.width.toFixed(2) + " px"; repaint();
+  });
+  $("dashSeg").addEventListener("click", (e) => {
+    const d = e.target.dataset.d; if (!d) return;
+    document.querySelectorAll("#dashSeg button").forEach((b) => b.classList.toggle("active", b.dataset.d === d));
+    state.line.dash = DASH_PRESETS[d].slice();
+    $("dashInput").value = state.line.dash.join(" ");
+    rebuildLayers(); // line-dasharray needs a full paint re-set
+  });
+  $("dashInput").addEventListener("change", (e) => {
+    state.line.dash = e.target.value.trim().split(/\s+/).map(Number).filter((n) => n > 0);
+    rebuildLayers();
+  });
+
+  // Icons
+  $("iconToggle").addEventListener("change", (e) => {
+    state.icons.on = e.target.checked;
+    if (state.icons.on) addIconLayer();
+    else if (map.getLayer("icons__symbol")) map.removeLayer("icons__symbol");
+  });
+  $("iconSample").addEventListener("change", (e) => { state.icons.sample = e.target.value; if (state.icons.on) addIconLayer(); });
+  $("iconScale").addEventListener("input", (e) => {
+    state.icons.scale = +e.target.value; $("iconScaleVal").textContent = state.icons.scale.toFixed(2) + "×";
+    if (map.getLayer("icons__symbol")) map.setLayoutProperty("icons__symbol", "icon-size", state.icons.scale);
+  });
+
+  // Source
+  $("reloadCatalog").addEventListener("click", generatePolygons);
+  $("layerSelect").addEventListener("change", (e) => selectLayer(e.target.value));
+
+  // Export / config
+  $("exportBtn").addEventListener("click", () => {
+    if (!state.layer) return toast("Select a layer first");
+    $("ioArea").value = JSON.stringify(buildExportedStyle(), null, 2);
+    navigator.clipboard?.writeText($("ioArea").value);
+    toast(state.svgFill.on
+      ? "style.json copied — note: SVG fills aren't in the metadata schema yet, wire installSvgPatternFill() manually for this layer"
+      : "style.json copied to clipboard");
+  });
+
+  function buildIntegrationSnippet() {
+    return `// Paste the exported style.json's sources+layers into your map style,
+// then call installPatternFills once the style has loaded:
+
+import { installPatternFills } from "maplibre-pattern-fills";
+
+map.on("load", () => {
+  installPatternFills(map, style); // \`style\` = the object exported above,
+                                    // or { layers: map.getStyle().layers }
+});
+
+// No bundler? Use the UMD build instead:
+// <scr` + `ipt src="https://unpkg.com/maplibre-pattern-fills/dist/index.global.js"></scr` + `ipt>
+// <scr` + `ipt>MaplibrePatternFills.installPatternFills(map, style)</scr` + `ipt>
+`;
+  }
+  $("exportJsBtn").addEventListener("click", () => {
+    $("ioArea").value = buildIntegrationSnippet();
+    navigator.clipboard?.writeText($("ioArea").value);
+    toast("Integration snippet copied");
+  });
+  $("copyConfigBtn").addEventListener("click", () => {
+    $("ioArea").value = JSON.stringify(state, null, 2);
+    navigator.clipboard?.writeText($("ioArea").value);
+    toast("Preset config copied");
+  });
+  $("importConfigBtn").addEventListener("click", () => {
+    try {
+      const cfg = JSON.parse($("ioArea").value);
+      Object.assign(state, cfg);
+      applyStateToUI();
+      if (state.layer) rebuildLayers();
+      toast("Config loaded");
+    } catch (e) { toast("Invalid JSON: " + e.message); }
+  });
+
+  // Reflect state into the controls (after loading a preset).
+  function applyStateToUI() {
+    $("patColor").value = $("patColorHex").value = state.patColor;
+    $("patOpacity").value = state.patOpacity; $("patOpacityVal").textContent = (+state.patOpacity).toFixed(2);
+    $("weight").value = state.weight; $("weightVal").textContent = (+state.weight).toFixed(2) + " px";
+    $("bgColor").value = $("bgColorHex").value = state.bg.color;
+    $("bgOpacity").value = state.bg.opacity; $("bgOpacityVal").textContent = (+state.bg.opacity).toFixed(2);
+    $("bgToggle").checked = state.bg.on;
+    $("lineColor").value = $("lineColorHex").value = state.line.color;
+    $("lineWidth").value = state.line.width; $("lineWidthVal").textContent = (+state.line.width).toFixed(2) + " px";
+    $("lineToggle").checked = state.line.on;
+    $("dashInput").value = (state.line.dash || []).join(" ");
+    $("svgFillToggle").checked = state.svgFill.on;
+    $("svgFillSample").value = state.svgFill.sample;
+    $("svgDensity").value = state.svgFill.density; $("svgDensityVal").textContent = state.svgFill.density.toFixed(2);
+    $("svgStampSize").value = state.svgFill.stampSize; $("svgStampSizeVal").textContent = state.svgFill.stampSize + " px";
+    $("svgRotJitter").value = state.svgFill.rotationJitterDeg; $("svgRotJitterVal").textContent = "±" + state.svgFill.rotationJitterDeg + "°";
+    $("svgScaleJitter").value = state.svgFill.scaleJitter; $("svgScaleJitterVal").textContent = "±" + state.svgFill.scaleJitter.toFixed(2);
+    $("svgSeed").value = state.svgFill.seed;
+    setGeometricFieldsetEnabled(!state.svgFill.on);
+    $("iconToggle").checked = state.icons.on;
+    $("iconSample").value = state.icons.sample;
+    $("iconScale").value = state.icons.scale; $("iconScaleVal").textContent = state.icons.scale.toFixed(2) + "×";
+    document.querySelectorAll("#patternPills .pill").forEach((el) => el.classList.toggle("active", el.dataset.p === state.pattern));
+    document.querySelectorAll("#tileSizeSeg button").forEach((b) => b.classList.toggle("active", +b.dataset.s === state.tile));
+    document.querySelectorAll("#angleSeg button").forEach((b) => b.classList.toggle("active", +b.dataset.a === state.angle));
+    renderPreview();
+  }
+
+  // ── Startup ──────────────────────────────────────────────────────────────────
+  map.on("load", () => {
+    applyStateToUI();
+    document.querySelectorAll("#patternPills .pill").forEach((el) => el.classList.toggle("active", el.dataset.p === state.pattern));
+    renderPreview();
+    generatePolygons();
+  });
+  </script>
+</body>
+</html>

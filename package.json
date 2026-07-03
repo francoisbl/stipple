@@ -1,0 +1,47 @@
+{
+  "name": "maplibre-pattern-fills",
+  "version": "0.1.0",
+  "description": "Textured fill patterns, tiled SVG fills, and SVG point icons for MapLibre GL JS — generated at runtime, no pre-baked sprite sheets.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "maplibre-gl": ">=3.0.0"
+  },
+  "devDependencies": {
+    "maplibre-gl": "^4.7.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
+  },
+  "keywords": [
+    "maplibre",
+    "maplibre-gl",
+    "fill-pattern",
+    "hatching",
+    "svg",
+    "map-styling"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/francoisbl/maplibre-pattern-fills.git"
+  },
+  "homepage": "https://github.com/francoisbl/maplibre-pattern-fills#readme"
+}
