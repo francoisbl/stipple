@@ -11,42 +11,103 @@
        host as-is (e.g. GitHub Pages). Run `npm run build` again after editing
        anything under ../src. -->
   <script src="../dist/index.global.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500;1,600&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
+    /* Studio palette: warm paper + ink, one terracotta accent, one moss
+       secondary — a drafting table, not a dashboard. */
     :root {
-      --bg: #0f1115; --panel: #171a21; --panel2: #1f242e; --line: #2c333f;
-      --text: #e6e9ef; --muted: #97a0b0; --accent: #4f9cff; --ok: #3ecf8e;
+      --paper: #f4efe4; --panel: #fffcf5; --panel-2: #faf5e9;
+      --line: #ddd3bd; --line-strong: #b9ab8c;
+      --ink: #2a251d; --ink-soft: #7a6f5c;
+      --accent: #c1622f; --accent-ink: #7c3d1c;
+      --moss: #5f7a5c; --ok: #5f7a5c;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, sans-serif; color: var(--text); background: var(--bg); }
+    html, body { margin: 0; height: 100%; font-family: "Work Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+    body {
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 26px 26px;
+      background-position: -1px -1px;
+    }
     #app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
     #map { height: 100%; }
-    #panel { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 14px; }
-    h1 { font-size: 15px; margin: 0 0 4px; }
-    .sub { color: var(--muted); font-size: 12px; margin: 0 0 14px; }
-    fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px 12px; margin: 0 0 12px; background: var(--panel2); }
-    fieldset.dimmed { opacity: .45; pointer-events: none; }
-    legend { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0 6px; }
-    label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
-    select, input[type=text], input[type=number] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
-    input[type=range] { width: 100%; }
-    input[type=color] { width: 44px; height: 28px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); padding: 2px; vertical-align: middle; }
+    #panel { background: var(--paper); border-right: 1.5px solid var(--line-strong); overflow-y: auto; padding: 18px 16px; }
+    h1 {
+      font-family: "Fraunces", Georgia, serif; font-style: italic; font-weight: 600;
+      font-size: 23px; margin: 0 0 2px; letter-spacing: -0.01em; color: var(--ink);
+    }
+    .squiggle { display: block; width: 108px; height: 8px; margin: 2px 0 8px; color: var(--accent); }
+    .sub { color: var(--ink-soft); font-size: 12.5px; margin: 0 0 16px; line-height: 1.45; }
+    fieldset {
+      border: 1.5px solid var(--line-strong); border-radius: 10px 10px 10px 3px;
+      padding: 11px 13px 13px; margin: 0 0 14px; background: var(--panel);
+      box-shadow: 0 1px 0 rgba(42,37,29,.05), 0 8px 16px -12px rgba(42,37,29,.35);
+    }
+    fieldset.dimmed { opacity: .4; pointer-events: none; }
+    legend {
+      font-family: "IBM Plex Mono", monospace; font-size: 10px; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--ink-soft); background: var(--panel-2);
+      border: 1px solid var(--line); border-radius: 3px; padding: 2px 7px;
+      transform: rotate(-0.6deg); margin-left: -2px;
+    }
+    label { display: block; font-family: "Work Sans"; font-size: 12px; color: var(--ink-soft); margin: 9px 0 4px; }
+    select, input[type=text], input[type=number] {
+      width: 100%; background: var(--panel-2); color: var(--ink); border: 1.5px solid var(--line-strong);
+      border-radius: 6px; padding: 6px 8px; font-family: "Work Sans"; font-size: 13px;
+    }
+    select:focus, input[type=text]:focus, input[type=number]:focus, textarea:focus {
+      outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(193,98,47,.15);
+    }
+    input[type=range] { width: 100%; accent-color: var(--accent); }
+    input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
+    input[type=color] { width: 44px; height: 28px; border: 1.5px solid var(--line-strong); border-radius: 6px; background: var(--panel-2); padding: 2px; vertical-align: middle; }
     .row { display: flex; gap: 8px; align-items: center; }
     .row > * { flex: 1; }
     .row.tight { gap: 6px; }
     .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
-    .pill { flex: 1 1 30%; text-align: center; padding: 6px 4px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; cursor: pointer; background: var(--bg); }
-    .pill.active { border-color: var(--accent); background: #1b2b44; color: #fff; }
+    .pill {
+      flex: 1 1 30%; text-align: center; padding: 7px 4px; border: 1.5px solid var(--line-strong);
+      border-radius: 999px; font-family: "Work Sans"; font-weight: 500; font-size: 12px;
+      cursor: pointer; background: var(--panel-2); color: var(--ink-soft); transition: transform .12s;
+    }
+    .pill:hover { transform: translateY(-1px); }
+    .pill.active { border-color: var(--accent-ink); background: var(--accent); color: #fff9f2; transform: rotate(-1deg); }
     .seg { display: flex; gap: 4px; }
-    .seg button { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px; font-size: 12px; cursor: pointer; }
-    .seg button.active { border-color: var(--accent); background: #1b2b44; }
+    .seg button {
+      flex: 1; background: var(--panel-2); color: var(--ink); border: 1.5px solid var(--line-strong);
+      border-radius: 6px; padding: 6px; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; cursor: pointer;
+    }
+    .seg button.active { border-color: var(--ink); background: var(--ink); color: var(--panel); }
     .switch { display: flex; align-items: center; justify-content: space-between; }
-    .val { color: var(--text); font-variant-numeric: tabular-nums; font-size: 12px; }
-    button.action { width: 100%; padding: 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 6px; }
-    button.action.ghost { background: transparent; color: var(--text); }
-    .preview-canvas { image-rendering: pixelated; border: 1px solid var(--line); border-radius: 4px; background: #fff; width: 64px; height: 64px; }
-    .hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
-    textarea { width: 100%; height: 120px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: 11px/1.4 ui-monospace, monospace; padding: 8px; }
-    .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ok); color: #04130c; padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .val { color: var(--ink); font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: 11.5px; }
+    button.action {
+      width: 100%; padding: 10px; border-radius: 7px 7px 7px 2px; border: 1.5px solid var(--accent-ink);
+      background: var(--accent); color: #fff9f2; font-family: "Work Sans"; font-size: 13px; font-weight: 600;
+      cursor: pointer; margin-top: 6px; box-shadow: 0 2px 0 rgba(124,61,28,.25); transition: transform .12s, box-shadow .12s;
+    }
+    button.action:hover { transform: translateY(-1px) rotate(-0.3deg); }
+    button.action:active { transform: translateY(1px); box-shadow: none; }
+    button.action.ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); box-shadow: none; }
+    button.action.ghost:hover { border-color: var(--accent); color: var(--accent-ink); }
+    .preview-canvas { image-rendering: pixelated; border: 1.5px solid var(--line-strong); border-radius: 6px; background: #fff; width: 64px; height: 64px; }
+    .hint { font-family: "Work Sans"; font-size: 11.5px; color: var(--ink-soft); margin-top: 7px; line-height: 1.45; }
+    .hint code {
+      font-family: "IBM Plex Mono", monospace; background: var(--panel-2); border: 1px solid var(--line);
+      border-radius: 3px; padding: 1px 4px; font-size: 11px; color: var(--accent-ink);
+    }
+    textarea {
+      width: 100%; height: 120px; background: var(--panel-2); color: var(--ink); border: 1.5px solid var(--line-strong);
+      border-radius: 6px; font: 11px/1.5 "IBM Plex Mono", ui-monospace, monospace; padding: 9px;
+    }
+    .toast {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper);
+      font-family: "Work Sans"; font-weight: 500; padding: 9px 16px; border-radius: 999px; font-size: 13px;
+      opacity: 0; transition: opacity .2s; pointer-events: none; box-shadow: 0 6px 20px -6px rgba(0,0,0,.35);
+    }
     .toast.show { opacity: 1; }
   </style>
 </head>
@@ -54,6 +115,9 @@
   <div id="app">
     <div id="panel">
       <h1>maplibre-pattern-fills</h1>
+      <svg class="squiggle" viewBox="0 0 108 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 5.5C10 1 16 1 24 5.5C32 10 38 10 46 5.5C54 1 60 1 68 5.5C76 10 82 10 90 5.5C96 2 100 2 106 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
       <p class="sub">Compose and live-preview textured fills, SVG scatter patterns and SVG point icons on test polygons.</p>
 
       <fieldset>
@@ -93,8 +157,8 @@
           <div style="flex:1">
             <label>Pattern colour</label>
             <div class="row tight">
-              <input type="color" id="patColor" value="#1f4e79" style="flex:0 0 auto" />
-              <input type="text" id="patColorHex" value="#1f4e79" />
+              <input type="color" id="patColor" value="#7c3d1c" style="flex:0 0 auto" />
+              <input type="text" id="patColorHex" value="#7c3d1c" />
             </div>
             <label>Opacity <span class="val" id="patOpacityVal">1.00</span></label>
             <input type="range" id="patOpacity" min="0" max="1" step="0.05" value="1" />
@@ -144,8 +208,8 @@
           <input type="checkbox" id="bgToggle" checked />
         </div>
         <div class="row tight" style="margin-top:8px">
-          <input type="color" id="bgColor" value="#9ec5e8" style="flex:0 0 auto" />
-          <input type="text" id="bgColorHex" value="#9ec5e8" />
+          <input type="color" id="bgColor" value="#e4d9c3" style="flex:0 0 auto" />
+          <input type="text" id="bgColorHex" value="#e4d9c3" />
         </div>
         <label>Background opacity <span class="val" id="bgOpacityVal">0.35</span></label>
         <input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35" />
@@ -158,8 +222,8 @@
           <input type="checkbox" id="lineToggle" checked />
         </div>
         <div class="row tight" style="margin-top:8px">
-          <input type="color" id="lineColor" value="#1f4e79" style="flex:0 0 auto" />
-          <input type="text" id="lineColorHex" value="#1f4e79" />
+          <input type="color" id="lineColor" value="#7c3d1c" style="flex:0 0 auto" />
+          <input type="text" id="lineColorHex" value="#7c3d1c" />
         </div>
         <label>Width <span class="val" id="lineWidthVal">1.50 px</span></label>
         <input type="range" id="lineWidth" min="0.1" max="6" step="0.1" value="1.5" />
@@ -278,12 +342,12 @@
     layer: null,           // { source } — id of the selected GeoJSON test source
     pattern: "stipple",    // solid | stipple | hachures | cross | grid | dots
     angle: 45,
-    patColor: "#1f4e79",
+    patColor: "#7c3d1c",
     patOpacity: 1,
     weight: 2,
     tile: 16,
-    bg: { on: true, color: "#9ec5e8", opacity: 0.35 },
-    line: { on: true, color: "#1f4e79", width: 1.5, dash: [] },
+    bg: { on: true, color: "#e4d9c3", opacity: 0.35 },
+    line: { on: true, color: "#7c3d1c", width: 1.5, dash: [] },
     svgFill: { on: false, sample: "grass-tuft", density: 1.4, stampSize: 28, rotationJitterDeg: 25, scaleJitter: 0.25, seed: "1" },
     icons: { on: false, sample: "tree-marker", scale: 1 },
   };
@@ -297,7 +361,7 @@
       version: 8,
       glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
       sources: {},
-      layers: [{ id: "bg", type: "background", paint: { "background-color": "#e9edf2" } }],
+      layers: [{ id: "bg", type: "background", paint: { "background-color": "#efe7d6" } }],
     },
     center: [4.62, 50.62], zoom: 12,
   });
