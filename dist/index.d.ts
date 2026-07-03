@@ -68,6 +68,40 @@ declare function mulberry32(seed: number): () => number;
 /** Turns an arbitrary string (e.g. a layer id) into a stable 32-bit seed. */
 declare function hashStringToSeed(str: string): number;
 
+/** A closed ring of [x, y] planar coordinates (any consistent unit — pixels, degrees, meters). */
+type Ring = Array<[number, number]>;
+interface ScatteredPoint {
+    x: number;
+    y: number;
+    /** Seeded rotation in degrees, for icon-rotate variety — 0 unless `rotationJitterDeg` is set. */
+    rotation: number;
+}
+interface ScatterPointsOptions {
+    /** Required clearance from any edge (including holes) for a point to qualify. */
+    radius: number;
+    /** Approx. points per 100x100 unit area. Default 1. */
+    density?: number;
+    /** Deterministic variation seed. Default 1. */
+    seed?: number | string;
+    /** Points sampled around the disc boundary for the erosion test. Default 12 — higher is stricter but slower. */
+    samples?: number;
+    /** +/- rotation jitter applied to each point, in degrees. Default 0. */
+    rotationJitterDeg?: number;
+}
+/**
+ * Scatters points inside a (possibly holed) polygon such that a disc of
+ * `radius` centered at each point stays entirely within it — so an icon of
+ * that radius placed at any returned point is never cut by the polygon
+ * boundary, unlike a repeating `fill-pattern` texture (which always clips
+ * hard at the edge). Deterministic for a given seed.
+ *
+ * `rings` should include the exterior ring first, followed by any hole
+ * rings; coordinates are unit-agnostic (pass pixels for on-screen icon
+ * placement — see {@link scatterIconPoints} — or any planar unit
+ * consistent with `radius`).
+ */
+declare function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[];
+
 interface PatternFillConfig {
     pattern: PatternType;
     tile: TileSize;
@@ -202,4 +236,73 @@ declare function addSvgIcon(map: Map, options: SvgIconOptions): Promise<{
     height: number;
 }>;
 
-export { type BackgroundFillConfig, type BuildStyleFragmentOptions, DASH_PRESETS, type HachureAngle, type MakeTileOptions, type OutlineConfig, type PatternFillConfig, type PatternType, type StyleLike, type SvgIconOptions, type SvgPatternOptions, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, addSvgIcon, buildStyleFragment, createMiniContext, createSvgScatterTile, hashStringToSeed, installPatternFills, installSvgPatternFill, makeTile, mulberry32, syncPatternTexture };
+type PolygonGeometry = {
+    type: "Polygon";
+    coordinates: number[][][];
+} | {
+    type: "MultiPolygon";
+    coordinates: number[][][][];
+};
+interface PointFeature {
+    type: "Feature";
+    geometry: {
+        type: "Point";
+        coordinates: [number, number];
+    };
+    properties: {
+        rotation: number;
+    };
+}
+interface PointFeatureCollection {
+    type: "FeatureCollection";
+    features: PointFeature[];
+}
+interface ScatterIconPointsOptions {
+    map: Map;
+    /** Polygon in [lng, lat] coordinates (the same geometry the fill is drawn from). */
+    polygon: PolygonGeometry;
+    /** On-screen icon radius in px — no point whose disc of this radius pokes outside the polygon. */
+    iconRadiusPx: number;
+    /** Approx. points per 100x100 screen px area. Default 1. */
+    density?: number;
+    /** Deterministic variation seed. Default 1. */
+    seed?: number | string;
+    /** Erosion-test resolution (see {@link scatterPointsInPolygon}). Default 12. */
+    samples?: number;
+    /** +/- rotation jitter per point, in degrees. Default 0. */
+    rotationJitterDeg?: number;
+}
+/**
+ * Computes scatter points inside a polygon, in the map's current screen
+ * projection, such that an icon of `iconRadiusPx` placed at any returned
+ * point is never cut by the polygon boundary — unlike a repeating
+ * `fill-pattern` texture, which always clips hard at the edge. Bound to the
+ * current view: recompute after pan/zoom if the layout should track it.
+ */
+declare function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatureCollection;
+
+interface InstallSvgIconScatterOptions {
+    /** GeoJSON source id to (re)create with the computed scatter points. */
+    sourceId: string;
+    /** Symbol layer id. */
+    layerId: string;
+    /** Image id passed to `addSvgIcon` (reused across calls if already installed). */
+    iconId: string;
+    polygon: PolygonGeometry;
+    svg: string;
+    /** Rendered icon size in px. Default 32 — also used as the no-cut clearance radius (size / 2). */
+    size?: number;
+    density?: number;
+    seed?: number | string;
+    rotationJitterDeg?: number;
+}
+/**
+ * The no-cut alternative to {@link installSvgPatternFill}: instead of a
+ * repeating texture (which always clips hard at the polygon edge),
+ * places whole SVG icons only where they fit entirely inside the polygon.
+ * Bound to the current view — call again after pan/zoom to keep the layout
+ * current, same as any screen-space scatter.
+ */
+declare function installSvgIconScatter(map: Map, options: InstallSvgIconScatterOptions): Promise<void>;
+
+export { type BackgroundFillConfig, type BuildStyleFragmentOptions, DASH_PRESETS, type HachureAngle, type InstallSvgIconScatterOptions, type MakeTileOptions, type OutlineConfig, type PatternFillConfig, type PatternType, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgIconOptions, type SvgPatternOptions, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, addSvgIcon, buildStyleFragment, createMiniContext, createSvgScatterTile, hashStringToSeed, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, scatterIconPoints, scatterPointsInPolygon, syncPatternTexture };

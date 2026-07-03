@@ -23,6 +23,12 @@ package generates that image for you:
 - **SVG point icons** — rasterize an SVG once via `addImage` and use it as
   `icon-image` on a `symbol` layer, with the icon's rendered scale controlled
   by MapLibre's native `icon-size` (no re-rasterization needed).
+- **No-cut icon scatter** — a repeating `fill-pattern` texture always clips
+  hard at the polygon boundary, so a stamp near the edge shows only its
+  overlapping part. `installSvgIconScatter` is the alternative: it places
+  whole SVG icons only where they fit entirely inside the polygon (a cheap
+  sampled "erosion" test, no heavy geometry dependency), so nothing is ever
+  cut — at the cost of a clear margin near the edge instead.
 - Flash-free live updates: colour/weight/angle changes call `updateImage`
   when the tile dimensions haven't changed, and fall back to
   `removeImage`/`addImage` only when they have.

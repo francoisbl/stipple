@@ -15,3 +15,9 @@ export type { SvgPatternOptions } from "./svgPattern";
 
 export { addSvgIcon } from "./svgIcon";
 export type { SvgIconOptions } from "./svgIcon";
+
+export { scatterIconPoints } from "./scatterIconPoints";
+export type { PolygonGeometry, PointFeature, PointFeatureCollection, ScatterIconPointsOptions } from "./scatterIconPoints";
+
+export { installSvgIconScatter } from "./svgIconScatter";
+export type { InstallSvgIconScatterOptions } from "./svgIconScatter";

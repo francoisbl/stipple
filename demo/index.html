@@ -179,6 +179,11 @@
           <label style="margin:0">Use SVG fill instead of geometric pattern</label>
           <input type="checkbox" id="svgFillToggle" />
         </div>
+        <div class="switch" style="margin-top:6px">
+          <label style="margin:0">Avoid cutting at edges (place as whole icons)</label>
+          <input type="checkbox" id="svgNoCutToggle" />
+        </div>
+        <p class="hint" id="noCutHint">A repeating texture always clips hard at the polygon boundary — any stamp whose center falls near the edge shows only its overlapping part. This mode instead places whole icons only where they fit entirely inside the shape, leaving a clear margin near the edge instead of a cut one.</p>
         <label>Sample</label>
         <select id="svgFillSample">
           <optgroup label="Vegetation">
@@ -299,7 +304,7 @@
 
   const {
     makeTile, syncPatternTexture, buildStyleFragment,
-    installSvgPatternFill, addSvgIcon, DASH_PRESETS,
+    installSvgPatternFill, addSvgIcon, installSvgIconScatter, DASH_PRESETS,
   } = window.MaplibrePatternFills;
 
   const $ = (id) => document.getElementById(id);
@@ -450,7 +455,7 @@
     tile: 16,
     bg: { on: true, color: "#e4d9c3", opacity: 0.35 },
     line: { on: true, color: "#7c3d1c", width: 1.5, dash: [] },
-    svgFill: { on: false, sample: "grass-tuft", density: 1.4, stampSize: 28, rotationJitterDeg: 25, scaleJitter: 0.25, seed: "1" },
+    svgFill: { on: false, noCut: false, sample: "grass-tuft", density: 1.4, stampSize: 28, rotationJitterDeg: 25, scaleJitter: 0.25, seed: "1" },
     icons: { on: false, sample: "tree-marker", scale: 1 },
   };
 
@@ -522,11 +527,45 @@
     });
   }
 
+  // "No cut" mode: whole icons placed only where they fit entirely inside
+  // the polygon, instead of a repeating texture clipped hard at the edge.
+  const svgIconScatterIds = () => ({
+    source: `${state.layer.source}__svgscatter`,
+    layer: `${state.layer.source}__svgscatter_layer`,
+    icon: `${state.layer.source}__svg_icon_${state.svgFill.sample}`,
+  });
+
+  async function syncSvgIconScatter() {
+    if (!state.layer) return;
+    const { source, layer, icon } = svgIconScatterIds();
+    const polygon = POLYGONS[state.layer.source].features[0].geometry;
+    await installSvgIconScatter(map, {
+      sourceId: source, layerId: layer, iconId: icon, polygon,
+      svg: SVG_PATTERN_SAMPLES[state.svgFill.sample],
+      size: state.svgFill.stampSize,
+      density: state.svgFill.density,
+      seed: state.svgFill.seed,
+      rotationJitterDeg: state.svgFill.rotationJitterDeg,
+    });
+  }
+
+  function removeSvgIconScatter() {
+    if (!state.layer) return;
+    const { source, layer } = svgIconScatterIds();
+    if (map.getLayer(layer)) map.removeLayer(layer);
+    if (map.getSource(source)) map.removeSource(source);
+  }
+
+  function syncSvgFill() {
+    if (state.svgFill.noCut) syncSvgIconScatter(); else syncSvgTexture();
+  }
+
   // ── (Re)build the three layers of the selected test feature ─────────────────
   function rebuildLayers() {
     if (!state.layer) return;
     const { src, bg, pat, line } = ids();
     [line, pat, bg].forEach((l) => { if (map.getLayer(l)) map.removeLayer(l); });
+    removeSvgIconScatter();
 
     if (state.bg.on) {
       map.addLayer({
@@ -535,7 +574,11 @@
       });
     }
 
-    if (state.svgFill.on) {
+    if (state.svgFill.on && state.svgFill.noCut) {
+      // No fill-pattern layer at all — whole icons placed only where they
+      // fit entirely inside the polygon, so nothing is ever cut at the edge.
+      syncSvgIconScatter();
+    } else if (state.svgFill.on) {
       syncSvgTexture().then(() => {
         if (!map.getLayer(pat)) return; // layer may have been rebuilt again meanwhile
       });
@@ -622,10 +665,11 @@
     sel.innerHTML = "";
     for (let i = 0; i < POLY_COUNT; i++) {
       const id = `polygon_${i + 1}`;
-      [`${id}__line`, `${id}__pat`, `${id}__bg`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
+      [`${id}__line`, `${id}__pat`, `${id}__bg`, `${id}__svgscatter_layer`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
       if (map.hasImage(`${id}__pat_img`)) map.removeImage(`${id}__pat_img`);
       if (map.hasImage(`${id}__svg_img`)) map.removeImage(`${id}__svg_img`);
       if (map.getSource(id)) map.removeSource(id);
+      if (map.getSource(`${id}__svgscatter`)) map.removeSource(`${id}__svgscatter`);
 
       const col = i % 2, row = (i / 2) | 0;
       const cx = c.lng + (col - 0.5) * span * 2.2;
@@ -682,6 +726,7 @@
       [old.line, old.pat, old.bg].forEach((l) => map.getLayer(l) && map.removeLayer(l));
       if (map.hasImage(geomImageId())) map.removeImage(geomImageId());
       if (map.hasImage(svgImageId())) map.removeImage(svgImageId());
+      removeSvgIconScatter();
     }
     state.layer = { source: id };
     $("layerSelect").value = id;
@@ -738,24 +783,28 @@
     setGeometricFieldsetEnabled(!state.svgFill.on);
     rebuildLayers();
   });
+  $("svgNoCutToggle").addEventListener("change", (e) => {
+    state.svgFill.noCut = e.target.checked;
+    if (state.svgFill.on) rebuildLayers();
+  });
   $("svgFillSample").addEventListener("change", (e) => { state.svgFill.sample = e.target.value; if (state.svgFill.on) rebuildLayers(); });
   $("svgDensity").addEventListener("input", (e) => {
     state.svgFill.density = +e.target.value; $("svgDensityVal").textContent = state.svgFill.density.toFixed(2);
-    if (state.svgFill.on) syncSvgTexture();
+    if (state.svgFill.on) syncSvgFill();
   });
   $("svgStampSize").addEventListener("input", (e) => {
     state.svgFill.stampSize = +e.target.value; $("svgStampSizeVal").textContent = state.svgFill.stampSize + " px";
-    if (state.svgFill.on) syncSvgTexture();
+    if (state.svgFill.on) syncSvgFill();
   });
   $("svgRotJitter").addEventListener("input", (e) => {
     state.svgFill.rotationJitterDeg = +e.target.value; $("svgRotJitterVal").textContent = "±" + state.svgFill.rotationJitterDeg + "°";
-    if (state.svgFill.on) syncSvgTexture();
+    if (state.svgFill.on) syncSvgFill();
   });
   $("svgScaleJitter").addEventListener("input", (e) => {
     state.svgFill.scaleJitter = +e.target.value; $("svgScaleJitterVal").textContent = "±" + state.svgFill.scaleJitter.toFixed(2);
-    if (state.svgFill.on) syncSvgTexture();
+    if (state.svgFill.on && !state.svgFill.noCut) syncSvgTexture();
   });
-  $("svgSeed").addEventListener("change", (e) => { state.svgFill.seed = e.target.value; if (state.svgFill.on) syncSvgTexture(); });
+  $("svgSeed").addEventListener("change", (e) => { state.svgFill.seed = e.target.value; if (state.svgFill.on) syncSvgFill(); });
 
   // Background
   $("bgToggle").addEventListener("change", (e) => { state.bg.on = e.target.checked; rebuildLayers(); });
@@ -858,6 +907,7 @@ map.on("load", () => {
     $("lineToggle").checked = state.line.on;
     $("dashInput").value = (state.line.dash || []).join(" ");
     $("svgFillToggle").checked = state.svgFill.on;
+    $("svgNoCutToggle").checked = state.svgFill.noCut;
     $("svgFillSample").value = state.svgFill.sample;
     $("svgDensity").value = state.svgFill.density; $("svgDensityVal").textContent = state.svgFill.density.toFixed(2);
     $("svgStampSize").value = state.svgFill.stampSize; $("svgStampSizeVal").textContent = state.svgFill.stampSize + " px";
