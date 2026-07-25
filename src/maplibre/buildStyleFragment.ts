@@ -1,4 +1,9 @@
 import type { BackgroundFillConfig, OutlineConfig, PatternFillConfig } from "./types";
+import {
+  PATTERN_METADATA_KEY,
+  patternDefinitionId,
+  type GeometricPatternDefinition,
+} from "./patternDefinition";
 
 export interface BuildStyleFragmentOptions {
   /** Vector source id, e.g. `"urbanisme.plan_de_secteur"`. */
@@ -15,8 +20,9 @@ export interface BuildStyleFragmentOptions {
 /**
  * Builds the sources+layers fragment for the three-layer stack
  * (tinted background / pattern fill / outline). The pattern's visual
- * parameters are NOT baked into the paint properties — they're carried in
- * `layer.metadata["enhanced:pattern"]` so {@link installPatternFills} can
+ * parameters are not baked into the paint properties. They are carried in
+ * versioned `layer.metadata["maplibre-pattern-fills:v1"]` so
+ * {@link installPatternFills} can
  * regenerate the exact same texture at runtime via `makeTile`.
  */
 export function buildStyleFragment(options: BuildStyleFragmentOptions) {
@@ -42,7 +48,15 @@ export function buildStyleFragment(options: BuildStyleFragmentOptions) {
       paint: { "fill-color": pattern.color, "fill-opacity": pattern.opacity },
     });
   } else {
-    const imageId = `${source}__pat_img`;
+    const definition: GeometricPatternDefinition = {
+      kind: "geometric",
+      pattern: pattern.pattern,
+      size: pattern.tile,
+      color: pattern.color,
+      weight: pattern.weight,
+      angle: pattern.angle,
+    };
+    const imageId = patternDefinitionId(definition);
     layers.push({
       id: `${source}__pat`,
       type: "fill",
@@ -50,14 +64,7 @@ export function buildStyleFragment(options: BuildStyleFragmentOptions) {
       "source-layer": sourceLayer,
       paint: { "fill-pattern": imageId, "fill-opacity": pattern.opacity },
       metadata: {
-        "enhanced:pattern": {
-          type: pattern.pattern,
-          tile: pattern.tile,
-          color: pattern.color,
-          weight: pattern.weight,
-          angle: pattern.angle,
-          imageId,
-        },
+        [PATTERN_METADATA_KEY]: { imageId, definition },
       },
     });
   }

@@ -15,7 +15,7 @@ export interface IconStyleLike {
  * Scans a style (or `map.getStyle()`) for layers carrying the
  * `enhanced:icon` metadata produced by {@link buildIconStyleFragment}, and
  * rasterizes + installs the matching SVG icon for each. Mirrors
- * {@link installPatternFills} for the point/symbol case — call once after
+ * {@link installPatternFills} for the point/symbol case. Call once after
  * `map.on('load', ...)` (and again if you swap styles).
  */
 export async function installIconStyles(map: MaplibreMap, style: IconStyleLike): Promise<void> {

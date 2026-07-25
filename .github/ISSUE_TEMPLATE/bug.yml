@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible defect in pattern generation or integration
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version
+      placeholder: 0.x.y
+    validations:
+      required: true
+  - type: input
+    id: maplibre-version
+    attributes:
+      label: MapLibre GL JS version
+      placeholder: 4.x, 5.x, or 6.x
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Link to or paste the smallest example that demonstrates the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, operating system, bundler, and relevant CSP details.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/francoisbl/maplibre-pattern-fills/security/advisories/new
+    about: Report vulnerabilities privately.
+  - name: MapLibre GL JS support
+    url: https://github.com/maplibre/maplibre-gl-js/discussions
+    about: Ask questions about MapLibre itself in the upstream community.

@@ -12,7 +12,7 @@ export interface BuildLineStyleFragmentOptions {
 
 /**
  * Builds the sources+layers fragment for a single line-style layer.
- * `line-dasharray` is a native declarative expression — unlike fill
+ * `line-dasharray` is a native declarative expression. Unlike fill
  * patterns there's nothing baked into a canvas image, so no metadata or
  * runtime installer is needed for this one.
  */

@@ -12,10 +12,12 @@ export interface InstallSvgIconScatterOptions {
   iconId: string;
   polygon: PolygonGeometry;
   svg: string;
-  /** Rendered icon size in px. Default 32 — also used as the no-cut clearance radius (size / 2). */
+  /** Rendered square icon size in px. Default 32; its circumscribed radius is used for clearance. */
   size?: number;
   density?: number;
   seed?: number | string;
+  /** Clearance-circle samples. Default 12; higher is stricter but slower. */
+  samples?: number;
   rotationJitterDeg?: number;
   /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
   scaleJitter?: number;
@@ -26,23 +28,56 @@ export interface InstallSvgIconScatterOptions {
 }
 
 /**
+ * @experimental
+ *
  * The no-cut alternative to {@link installSvgPatternFill}: instead of a
  * repeating texture (which always clips hard at the polygon edge),
- * places whole SVG icons only where they fit entirely inside the polygon.
+ * places SVG icons where a sampled circular-clearance test says they fit
+ * inside the polygon. This is an approximation, not an exact geometry
+ * guarantee; very narrow or highly concave boundaries can fall between the
+ * configured samples.
  *
  * Points are computed in screen pixels at call time, then frozen as
- * lng/lat — so density (icon count per screen area) drifts out of sync
+ * lng/lat, so density (icon count per screen area) drifts out of sync
  * with the current zoom unless you recompute after each pan/zoom, e.g.
  * `map.on('moveend', () => installSvgIconScatter(map, options))`.
  */
 export async function installSvgIconScatter(map: MaplibreMap, options: InstallSvgIconScatterOptions): Promise<void> {
-  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
+  const {
+    sourceId,
+    layerId,
+    iconId,
+    polygon,
+    svg,
+    size = 32,
+    density,
+    seed,
+    samples,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger,
+  } = options;
 
   // Always (re)rasterize: `size` may have changed since the icon id was last
   // installed, and addSvgIcon's own removeImage+addImage is cheap.
   await addSvgIcon(map, { id: iconId, svg, size });
 
-  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg, scaleJitter, positionJitter, stagger });
+  // The circumscribed radius covers every corner of the square icon canvas,
+  // including when icon-rotate is used. scatterIconPoints applies each
+  // point's scale variation to this radius during its sampled erosion test.
+  const points = scatterIconPoints({
+    map,
+    polygon,
+    iconRadiusPx: size / Math.SQRT2,
+    density,
+    seed,
+    samples,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger,
+  });
 
   const existingSource = map.getSource(sourceId) as GeoJSONSource | undefined;
   if (existingSource) {

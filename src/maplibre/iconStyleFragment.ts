@@ -3,7 +3,7 @@ export interface IconStyleConfig {
   svg: string;
   /** Rendered icon size in px. */
   size: number;
-  /** Image id the layer's `icon-image` references — also passed to `addSvgIcon`. */
+  /** Image id referenced by the layer's `icon-image` and passed to `addSvgIcon`. */
   imageId: string;
 }
 
@@ -21,7 +21,7 @@ export interface BuildIconStyleFragmentOptions {
 
 /**
  * Builds the sources+layers fragment for a single SVG point-icon layer.
- * The icon isn't baked into the paint properties — it's carried in
+ * The icon is not baked into the paint properties. It is carried in
  * `layer.metadata["enhanced:icon"]` so {@link installIconStyles} can
  * rasterize the same icon at runtime via `addSvgIcon`.
  */
