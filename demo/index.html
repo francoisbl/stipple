@@ -847,6 +847,144 @@
       #panel.control-dock { max-height: 52%; }
       .geometry-grid { grid-template-columns: 1fr; }
     }
+
+    /* Fixed GIS workspace */
+    .workspace {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr) 430px;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--canvas);
+    }
+    .layer-panel {
+      min-width: 0;
+      padding: 0;
+      background: #f2f4ef;
+      border-right: 1px solid var(--line-strong);
+    }
+    .source-palette,
+    .basemap-palette {
+      position: static;
+      width: auto;
+      padding: 16px 14px;
+      border: 0;
+      border-bottom: 1px solid var(--line-strong);
+      background: transparent;
+    }
+    .source-palette { border-left: 0; }
+    .source-line { grid-template-columns: 1fr; }
+    .source-line button { width: 100%; }
+    .feature-chips { flex-wrap: wrap; }
+    .feature-chip { flex: 0 0 calc(33.333% - 4px); }
+    .basemap-options { display: grid; grid-template-columns: 1fr 1fr; }
+    .basemap-button { min-width: 0; }
+    .map-shell {
+      position: relative;
+      inset: auto;
+      grid-column: 2;
+      min-width: 0;
+      min-height: 0;
+      height: auto;
+    }
+    #panel.control-dock {
+      position: relative;
+      inset: auto;
+      grid-column: 3;
+      width: auto;
+      max-height: none;
+      min-width: 0;
+      overflow: hidden;
+      transform: none;
+      border: 0;
+      border-left: 1px solid var(--line-strong);
+      border-radius: 0;
+      box-shadow: none;
+    }
+    #panel.control-dock.collapsed {
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+    }
+    .dock-head {
+      position: static;
+      min-height: 78px;
+      height: auto;
+      flex-wrap: wrap;
+      align-content: space-between;
+      padding: 11px 14px 0;
+    }
+    .dock-context { width: 100%; }
+    .tool-tabs {
+      width: 100%;
+      gap: 16px;
+    }
+    .tool-tab { min-height: 36px; }
+    .tool-panel {
+      padding: 12px 14px 14px;
+      overflow: hidden;
+    }
+    .geometry-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 12px;
+    }
+    .geometry-grid > .control-block:first-child { grid-column: 1 / -1; }
+    .geometry-grid > .control-block:last-child { grid-column: 1 / -1; }
+    .control-block {
+      padding: 0 0 9px;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .control-block:last-child { border-bottom: 0; }
+    .pill-group { grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .pill { min-height: 27px; padding: 4px 7px; font-size: 10px; }
+    .family-label { margin: 7px 0 4px; }
+    .control-title { margin-bottom: 6px; }
+    label { margin: 7px 0 3px; }
+    select,
+    input[type=text],
+    input[type=number] { height: 34px; }
+    input[type=color] { height: 34px; }
+    input[type=range] { height: 14px; }
+    .switch { min-height: 34px; }
+    .preview-canvas { width: 48px; height: 48px; }
+    #geometricFieldset.svg-mode .geometry-grid {
+      grid-template-columns: 1fr;
+    }
+    .svg-settings { padding-top: 10px; }
+    .svg-layout {
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 12px;
+    }
+    .svg-column {
+      padding: 0 !important;
+      border: 0 !important;
+    }
+    .svg-column:first-child { grid-column: 1 / -1; }
+    .svg-column:last-child { grid-column: auto; }
+    .custom-svg-panel { position: absolute; z-index: 8; right: 14px; left: 14px; background: var(--panel); }
+    .appearance-layout { grid-template-columns: 1fr 1fr; gap: 14px; }
+    .appearance-layout fieldset + fieldset { padding-left: 14px; }
+    .output-layout { grid-template-columns: 1fr; gap: 10px; }
+    .output-layout textarea { height: 150px; }
+    .export-grid { grid-template-columns: 1fr 1fr; }
+    .maplibregl-ctrl-top-right { top: 10px; }
+    @media (max-width: 1180px) {
+      .workspace { grid-template-columns: 200px minmax(0, 1fr) 380px; }
+      .app-tagline { display: none; }
+      .pill-group { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 180px minmax(0, 1fr); }
+      #panel.control-dock {
+        position: absolute;
+        z-index: 6;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 360px;
+      }
+      .map-shell { grid-column: 2; }
+    }
   </style>
 </head>
 <body>
@@ -860,9 +998,7 @@
     </header>
 
     <main class="workspace">
-      <div class="map-shell">
-        <div id="map"></div>
-
+      <aside class="layer-panel" aria-label="Map layers">
         <aside class="source-palette" aria-label="Polygon selection">
           <div class="palette-label">
             <span>Polygons</span>
@@ -885,6 +1021,10 @@
             <button type="button" class="basemap-button" data-basemap="aerial">Aerial</button>
           </div>
         </aside>
+      </aside>
+
+      <div class="map-shell">
+        <div id="map"></div>
       </div>
 
       <section id="panel" class="control-dock" aria-label="Polygon style editor">
@@ -899,7 +1039,6 @@
             <button type="button" class="tool-tab" data-tool="appearance">Background &amp; line</button>
             <button type="button" class="tool-tab" data-tool="export">Export</button>
           </nav>
-          <button type="button" class="dock-close" id="dockClose">Hide controls</button>
         </div>
 
         <div class="tool-panel fill-base active" data-tool-panel="fill">
@@ -1628,8 +1767,8 @@
     const compact = window.innerWidth < 700;
     map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {
       padding: compact
-        ? { top: 190, right: 30, bottom: 310, left: 30 }
-        : { top: 100, right: 90, bottom: 300, left: 370 },
+        ? { top: 80, right: 40, bottom: 80, left: 40 }
+        : { top: 70, right: 70, bottom: 70, left: 70 },
       maxZoom: 13.5,
       duration: 450,
     });
@@ -1722,7 +1861,6 @@
     const tool = event.target.dataset.tool;
     if (tool) openTool(tool);
   });
-  $("dockClose").addEventListener("click", () => $("panel").classList.add("collapsed"));
 
   function setBasemap(name) {
     ["streets", "topo", "aerial"].forEach((id) => {
