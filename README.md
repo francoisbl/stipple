@@ -101,6 +101,11 @@ Security Policy must therefore allow `blob:` in `img-src`. The package targets
 modern evergreen browsers and Node.js 18 or newer; SVG rasterization itself is
 browser-only, while the geometric engine also runs in Node.
 
+Textures installed in MapLibre follow the display pixel ratio, capped at 2,
+without changing their layout size. `syncPatternTexture` and
+`installSvgPatternFill` also accept an explicit `pixelRatio` when an
+application needs to control the raster cost.
+
 For applications that replace styles repeatedly, create one observer and
 dispose it with the map or owning component:
 

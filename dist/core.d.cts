@@ -7,6 +7,8 @@ interface MakeTileOptions {
         ctx: TileContext;
         toTileImage: () => TileImage;
     };
+    /** Raster pixels per MapLibre layout pixel. Use 2 for high-density displays. Default 1. */
+    pixelRatio?: number;
 }
 /**
  * Renders one seamless pattern tile (any pixel size; MapLibre's
@@ -56,7 +58,7 @@ interface ScatterPointsOptions {
     density?: number;
     /** Deterministic variation seed. Default 1. */
     seed?: number | string;
-    /** Points sampled around the disc boundary for the erosion test. Default 12; higher is stricter but slower. */
+    /** Points sampled around the disc boundary for the erosion test. Default 24; higher is stricter but slower. */
     samples?: number;
     /** +/- rotation jitter applied to each point, in degrees. Default 0. */
     rotationJitterDeg?: number;

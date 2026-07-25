@@ -29,7 +29,7 @@ describe("pattern definitions", () => {
     expect(createSvgPatternDefinition({ svg: "<svg />" })).toEqual({
       kind: "svg",
       svg: "<svg />",
-      tileSize: 192,
+      tileSize: 288,
       stampSize: 28,
       density: 1.4,
       seed: 1,

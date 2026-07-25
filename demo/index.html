@@ -961,6 +961,12 @@
     }
     .svg-column:first-child { grid-column: 1 / -1; }
     .svg-column:last-child { grid-column: auto; }
+    .svg-appearance-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 7px;
+    }
     .custom-svg-panel { position: absolute; z-index: 8; right: 14px; left: 14px; background: var(--panel); }
     .appearance-layout { grid-template-columns: 1fr 1fr; gap: 14px; }
     .appearance-layout fieldset + fieldset { padding-left: 14px; }
@@ -1150,6 +1156,19 @@
                     <input type="file" id="svgFillCustomFile" accept=".svg,image/svg+xml" />
                     <button class="action ghost" id="svgFillCustomApply">Use this SVG</button>
                   </div>
+                  <div class="svg-appearance-row">
+                    <div id="svgBuiltInColor">
+                      <label style="margin-top:0">Motif colour</label>
+                      <div class="row tight">
+                        <input type="color" id="svgPatColor" value="#2c6a5b" style="flex:0 0 auto" />
+                        <input type="text" id="svgPatColorHex" value="#2c6a5b" />
+                      </div>
+                    </div>
+                    <div>
+                      <label style="margin-top:0">Opacity <span class="val" id="svgPatOpacityVal">1.00</span></label>
+                      <input type="range" id="svgPatOpacity" min="0" max="1" step="0.05" value="1" />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1157,7 +1176,7 @@
                 <label style="margin-top:0">Density <span class="val" id="svgDensityVal">1.40</span></label>
                 <input type="range" id="svgDensity" min="0.1" max="6" step="0.1" value="1.4" />
                 <label>Stamp size <span class="val" id="svgStampSizeVal">28 px</span></label>
-                <input type="range" id="svgStampSize" min="10" max="60" step="1" value="28" />
+                <input type="range" id="svgStampSize" min="14" max="60" step="1" value="28" />
                 <div class="switch" style="margin-top:9px">
                   <label style="margin:0">Stagger rows</label>
                   <input type="checkbox" id="svgStagger" checked />
@@ -1168,16 +1187,17 @@
 
               <div class="svg-column" data-svg-options>
                 <label style="margin-top:0">Position jitter <span class="val" id="svgPosJitterVal">±0.15</span></label>
-                <input type="range" id="svgPosJitter" min="0" max="1" step="0.05" value="0.15" />
+                <input type="range" id="svgPosJitter" min="0" max="0.65" step="0.05" value="0.15" />
                 <label>Rotation jitter <span class="val" id="svgRotJitterVal">±0°</span></label>
                 <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="0" />
                 <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.00</span></label>
-                <input type="range" id="svgScaleJitter" min="0" max="0.8" step="0.05" value="0" />
+                <input type="range" id="svgScaleJitter" min="0" max="0.5" step="0.05" value="0" />
                 <div class="switch" style="margin-top:9px">
                   <label style="margin:0">Reduce edge clipping</label>
                   <input type="checkbox" id="svgNoCutToggle" />
                 </div>
                 <p class="hint" id="noCutHint">Experimental clearance sampling leaves a margin near polygon edges.</p>
+                <p class="hint" id="svgQualityHint">High-density rendering is automatic.</p>
               </div>
             </div>
           </fieldset>
@@ -1450,7 +1470,11 @@
   }
 
   function resolveSvgFillSample() {
-    return state.svgFill.sample === "custom" ? state.svgFill.customSvg : SVG_PATTERN_SAMPLES[state.svgFill.sample];
+    if (state.svgFill.sample === "custom") return state.svgFill.customSvg;
+    return SVG_PATTERN_SAMPLES[state.svgFill.sample]?.replace(
+      /#[0-9a-f]{6}/gi,
+      state.patColor,
+    );
   }
   // Map and optional context layers.
   const map = new maplibregl.Map({
@@ -1569,6 +1593,7 @@
       positionJitter: state.svgFill.positionJitter,
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
       scaleJitter: state.svgFill.scaleJitter,
+      opacity: state.patOpacity,
     });
     rememberActiveStyle();
   }
@@ -1640,6 +1665,10 @@
     if (map.getLayer(line)) {
       map.setPaintProperty(line, "line-color", state.outline.color);
       map.setPaintProperty(line, "line-width", state.outline.width);
+    }
+    const scatterLayer = `${state.layer.source}__svgscatter_layer`;
+    if (map.getLayer(scatterLayer)) {
+      map.setPaintProperty(scatterLayer, "icon-opacity", state.patOpacity);
     }
     rememberActiveStyle();
   }
@@ -1936,12 +1965,28 @@
   });
 
   bindColor("patColor", "patColorHex", (v) => {
-    state.patColor = v; renderPreview();
+    state.patColor = v;
+    $("svgPatColor").value = $("svgPatColorHex").value = v;
+    renderPreview();
     if (state.pattern === "solid") repaint(); else syncGeomTexture();
+  });
+  bindColor("svgPatColor", "svgPatColorHex", (v) => {
+    state.patColor = v;
+    $("patColor").value = $("patColorHex").value = v;
+    if (state.svgFill.on && state.svgFill.sample !== "custom") syncSvgFill();
   });
   $("patOpacity").addEventListener("input", (e) => {
     state.patOpacity = +e.target.value; $("patOpacityVal").textContent = state.patOpacity.toFixed(2);
+    $("svgPatOpacity").value = state.patOpacity;
+    $("svgPatOpacityVal").textContent = state.patOpacity.toFixed(2);
     renderPreview(); repaint();
+  });
+  $("svgPatOpacity").addEventListener("input", (e) => {
+    state.patOpacity = +e.target.value;
+    $("svgPatOpacityVal").textContent = state.patOpacity.toFixed(2);
+    $("patOpacity").value = state.patOpacity;
+    $("patOpacityVal").textContent = state.patOpacity.toFixed(2);
+    repaint();
   });
   $("weight").addEventListener("input", (e) => {
     state.weight = +e.target.value; $("weightVal").textContent = state.weight.toFixed(2) + " px";
@@ -1983,6 +2028,23 @@
         control.disabled = !state.svgFill.on;
       });
     });
+    const builtInColor = state.svgFill.on && state.svgFill.sample !== "custom";
+    $("svgBuiltInColor").classList.toggle("is-disabled", !builtInColor);
+    $("svgPatColor").disabled = !builtInColor;
+    $("svgPatColorHex").disabled = !builtInColor;
+  }
+  function updateSvgQualityHint() {
+    const cell = 100 / Math.sqrt(state.svgFill.density);
+    const largestStamp = state.svgFill.stampSize * (1 + state.svgFill.scaleJitter);
+    let message = "High-density rendering is automatic.";
+    if (largestStamp > cell * 0.9) {
+      message = "Symbols may overlap. Reduce size or density.";
+    } else if (state.svgFill.stampSize < 18) {
+      message = "Fine SVG details may fade at this symbol size.";
+    } else if (state.svgFill.positionJitter > 0.5) {
+      message = "Strong position variation can create uneven gaps.";
+    }
+    $("svgQualityHint").textContent = message;
   }
   function updateAppearanceControlAvailability() {
     [
@@ -2010,14 +2072,17 @@
   $("svgFillSample").addEventListener("change", (e) => {
     state.svgFill.sample = e.target.value;
     updateFillChoiceUI();
+    updateSvgControlAvailability();
     if (state.svgFill.on) rebuildLayers();
   });
   $("svgDensity").addEventListener("input", (e) => {
     state.svgFill.density = +e.target.value; $("svgDensityVal").textContent = state.svgFill.density.toFixed(2);
+    updateSvgQualityHint();
     if (state.svgFill.on) syncSvgFill();
   });
   $("svgStampSize").addEventListener("input", (e) => {
     state.svgFill.stampSize = +e.target.value; $("svgStampSizeVal").textContent = state.svgFill.stampSize + " px";
+    updateSvgQualityHint();
     if (state.svgFill.on) syncSvgFill();
   });
   $("svgStagger").addEventListener("change", (e) => {
@@ -2026,6 +2091,7 @@
   });
   $("svgPosJitter").addEventListener("input", (e) => {
     state.svgFill.positionJitter = +e.target.value; $("svgPosJitterVal").textContent = "±" + state.svgFill.positionJitter.toFixed(2);
+    updateSvgQualityHint();
     if (state.svgFill.on) syncSvgFill();
   });
   $("svgRotJitter").addEventListener("input", (e) => {
@@ -2034,6 +2100,7 @@
   });
   $("svgScaleJitter").addEventListener("input", (e) => {
     state.svgFill.scaleJitter = +e.target.value; $("svgScaleJitterVal").textContent = "±" + state.svgFill.scaleJitter.toFixed(2);
+    updateSvgQualityHint();
     if (state.svgFill.on) syncSvgFill();
   });
   $("svgSeed").addEventListener("change", (e) => { state.svgFill.seed = e.target.value; if (state.svgFill.on) syncSvgFill(); });
@@ -2099,6 +2166,8 @@
     });
   }
 
+  const STATIC_PIXEL_RATIO = 2;
+
   async function buildStaticPatternPng() {
     if (state.svgFill.on) {
       const svg = resolveSvgFillSample();
@@ -2113,6 +2182,7 @@
         rotationJitterDeg: state.svgFill.rotationJitterDeg,
         scaleJitter: state.svgFill.scaleJitter,
         seed: state.svgFill.seed,
+        pixelRatio: STATIC_PIXEL_RATIO,
       });
       return tileImageToPng(tile);
     }
@@ -2124,6 +2194,7 @@
         state.patColor,
         state.weight,
         state.angle,
+        { pixelRatio: STATIC_PIXEL_RATIO },
       ));
     }
 
@@ -2173,7 +2244,7 @@ export async function addPatternFill(map, {
     const imageId = patternLayer.paint["fill-pattern"];
     if (!map.hasImage(imageId)) {
       const loaded = await map.loadImage(imageUrl.href);
-      map.addImage(imageId, loaded.data || loaded);
+      map.addImage(imageId, loaded.data || loaded, { pixelRatio: 2 });
     }
   }
 
@@ -2204,7 +2275,7 @@ maplibre-pattern-fills. It does not require the plugin at runtime.
 ## Files
 
 - style.json: background, pattern and outline layers
-- pattern.png: the repeating pattern image
+- pattern.png: the repeating pattern image rendered at 2x resolution
 - integration.js: loads the image and adds the layers to an existing map
 
 ## Use
@@ -2350,7 +2421,9 @@ if (map.isStyleLoaded()) {
   // Reflect state into the controls (after loading a preset).
   function applyStateToUI() {
     $("patColor").value = $("patColorHex").value = state.patColor;
+    $("svgPatColor").value = $("svgPatColorHex").value = state.patColor;
     $("patOpacity").value = state.patOpacity; $("patOpacityVal").textContent = (+state.patOpacity).toFixed(2);
+    $("svgPatOpacity").value = state.patOpacity; $("svgPatOpacityVal").textContent = (+state.patOpacity).toFixed(2);
     $("weight").value = state.weight; $("weightVal").textContent = (+state.weight).toFixed(2) + " px";
     $("tile").value = state.tile; $("tileVal").textContent = state.tile + " px";
     $("bgColor").value = $("bgColorHex").value = state.bg.color;
@@ -2372,6 +2445,7 @@ if (map.isStyleLoaded()) {
     $("svgRotJitter").value = state.svgFill.rotationJitterDeg; $("svgRotJitterVal").textContent = "±" + state.svgFill.rotationJitterDeg + "°";
     $("svgScaleJitter").value = state.svgFill.scaleJitter; $("svgScaleJitterVal").textContent = "±" + state.svgFill.scaleJitter.toFixed(2);
     $("svgSeed").value = state.svgFill.seed;
+    updateSvgQualityHint();
     setGeometricFieldsetEnabled(!state.svgFill.on);
     updateFillChoiceUI();
     document.querySelectorAll("#angleSeg button").forEach((b) => b.classList.toggle("active", +b.dataset.a === state.angle));

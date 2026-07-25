@@ -11,7 +11,7 @@ export interface SvgPatternOptions {
   imageId: string;
   /** Raw `<svg>...</svg>` markup, used as the repeatable stamp. */
   svg: string;
-  /** Size of the generated meta-tile in px. Default 192. */
+  /** Size of the generated meta-tile in layout px. Default 288. */
   tileSize?: number;
   /** Rendered size of each SVG stamp in px. Default 28. */
   stampSize?: number;
@@ -27,6 +27,19 @@ export interface SvgPatternOptions {
   positionJitter?: number;
   /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout (orchard/marsh map fills). Default true. */
   stagger?: boolean;
+  /** Raster pixels per MapLibre layout pixel. Defaults to the display ratio, capped at 2 when installed. */
+  pixelRatio?: number;
+}
+
+function resolvePixelRatio(value: number | undefined, useDisplayRatio: boolean): number {
+  const displayRatio = useDisplayRatio && typeof globalThis.devicePixelRatio === "number"
+    ? globalThis.devicePixelRatio
+    : 1;
+  const ratio = value ?? Math.min(Math.max(displayRatio, 1), 2);
+  if (!Number.isFinite(ratio) || ratio <= 0) {
+    throw new RangeError("pixelRatio must be a finite number greater than 0");
+  }
+  return ratio;
 }
 
 /**
@@ -43,6 +56,7 @@ export interface SvgPatternOptions {
  */
 export async function createSvgScatterTile(options: SvgPatternOptions): Promise<TileImage> {
   const definition = createSvgPatternDefinition(options);
+  const pixelRatio = resolvePixelRatio(options.pixelRatio, false);
   const {
     svg,
     tileSize,
@@ -57,10 +71,13 @@ export async function createSvgScatterTile(options: SvgPatternOptions): Promise<
 
   const image = await loadSvgImage(svg);
   const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = tileSize;
+  const physicalTileSize = Math.max(1, Math.round(tileSize * pixelRatio));
+  const renderScale = physicalTileSize / tileSize;
+  canvas.width = canvas.height = physicalTileSize;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D canvas context unavailable");
-  ctx.clearRect(0, 0, tileSize, tileSize);
+  ctx.clearRect(0, 0, physicalTileSize, physicalTileSize);
+  ctx.scale(renderScale, renderScale);
 
   const placements = createSvgScatterLayout({
     tileSize,
@@ -82,14 +99,19 @@ export async function createSvgScatterTile(options: SvgPatternOptions): Promise<
     ctx.restore();
   }
 
-  const imageData = ctx.getImageData(0, 0, tileSize, tileSize);
-  return { width: tileSize, height: tileSize, data: new Uint8Array(imageData.data.buffer) };
+  const imageData = ctx.getImageData(0, 0, physicalTileSize, physicalTileSize);
+  return {
+    width: physicalTileSize,
+    height: physicalTileSize,
+    data: new Uint8Array(imageData.data.buffer),
+  };
 }
 
 interface InstalledSvgPattern {
   signature: string;
   width: number;
   height: number;
+  pixelRatio: number;
 }
 
 const installedSvgPatterns = new WeakMap<MaplibreMap, Map<string, InstalledSvgPattern>>();
@@ -102,7 +124,8 @@ const svgPatternGenerations = new WeakMap<MaplibreMap, Map<string, number>>();
  */
 export async function installSvgPatternFill(map: MaplibreMap, options: SvgPatternOptions): Promise<void> {
   const definition = createSvgPatternDefinition(options);
-  const signature = serializePatternDefinition(definition);
+  const pixelRatio = resolvePixelRatio(options.pixelRatio, true);
+  const signature = `${serializePatternDefinition(definition)}@${pixelRatio}`;
   let installedById = installedSvgPatterns.get(map);
   if (!installedById) {
     installedById = new Map();
@@ -120,24 +143,26 @@ export async function installSvgPatternFill(map: MaplibreMap, options: SvgPatter
   const generation = (generationsById.get(options.imageId) ?? 0) + 1;
   generationsById.set(options.imageId, generation);
 
-  const tile = await createSvgScatterTile(options);
+  const tile = await createSvgScatterTile({ ...options, pixelRatio });
   if (generationsById.get(options.imageId) !== generation) return;
 
   const previous = installedById.get(options.imageId);
   if (
     map.hasImage(options.imageId) &&
     previous?.width === tile.width &&
-    previous.height === tile.height
+    previous.height === tile.height &&
+    previous.pixelRatio === pixelRatio
   ) {
     map.updateImage(options.imageId, tile);
   } else {
     if (map.hasImage(options.imageId)) map.removeImage(options.imageId);
-    map.addImage(options.imageId, tile);
+    map.addImage(options.imageId, tile, { pixelRatio });
   }
   installedById.set(options.imageId, {
     signature,
     width: tile.width,
     height: tile.height,
+    pixelRatio,
   });
   map.triggerRepaint();
 }

@@ -37,4 +37,16 @@ describe("scatterPointsInPolygon", () => {
     expect(() => scatterPointsInPolygon([exterior], { radius: 10, samples: 2 })).toThrow(/samples/);
     expect(() => scatterPointsInPolygon([exterior], { radius: 10, scaleJitter: 1 })).toThrow(/scaleJitter/);
   });
+
+  it("centres a regular layout inside the polygon bounds", () => {
+    const points = scatterPointsInPolygon([exterior], {
+      radius: 10,
+      density: 4,
+      positionJitter: 0,
+      stagger: false,
+    });
+    expect(points).toHaveLength(36);
+    expect(points.reduce((sum, point) => sum + point.x, 0) / points.length).toBe(150);
+    expect(points.reduce((sum, point) => sum + point.y, 0) / points.length).toBe(150);
+  });
 });

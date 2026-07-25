@@ -52,4 +52,34 @@ describe("createSvgScatterLayout", () => {
     expect(() => createSvgScatterLayout({ ...options, tileSize: Number.NaN })).toThrow(/tileSize/);
     expect(() => createSvgScatterLayout({ ...options, scaleJitter: 1 })).toThrow(/scaleJitter/);
   });
+
+  it("keeps regular spacing across the tile seam", () => {
+    const tileSize = 192;
+    const placements = createSvgScatterLayout({
+      ...options,
+      tileSize,
+      stampSize: 20,
+      density: 2.7,
+      positionJitter: 0,
+      rotationJitterDeg: 0,
+      scaleJitter: 0,
+    }).filter(({ x, y }) => x >= 0 && x < tileSize && y >= 0 && y < tileSize);
+
+    expect(placements).toHaveLength(12);
+    const rows = new Map<number, typeof placements>();
+    for (const placement of placements) {
+      const row = rows.get(placement.y) ?? [];
+      row.push(placement);
+      rows.set(placement.y, row);
+    }
+    expect(rows.size).toBe(4);
+    for (const row of rows.values()) {
+      const xs = row.map(({ x }) => x).sort((a, b) => a - b);
+      const gaps = xs.map((x, index) => {
+        const next = xs[(index + 1) % xs.length];
+        return (next - x + tileSize) % tileSize;
+      });
+      expect(gaps.every((gap) => Math.abs(gap - 64) < 1e-9)).toBe(true);
+    }
+  });
 });

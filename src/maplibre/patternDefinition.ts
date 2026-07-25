@@ -160,7 +160,7 @@ export function createSvgPatternDefinition(options: {
   return parsePatternDefinition({
     kind: "svg",
     svg: options.svg,
-    tileSize: options.tileSize ?? 192,
+    tileSize: options.tileSize ?? 288,
     stampSize: options.stampSize ?? 28,
     density: options.density ?? 1.4,
     seed: options.seed ?? 1,

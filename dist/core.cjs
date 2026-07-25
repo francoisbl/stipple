@@ -174,34 +174,40 @@ function defaultContextFactory(size) {
   return createMiniContext(size);
 }
 function makeTile(pattern, size, color, weight, angle, options = {}) {
-  const { ctx, toTileImage } = (options.contextFactory ?? defaultContextFactory)(size);
-  ctx.clearRect(0, 0, size, size);
+  const pixelRatio = options.pixelRatio ?? 1;
+  if (!Number.isFinite(pixelRatio) || pixelRatio <= 0) {
+    throw new RangeError("pixelRatio must be a finite number greater than 0");
+  }
+  const physicalSize = Math.max(1, Math.round(size * pixelRatio));
+  const renderScale = physicalSize / size;
+  const { ctx, toTileImage } = (options.contextFactory ?? defaultContextFactory)(physicalSize);
+  ctx.clearRect(0, 0, physicalSize, physicalSize);
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = weight;
+  ctx.lineWidth = weight * renderScale;
   ctx.lineCap = "round";
   const drawHachures = (deg) => {
     ctx.beginPath();
-    const step = Math.max(size / 2, 4);
+    const step = Math.max(physicalSize / 2, 4 * renderScale);
     if (deg === 0) {
-      for (let y = 0; y <= size; y += step) {
-        ctx.moveTo(0, y + 0.5);
-        ctx.lineTo(size, y + 0.5);
+      for (let y = 0; y <= physicalSize; y += step) {
+        ctx.moveTo(0, y + 0.5 * renderScale);
+        ctx.lineTo(physicalSize, y + 0.5 * renderScale);
       }
     } else if (deg === 90) {
-      for (let x = 0; x <= size; x += step) {
-        ctx.moveTo(x + 0.5, 0);
-        ctx.lineTo(x + 0.5, size);
+      for (let x = 0; x <= physicalSize; x += step) {
+        ctx.moveTo(x + 0.5 * renderScale, 0);
+        ctx.lineTo(x + 0.5 * renderScale, physicalSize);
       }
     } else if (deg === 45) {
-      for (let o = -size; o <= size * 2; o += step) {
+      for (let o = -physicalSize; o <= physicalSize * 2; o += step) {
         ctx.moveTo(o, 0);
-        ctx.lineTo(o + size, size);
+        ctx.lineTo(o + physicalSize, physicalSize);
       }
     } else {
-      for (let o = -size; o <= size * 2; o += step) {
-        ctx.moveTo(o + size, 0);
-        ctx.lineTo(o, size);
+      for (let o = -physicalSize; o <= physicalSize * 2; o += step) {
+        ctx.moveTo(o + physicalSize, 0);
+        ctx.lineTo(o, physicalSize);
       }
     }
     ctx.stroke();
@@ -216,32 +222,32 @@ function makeTile(pattern, size, color, weight, angle, options = {}) {
       break;
     case "grid": {
       ctx.beginPath();
-      ctx.moveTo(0.5, 0);
-      ctx.lineTo(0.5, size);
-      ctx.moveTo(0, 0.5);
-      ctx.lineTo(size, 0.5);
+      ctx.moveTo(0.5 * renderScale, 0);
+      ctx.lineTo(0.5 * renderScale, physicalSize);
+      ctx.moveTo(0, 0.5 * renderScale);
+      ctx.lineTo(physicalSize, 0.5 * renderScale);
       ctx.stroke();
       break;
     }
     case "stipple": {
-      const r = weight * 0.6;
+      const r = weight * renderScale * 0.6;
       const cells = Math.max(2, Math.round(size / 6));
-      const s = size / cells;
+      const s = physicalSize / cells;
       for (let i = 0; i < cells; i++) {
         for (let j = 0; j < cells; j++) {
           const cx = (i + (j % 2 ? 0.75 : 0.25)) * s;
           const cy = (j + 0.5) * s;
           ctx.beginPath();
-          ctx.arc(cx % size, cy % size, r, 0, Math.PI * 2);
+          ctx.arc(cx % physicalSize, cy % physicalSize, r, 0, Math.PI * 2);
           ctx.fill();
         }
       }
       break;
     }
     case "dots": {
-      const r = Math.max(weight * 0.5, 1);
+      const r = Math.max(weight * renderScale * 0.5, renderScale);
       ctx.beginPath();
-      ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2);
+      ctx.arc(physicalSize / 2, physicalSize / 2, r, 0, Math.PI * 2);
       ctx.fill();
       break;
     }
@@ -299,7 +305,7 @@ function scatterPointsInPolygon(rings, options) {
     radius,
     density = 1,
     seed = 1,
-    samples = 12,
+    samples = 24,
     rotationJitterDeg = 0,
     scaleJitter = 0,
     positionJitter = 0.15,
@@ -339,12 +345,17 @@ function scatterPointsInPolygon(rings, options) {
   const rand = mulberry32(seedNum);
   const cell = 100 / Math.sqrt(density);
   const points = [];
-  let row = 0;
-  for (let y = minY; y <= maxY; y += cell, row++) {
-    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
-    for (let x = minX; x <= maxX; x += cell) {
-      const jx = x + rowOffset + (rand() - 0.5) * cell * positionJitter;
-      const jy = y + (rand() - 0.5) * cell * positionJitter;
+  const width = maxX - minX;
+  const height = maxY - minY;
+  const columns = Math.max(1, Math.floor(width / cell));
+  const rows = Math.max(1, Math.floor(height / cell));
+  const startX = minX + (width - (columns - 1) * cell) / 2;
+  const startY = minY + (height - (rows - 1) * cell) / 2;
+  for (let row = 0; row < rows; row++) {
+    const rowOffset = stagger && columns > 1 ? row % 2 === 0 ? -cell / 4 : cell / 4 : 0;
+    for (let column = 0; column < columns; column++) {
+      const jx = startX + column * cell + rowOffset + (rand() - 0.5) * cell * positionJitter;
+      const jy = startY + row * cell + (rand() - 0.5) * cell * positionJitter;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
       if (discFitsInside(jx, jy, radius * scale, rings, samples)) points.push({ x: jx, y: jy, rotation, scale });
@@ -390,19 +401,26 @@ function createSvgScatterLayout(options) {
   const seedNum = typeof seed === "string" ? hashStringToSeed(seed) : seed;
   if (!Number.isFinite(seedNum)) throw new RangeError("seed must be a finite number or a string");
   const rand = mulberry32(seedNum);
-  const cell = 100 / Math.sqrt(density);
-  const cols = Math.max(1, Math.ceil(tileSize / cell));
-  let rows = Math.max(1, Math.ceil(tileSize / cell));
-  if (stagger && rows % 2 !== 0) rows += 1;
+  const targetCell = 100 / Math.sqrt(density);
+  const cols = Math.max(1, Math.round(tileSize / targetCell));
+  let rows = Math.max(1, Math.round(tileSize / targetCell));
+  if (stagger && rows % 2 !== 0) {
+    const lower = Math.max(2, rows - 1);
+    const upper = rows + 1;
+    const targetCount = density * (tileSize * tileSize) / 1e4;
+    rows = Math.abs(cols * lower - targetCount) <= Math.abs(cols * upper - targetCount) ? lower : upper;
+  }
+  const cellWidth = tileSize / cols;
+  const cellHeight = tileSize / rows;
   const placements = [];
   let stampIndex = 0;
   for (let row = 0; row < rows; row++) {
-    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
+    const rowOffset = stagger && row % 2 === 1 ? cellWidth / 2 : 0;
     for (let col = 0; col < cols; col++, stampIndex++) {
-      const jitterX = (rand() - 0.5) * cell * positionJitter;
-      const jitterY = (rand() - 0.5) * cell * positionJitter;
-      const x = modulo(col * cell + cell / 2 + rowOffset + jitterX, tileSize);
-      const y = modulo(row * cell + cell / 2 + jitterY, tileSize);
+      const jitterX = (rand() - 0.5) * cellWidth * positionJitter;
+      const jitterY = (rand() - 0.5) * cellHeight * positionJitter;
+      const x = modulo(col * cellWidth + cellWidth / 2 + rowOffset + jitterX, tileSize);
+      const y = modulo(row * cellHeight + cellHeight / 2 + jitterY, tileSize);
       const rotationRad = (rand() * 2 - 1) * rotationJitterDeg * (Math.PI / 180);
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
       const extent = stampSize * scale * Math.SQRT2 / 2;

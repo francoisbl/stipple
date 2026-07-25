@@ -64,6 +64,7 @@ describe("installPatternFills", () => {
     expect(map.addImage).toHaveBeenCalledWith(
       "legacy",
       expect.objectContaining({ width: 16, height: 16 }),
+      { pixelRatio: 1 },
     );
   });
 
