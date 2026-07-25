@@ -6,9 +6,10 @@ milestones. The project should stay focused on one clear promise:
 > Generate robust cartographic surface patterns for MapLibre GL JS, at runtime
 > or ahead of time, without requiring a hand-built sprite sheet.
 
-Point-icon helpers and no-cut icon scattering remain useful, but they must not
-blur that primary positioning. The no-cut scatter API is experimental until its
-geometry guarantees are made exact and tested.
+The playground may include background and outline controls to preview a fill in
+context. General line styling and point-symbol helpers stay outside the public
+API. The no-cut scatter API is experimental until its geometry guarantees are
+made exact and tested.
 
 ## Product boundaries
 
@@ -141,6 +142,8 @@ Implementation status:
 - [x] Make geometric and SVG installation idempotent.
 - [x] Prevent stale SVG renders from overwriting newer definitions.
 - [x] Restore registered images after style reloads with a disposable observer.
+- [x] Remove generic line and point-symbol helpers from the public API.
+- [x] Focus the playground on polygon fill patterns.
 - [ ] Publish the `0.3.0` release.
 
 ### P0: Define a versioned pattern specification
@@ -174,8 +177,8 @@ Acceptance criteria:
 ### P1: Simplify package scope
 
 - Keep pattern-oriented style builders.
-- Deprecate or move generic line styling out of the main entry point.
-- Decide whether basic SVG point icons belong in a secondary export.
+- Keep generic line styling out of the public API.
+- Keep basic SVG point helpers internal to the experimental scatter.
 - Move no-cut scatter under an `experimental` export path.
 
 Suggested exports:

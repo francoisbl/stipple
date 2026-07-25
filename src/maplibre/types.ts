@@ -23,8 +23,3 @@ export interface OutlineConfig {
 }
 
 /** `line-dasharray` presets using native MapLibre expressions (no canvas involved). */
-export const DASH_PRESETS: Record<"solid" | "dotted" | "dashdot", number[]> = {
-  solid: [],
-  dotted: [1, 2],
-  dashdot: [4, 2, 1, 2],
-};

@@ -155,8 +155,6 @@ interface OutlineConfig {
     width: number;
     dash: number[];
 }
-/** `line-dasharray` presets using native MapLibre expressions (no canvas involved). */
-declare const DASH_PRESETS: Record<"solid" | "dotted" | "dashdot", number[]>;
 
 declare const PATTERN_METADATA_KEY: "maplibre-pattern-fills:v1";
 declare const LEGACY_PATTERN_METADATA_KEY: "enhanced:pattern";
@@ -251,66 +249,6 @@ declare function buildStyleFragment(options: BuildStyleFragmentOptions): {
     layers: Record<string, unknown>[];
 };
 
-interface BuildLineStyleFragmentOptions {
-    /** Vector source id, e.g. `"urbanisme.voiries"`. */
-    source: string;
-    /** Source-layer name (the table/layer inside the vector source). */
-    sourceLayer: string;
-    /** Vector tile URL. Defaults to a `<url>/<source>` placeholder to fill in. */
-    sourceUrl?: string;
-    line: OutlineConfig;
-}
-/**
- * Builds the sources+layers fragment for a single line-style layer.
- * `line-dasharray` is a native declarative expression. Unlike fill
- * patterns there's nothing baked into a canvas image, so no metadata or
- * runtime installer is needed for this one.
- */
-declare function buildLineStyleFragment(options: BuildLineStyleFragmentOptions): {
-    sources: {
-        [x: string]: {
-            type: string;
-            url: string;
-        };
-    };
-    layers: Record<string, unknown>[];
-};
-
-interface IconStyleConfig {
-    /** Raw `<svg>...</svg>` markup. */
-    svg: string;
-    /** Rendered icon size in px. */
-    size: number;
-    /** Image id referenced by the layer's `icon-image` and passed to `addSvgIcon`. */
-    imageId: string;
-}
-interface BuildIconStyleFragmentOptions {
-    /** Vector source id, e.g. `"urbanisme.arbres"`. */
-    source: string;
-    /** Source-layer name (the table/layer inside the vector source). */
-    sourceLayer: string;
-    /** Vector tile URL. Defaults to a `<url>/<source>` placeholder to fill in. */
-    sourceUrl?: string;
-    icon: IconStyleConfig;
-    /** Static icon rotation in degrees, if any. */
-    rotationDeg?: number;
-}
-/**
- * Builds the sources+layers fragment for a single SVG point-icon layer.
- * The icon is not baked into the paint properties. It is carried in
- * `layer.metadata["enhanced:icon"]` so {@link installIconStyles} can
- * rasterize the same icon at runtime via `addSvgIcon`.
- */
-declare function buildIconStyleFragment(options: BuildIconStyleFragmentOptions): {
-    sources: {
-        [x: string]: {
-            type: string;
-            url: string;
-        };
-    };
-    layers: Record<string, unknown>[];
-};
-
 interface StyleLike {
     layers: Array<{
         metadata?: Record<string, unknown>;
@@ -346,20 +284,6 @@ interface PatternFillObserver {
  * safe to call explicitly after changing metadata.
  */
 declare function observePatternFills(map: Map, options?: ObservePatternFillsOptions): PatternFillObserver;
-
-interface IconStyleLike {
-    layers: Array<{
-        metadata?: Record<string, unknown>;
-    }>;
-}
-/**
- * Scans a style (or `map.getStyle()`) for layers carrying the
- * `enhanced:icon` metadata produced by {@link buildIconStyleFragment}, and
- * rasterizes + installs the matching SVG icon for each. Mirrors
- * {@link installPatternFills} for the point/symbol case. Call once after
- * `map.on('load', ...)` (and again if you swap styles).
- */
-declare function installIconStyles(map: Map, style: IconStyleLike): Promise<void>;
 
 interface SvgPatternOptions {
     imageId: string;
@@ -401,26 +325,6 @@ declare function createSvgScatterTile(options: SvgPatternOptions): Promise<TileI
  * and a stale asynchronous render cannot overwrite a newer call.
  */
 declare function installSvgPatternFill(map: Map, options: SvgPatternOptions): Promise<void>;
-
-interface SvgIconOptions {
-    id: string;
-    /** Raw `<svg>...</svg>` markup. */
-    svg: string;
-    /** Rendered size (square) in CSS px. Default 32. */
-    size?: number;
-    /** Oversampling factor for crisp rendering at high zoom / retina. Default 2. */
-    pixelRatio?: number;
-}
-/**
- * Rasterizes an SVG as a point icon and installs it via `map.addImage`, ready
- * to use as `icon-image` on a `symbol` layer. Reuses MapLibre's native image
- * pipeline (canvas raster + addImage) instead of a custom SVG renderer.
- */
-declare function addSvgIcon(map: Map, options: SvgIconOptions): Promise<{
-    id: string;
-    width: number;
-    height: number;
-}>;
 
 type PolygonGeometry = {
     type: "Polygon";
@@ -478,7 +382,7 @@ interface InstallSvgIconScatterOptions {
     sourceId: string;
     /** Symbol layer id. */
     layerId: string;
-    /** Image id passed to `addSvgIcon` (reused across calls if already installed). */
+    /** MapLibre image id used for the rasterized SVG. */
     iconId: string;
     polygon: PolygonGeometry;
     svg: string;
@@ -513,4 +417,4 @@ interface InstallSvgIconScatterOptions {
  */
 declare function installSvgIconScatter(map: Map, options: InstallSvgIconScatterOptions): Promise<void>;
 
-export { type BackgroundFillConfig, type BuildIconStyleFragmentOptions, type BuildLineStyleFragmentOptions, type BuildStyleFragmentOptions, DASH_PRESETS, type GeometricPatternDefinition, type GeometricPatternType, type HachureAngle, type IconStyleConfig, type IconStyleLike, type InstallSvgIconScatterOptions, LEGACY_PATTERN_METADATA_KEY, type MakeTileOptions, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type PatternType, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgIconOptions, type SvgPatternDefinition, type SvgPatternOptions, type SvgScatterLayoutOptions, type SvgStampPlacement, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, addSvgIcon, buildIconStyleFragment, buildLineStyleFragment, buildStyleFragment, createMiniContext, createSvgPatternDefinition, createSvgScatterLayout, createSvgScatterTile, hashStringToSeed, installIconStyles, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, scatterIconPoints, scatterPointsInPolygon, serializePatternDefinition, syncPatternTexture };
+export { type BackgroundFillConfig, type BuildStyleFragmentOptions, type GeometricPatternDefinition, type GeometricPatternType, type HachureAngle, type InstallSvgIconScatterOptions, LEGACY_PATTERN_METADATA_KEY, type MakeTileOptions, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type PatternType, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgPatternDefinition, type SvgPatternOptions, type SvgScatterLayoutOptions, type SvgStampPlacement, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, buildStyleFragment, createMiniContext, createSvgPatternDefinition, createSvgScatterLayout, createSvgScatterTile, hashStringToSeed, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, scatterIconPoints, scatterPointsInPolygon, serializePatternDefinition, syncPatternTexture };

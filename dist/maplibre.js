@@ -3,17 +3,9 @@ import {
   makeTile
 } from "./chunk-FXXBZSDE.js";
 import {
-  addSvgIcon,
   loadSvgImage
-} from "./chunk-QO6U5GJG.js";
+} from "./chunk-Z7LWPO7O.js";
 import "./chunk-GBEE6YET.js";
-
-// src/maplibre/types.ts
-var DASH_PRESETS = {
-  solid: [],
-  dotted: [1, 2],
-  dashdot: [4, 2, 1, 2]
-};
 
 // src/maplibre/patternDefinition.ts
 var PATTERN_METADATA_KEY = "maplibre-pattern-fills:v1";
@@ -209,54 +201,6 @@ function buildStyleFragment(options) {
   };
 }
 
-// src/maplibre/buildLineStyleFragment.ts
-function buildLineStyleFragment(options) {
-  const { source, sourceLayer, sourceUrl, line } = options;
-  const layers = [];
-  if (line.enabled) {
-    layers.push({
-      id: `${source}__line`,
-      type: "line",
-      source,
-      "source-layer": sourceLayer,
-      paint: {
-        "line-color": line.color,
-        "line-width": line.width,
-        ...line.dash.length ? { "line-dasharray": line.dash } : {}
-      }
-    });
-  }
-  return {
-    sources: { [source]: { type: "vector", url: sourceUrl ?? `<url>/${source}` } },
-    layers
-  };
-}
-
-// src/maplibre/iconStyleFragment.ts
-function buildIconStyleFragment(options) {
-  const { source, sourceLayer, sourceUrl, icon, rotationDeg } = options;
-  const layers = [
-    {
-      id: `${source}__icon`,
-      type: "symbol",
-      source,
-      "source-layer": sourceLayer,
-      layout: {
-        "icon-image": icon.imageId,
-        "icon-allow-overlap": true,
-        ...rotationDeg ? { "icon-rotate": rotationDeg } : {}
-      },
-      metadata: {
-        "enhanced:icon": { svg: icon.svg, size: icon.size, imageId: icon.imageId }
-      }
-    }
-  ];
-  return {
-    sources: { [source]: { type: "vector", url: sourceUrl ?? `<url>/${source}` } },
-    layers
-  };
-}
-
 // src/maplibre/svgPattern.ts
 async function createSvgScatterTile(options) {
   const definition = createSvgPatternDefinition(options);
@@ -411,26 +355,12 @@ function observePatternFills(map, options = {}) {
     }
   };
 }
-
-// src/maplibre/installIconStyles.ts
-async function installIconStyles(map, style) {
-  for (const layer of style.layers) {
-    const meta = layer.metadata?.["enhanced:icon"];
-    if (!meta) continue;
-    await addSvgIcon(map, { id: meta.imageId, svg: meta.svg, size: meta.size });
-  }
-}
 export {
-  DASH_PRESETS,
   LEGACY_PATTERN_METADATA_KEY,
   PATTERN_METADATA_KEY,
-  addSvgIcon,
-  buildIconStyleFragment,
-  buildLineStyleFragment,
   buildStyleFragment,
   createSvgPatternDefinition,
   createSvgScatterTile,
-  installIconStyles,
   installPatternFills,
   installSvgPatternFill,
   observePatternFills,

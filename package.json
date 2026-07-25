@@ -1,7 +1,7 @@
 {
   "name": "maplibre-pattern-fills",
   "version": "0.1.0",
-  "description": "Textured fill patterns, tiled SVG fills, and SVG point icons for MapLibre GL JS, generated at runtime without pre-baked sprite sheets.",
+  "description": "Runtime-generated geometric and SVG fill patterns for MapLibre GL JS, with deterministic styling and a visual playground.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -64,6 +64,8 @@
     "maplibre",
     "maplibre-gl",
     "fill-pattern",
+    "cartography",
+    "pattern-generator",
     "hatching",
     "svg",
     "map-styling"

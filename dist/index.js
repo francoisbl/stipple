@@ -395,13 +395,6 @@ function createSvgScatterLayout(options) {
   return placements;
 }
 
-// src/maplibre/types.ts
-var DASH_PRESETS = {
-  solid: [],
-  dotted: [1, 2],
-  dashdot: [4, 2, 1, 2]
-};
-
 // src/maplibre/patternDefinition.ts
 var PATTERN_METADATA_KEY = "maplibre-pattern-fills:v1";
 var LEGACY_PATTERN_METADATA_KEY = "enhanced:pattern";
@@ -596,54 +589,6 @@ function buildStyleFragment(options) {
   };
 }
 
-// src/maplibre/buildLineStyleFragment.ts
-function buildLineStyleFragment(options) {
-  const { source, sourceLayer, sourceUrl, line } = options;
-  const layers = [];
-  if (line.enabled) {
-    layers.push({
-      id: `${source}__line`,
-      type: "line",
-      source,
-      "source-layer": sourceLayer,
-      paint: {
-        "line-color": line.color,
-        "line-width": line.width,
-        ...line.dash.length ? { "line-dasharray": line.dash } : {}
-      }
-    });
-  }
-  return {
-    sources: { [source]: { type: "vector", url: sourceUrl ?? `<url>/${source}` } },
-    layers
-  };
-}
-
-// src/maplibre/iconStyleFragment.ts
-function buildIconStyleFragment(options) {
-  const { source, sourceLayer, sourceUrl, icon, rotationDeg } = options;
-  const layers = [
-    {
-      id: `${source}__icon`,
-      type: "symbol",
-      source,
-      "source-layer": sourceLayer,
-      layout: {
-        "icon-image": icon.imageId,
-        "icon-allow-overlap": true,
-        ...rotationDeg ? { "icon-rotate": rotationDeg } : {}
-      },
-      metadata: {
-        "enhanced:icon": { svg: icon.svg, size: icon.size, imageId: icon.imageId }
-      }
-    }
-  ];
-  return {
-    sources: { [source]: { type: "vector", url: sourceUrl ?? `<url>/${source}` } },
-    layers
-  };
-}
-
 // src/maplibre/loadSvgImage.ts
 async function loadSvgImage(svg) {
   const blob = new Blob([svg], { type: "image/svg+xml" });
@@ -813,33 +758,6 @@ function observePatternFills(map, options = {}) {
   };
 }
 
-// src/maplibre/svgIcon.ts
-async function addSvgIcon(map, options) {
-  const { id, svg, size = 32, pixelRatio = 2 } = options;
-  const image = await loadSvgImage(svg);
-  const px = Math.round(size * pixelRatio);
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = px;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D canvas context unavailable");
-  ctx.clearRect(0, 0, px, px);
-  ctx.drawImage(image, 0, 0, px, px);
-  const imageData = ctx.getImageData(0, 0, px, px);
-  const tile = { width: px, height: px, data: new Uint8Array(imageData.data.buffer) };
-  if (map.hasImage(id)) map.removeImage(id);
-  map.addImage(id, tile, { pixelRatio });
-  return { id, width: px, height: px };
-}
-
-// src/maplibre/installIconStyles.ts
-async function installIconStyles(map, style) {
-  for (const layer of style.layers) {
-    const meta = layer.metadata?.["enhanced:icon"];
-    if (!meta) continue;
-    await addSvgIcon(map, { id: meta.imageId, svg: meta.svg, size: meta.size });
-  }
-}
-
 // src/maplibre/scatterIconPoints.ts
 function toPolygons(polygon) {
   return polygon.type === "Polygon" ? [polygon.coordinates] : polygon.coordinates;
@@ -877,6 +795,24 @@ function scatterIconPoints(options) {
     };
   });
   return { type: "FeatureCollection", features };
+}
+
+// src/maplibre/svgIcon.ts
+async function addSvgIcon(map, options) {
+  const { id, svg, size = 32, pixelRatio = 2 } = options;
+  const image = await loadSvgImage(svg);
+  const px = Math.round(size * pixelRatio);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = px;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas context unavailable");
+  ctx.clearRect(0, 0, px, px);
+  ctx.drawImage(image, 0, 0, px, px);
+  const imageData = ctx.getImageData(0, 0, px, px);
+  const tile = { width: px, height: px, data: new Uint8Array(imageData.data.buffer) };
+  if (map.hasImage(id)) map.removeImage(id);
+  map.addImage(id, tile, { pixelRatio });
+  return { id, width: px, height: px };
 }
 
 // src/maplibre/svgIconScatter.ts
@@ -930,19 +866,14 @@ async function installSvgIconScatter(map, options) {
   }
 }
 export {
-  DASH_PRESETS,
   LEGACY_PATTERN_METADATA_KEY,
   PATTERN_METADATA_KEY,
-  addSvgIcon,
-  buildIconStyleFragment,
-  buildLineStyleFragment,
   buildStyleFragment,
   createMiniContext,
   createSvgPatternDefinition,
   createSvgScatterLayout,
   createSvgScatterTile,
   hashStringToSeed,
-  installIconStyles,
   installPatternFills,
   installSvgIconScatter,
   installSvgPatternFill,

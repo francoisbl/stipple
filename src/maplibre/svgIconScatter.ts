@@ -8,7 +8,7 @@ export interface InstallSvgIconScatterOptions {
   sourceId: string;
   /** Symbol layer id. */
   layerId: string;
-  /** Image id passed to `addSvgIcon` (reused across calls if already installed). */
+  /** MapLibre image id used for the rasterized SVG. */
   iconId: string;
   polygon: PolygonGeometry;
   svg: string;
@@ -59,8 +59,8 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
     stagger,
   } = options;
 
-  // Always (re)rasterize: `size` may have changed since the icon id was last
-  // installed, and addSvgIcon's own removeImage+addImage is cheap.
+  // Always rasterize because `size` may have changed since the image id was
+  // last installed.
   await addSvgIcon(map, { id: iconId, svg, size });
 
   // The circumscribed radius covers every corner of the square icon canvas,
