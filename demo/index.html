@@ -564,6 +564,18 @@
     }
     .control-block:last-child { padding-right: 0; border-right: 0; }
     .control-block > label:first-child { margin-top: 0; }
+    .parameter-group,
+    #textureScaleControl,
+    [data-svg-options],
+    [data-bg-options],
+    [data-line-options] { transition: opacity .16s; }
+    .parameter-group.is-disabled,
+    #textureScaleControl.is-disabled,
+    [data-svg-options].is-disabled,
+    [data-bg-options].is-disabled,
+    [data-line-options].is-disabled { opacity: .34; }
+    button:disabled,
+    input:disabled { cursor: not-allowed; }
     .control-title {
       display: block;
       margin: 0 0 9px;
@@ -662,11 +674,11 @@
         <aside class="source-palette" aria-label="Polygon selection">
           <div class="palette-label">
             <span>Polygons</span>
-            <small>click to edit</small>
+            <small id="polygonCount">1 polygon</small>
           </div>
           <div class="source-line">
             <select id="layerSelect" aria-label="Selected polygon"></select>
-            <button type="button" id="reloadCatalog">New shapes</button>
+            <button type="button" id="reloadCatalog">Add polygon</button>
           </div>
           <div class="feature-chips" id="featureChips"></div>
           <div class="hint" id="srcHint"></div>
@@ -710,12 +722,14 @@
               </div>
 
               <div class="control-block">
-                <span class="control-title">Direction</span>
-                <div class="seg" id="angleSeg">
-                  <button data-a="0">0°</button>
-                  <button data-a="45" class="active">45°</button>
-                  <button data-a="90">90°</button>
-                  <button data-a="-45">-45°</button>
+                <div class="parameter-group" id="angleControl">
+                  <span class="control-title">Direction</span>
+                  <div class="seg" id="angleSeg">
+                    <button data-a="0">0°</button>
+                    <button data-a="45" class="active">45°</button>
+                    <button data-a="90">90°</button>
+                    <button data-a="-45">-45°</button>
+                  </div>
                 </div>
                 <label>Pattern colour</label>
                 <div class="row tight">
@@ -724,7 +738,7 @@
                 </div>
               </div>
 
-              <div class="control-block">
+              <div class="control-block" id="textureScaleControl">
                 <span class="control-title">Tile preview</span>
                 <div class="row" style="align-items:flex-start">
                   <canvas class="preview-canvas" id="tilePreview" width="32" height="32"></canvas>
@@ -755,43 +769,45 @@
                   <label style="margin:0">Use SVG pattern</label>
                   <input type="checkbox" id="svgFillToggle" />
                 </div>
-                <label>Sample</label>
-                <select id="svgFillSample">
-                  <optgroup label="Vegetation">
-                    <option value="grass-tuft">Grass tuft</option>
-                    <option value="fern">Fern</option>
-                    <option value="wildflower">Wildflower</option>
-                    <option value="small-bush">Small bush</option>
-                  </optgroup>
-                  <optgroup label="Trees">
-                    <option value="round-canopy">Round canopy</option>
-                    <option value="conifer">Conifer</option>
-                    <option value="palm">Palm</option>
-                  </optgroup>
-                  <optgroup label="Water">
-                    <option value="reeds">Reeds</option>
-                    <option value="ripple">Ripple</option>
-                    <option value="wave-lines">Wave lines</option>
-                    <option value="droplet">Droplet</option>
-                  </optgroup>
-                  <optgroup label="Shapes">
-                    <option value="triangles">Triangles</option>
-                    <option value="hexagon">Hexagon</option>
-                    <option value="confetti">Confetti</option>
-                  </optgroup>
-                  <optgroup label="Custom">
-                    <option value="custom">Custom SVG…</option>
-                  </optgroup>
-                </select>
-                <div class="custom-svg-panel hidden" id="svgFillCustomPanel">
-                  <label style="margin-top:0">Paste SVG markup or upload a file</label>
-                  <textarea id="svgFillCustomText" placeholder="<svg>...</svg>"></textarea>
-                  <input type="file" id="svgFillCustomFile" accept=".svg,image/svg+xml" />
-                  <button class="action ghost" id="svgFillCustomApply">Use this SVG</button>
+                <div data-svg-options>
+                  <label>Sample</label>
+                  <select id="svgFillSample">
+                    <optgroup label="Vegetation">
+                      <option value="grass-tuft">Grass tuft</option>
+                      <option value="fern">Fern</option>
+                      <option value="wildflower">Wildflower</option>
+                      <option value="small-bush">Small bush</option>
+                    </optgroup>
+                    <optgroup label="Trees">
+                      <option value="round-canopy">Round canopy</option>
+                      <option value="conifer">Conifer</option>
+                      <option value="palm">Palm</option>
+                    </optgroup>
+                    <optgroup label="Water">
+                      <option value="reeds">Reeds</option>
+                      <option value="ripple">Ripple</option>
+                      <option value="wave-lines">Wave lines</option>
+                      <option value="droplet">Droplet</option>
+                    </optgroup>
+                    <optgroup label="Shapes">
+                      <option value="triangles">Triangles</option>
+                      <option value="hexagon">Hexagon</option>
+                      <option value="confetti">Confetti</option>
+                    </optgroup>
+                    <optgroup label="Custom">
+                      <option value="custom">Custom SVG…</option>
+                    </optgroup>
+                  </select>
+                  <div class="custom-svg-panel hidden" id="svgFillCustomPanel">
+                    <label style="margin-top:0">Paste SVG markup or upload a file</label>
+                    <textarea id="svgFillCustomText" placeholder="<svg>...</svg>"></textarea>
+                    <input type="file" id="svgFillCustomFile" accept=".svg,image/svg+xml" />
+                    <button class="action ghost" id="svgFillCustomApply">Use this SVG</button>
+                  </div>
                 </div>
               </div>
 
-              <div class="svg-column">
+              <div class="svg-column" data-svg-options>
                 <label style="margin-top:0">Density <span class="val" id="svgDensityVal">1.40</span></label>
                 <input type="range" id="svgDensity" min="0.1" max="6" step="0.1" value="1.4" />
                 <label>Stamp size <span class="val" id="svgStampSizeVal">28 px</span></label>
@@ -804,7 +820,7 @@
                 <input type="text" id="svgSeed" value="1" />
               </div>
 
-              <div class="svg-column">
+              <div class="svg-column" data-svg-options>
                 <label style="margin-top:0">Position jitter <span class="val" id="svgPosJitterVal">±0.15</span></label>
                 <input type="range" id="svgPosJitter" min="0" max="1" step="0.05" value="0.15" />
                 <label>Rotation jitter <span class="val" id="svgRotJitterVal">±0°</span></label>
@@ -829,12 +845,14 @@
                 <label style="margin:0">Enable background</label>
                 <input type="checkbox" id="bgToggle" checked />
               </div>
-              <div class="row tight" style="margin-top:8px">
-                <input type="color" id="bgColor" value="#dce8e3" style="flex:0 0 auto" />
-                <input type="text" id="bgColorHex" value="#dce8e3" />
+              <div data-bg-options>
+                <div class="row tight" style="margin-top:8px">
+                  <input type="color" id="bgColor" value="#dce8e3" style="flex:0 0 auto" />
+                  <input type="text" id="bgColorHex" value="#dce8e3" />
+                </div>
+                <label>Background opacity <span class="val" id="bgOpacityVal">0.35</span></label>
+                <input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35" />
               </div>
-              <label>Background opacity <span class="val" id="bgOpacityVal">0.35</span></label>
-              <input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35" />
             </fieldset>
 
             <fieldset>
@@ -843,20 +861,22 @@
                 <label style="margin:0">Enable outline</label>
                 <input type="checkbox" id="lineToggle" checked />
               </div>
-              <div class="row tight" style="margin-top:8px">
-                <input type="color" id="lineColor" value="#234c46" style="flex:0 0 auto" />
-                <input type="text" id="lineColorHex" value="#234c46" />
+              <div data-line-options>
+                <div class="row tight" style="margin-top:8px">
+                  <input type="color" id="lineColor" value="#234c46" style="flex:0 0 auto" />
+                  <input type="text" id="lineColorHex" value="#234c46" />
+                </div>
+                <label>Width <span class="val" id="lineWidthVal">1.50 px</span></label>
+                <input type="range" id="lineWidth" min="0.1" max="6" step="0.1" value="1.5" />
+                <label>Dash style</label>
+                <div class="seg" id="dashSeg">
+                  <button data-d="solid" class="active">Solid</button>
+                  <button data-d="dotted">Dotted</button>
+                  <button data-d="dashdot">Dash-dot</button>
+                </div>
+                <label>Custom dasharray</label>
+                <input type="text" id="dashInput" value="" placeholder="e.g. 2 4" />
               </div>
-              <label>Width <span class="val" id="lineWidthVal">1.50 px</span></label>
-              <input type="range" id="lineWidth" min="0.1" max="6" step="0.1" value="1.5" />
-              <label>Dash style</label>
-              <div class="seg" id="dashSeg">
-                <button data-d="solid" class="active">Solid</button>
-                <button data-d="dotted">Dotted</button>
-                <button data-d="dashdot">Dash-dot</button>
-              </div>
-              <label>Custom dasharray</label>
-              <input type="text" id="dashInput" value="" placeholder="e.g. 2 4" />
             </fieldset>
           </div>
         </div>
@@ -1250,7 +1270,7 @@
   function rebuildLayers() {
     if (!state.layer) return;
     const id = state.layer.source;
-    removeStyleLayers(id);
+    removePatternLayers(id);
     rebuildPolygonLayers(id);
     rememberActiveStyle();
     showSelection(id);
@@ -1318,8 +1338,18 @@
   }
 
   // Random GeoJSON test features.
-  const FEATURE_COUNT = 4;
+  const MAX_FEATURES = 6;
   const FEATURES = {};
+  const FEATURE_POSITIONS = [
+    [0, 0],
+    [0.95, 0.2],
+    [-0.95, 0.2],
+    [0, -0.9],
+    [0.95, -0.85],
+    [-0.95, -0.85],
+  ];
+  let featureOrigin = null;
+  let featureSerial = 0;
 
   function randomPolygon(cx, cy, rBase) {
     const pts = [], n = 6 + Math.floor(Math.random() * 4);
@@ -1333,11 +1363,16 @@
   }
 
   // Remove generated layers without touching the main GeoJSON source.
-  function removeStyleLayers(id) {
+  function removePatternLayers(id) {
     [`${id}__line`, `${id}__pat`, `${id}__bg`, `${id}__svgscatter_layer`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
     if (map.hasImage(`${id}__pat_img`)) map.removeImage(`${id}__pat_img`);
     if (map.hasImage(`${id}__svg_img`)) map.removeImage(`${id}__svg_img`);
     if (map.getSource(`${id}__svgscatter`)) map.removeSource(`${id}__svgscatter`);
+  }
+
+  function removeStyleLayers(id) {
+    [`${id}__idle_line`, `${id}__idle`].forEach((layerId) => map.getLayer(layerId) && map.removeLayer(layerId));
+    removePatternLayers(id);
   }
 
   function removeFeatureCompletely(id) {
@@ -1346,18 +1381,16 @@
   }
 
   function showSelection(id) {
-    if (map.getLayer("active-selection")) map.removeLayer("active-selection");
-    if (!id || !map.getSource(id)) return;
-    map.addLayer({
-      id: "active-selection",
-      type: "line",
-      source: id,
-      paint: {
-        "line-color": "#f06a4f",
-        "line-width": 2.5,
-        "line-opacity": 0.95,
-        "line-dasharray": [1, 1.5],
-      },
+    Object.keys(FEATURES).forEach((featureId) => {
+      const visibility = featureId === id ? "none" : "visible";
+      if (map.getLayer(`${featureId}__idle`)) {
+        map.setLayoutProperty(`${featureId}__idle`, "visibility", visibility);
+        if (visibility === "visible") map.moveLayer(`${featureId}__idle`);
+      }
+      if (map.getLayer(`${featureId}__idle_line`)) {
+        map.setLayoutProperty(`${featureId}__idle_line`, "visibility", visibility);
+        if (visibility === "visible") map.moveLayer(`${featureId}__idle_line`);
+      }
     });
   }
 
@@ -1373,6 +1406,10 @@
       button.addEventListener("click", () => selectLayer(id));
       chips.appendChild(button);
     });
+    const count = Object.keys(FEATURES).length;
+    $("polygonCount").textContent = `${count} polygon${count === 1 ? "" : "s"}`;
+    $("reloadCatalog").disabled = count >= MAX_FEATURES;
+    $("reloadCatalog").textContent = count >= MAX_FEATURES ? "Maximum reached" : "Add polygon";
   }
 
   function fitAllFeatures() {
@@ -1391,35 +1428,57 @@
     });
   }
 
-  function generateFeatures() {
-    const c = map.getCenter(), span = 0.03;
+  function addFeature() {
+    const index = Object.keys(FEATURES).length;
+    if (index >= MAX_FEATURES) return;
+    if (state.layer) rememberActiveStyle();
+    const span = 0.028;
     const sel = $("layerSelect");
-    if (map.getLayer("active-selection")) map.removeLayer("active-selection");
-    sel.innerHTML = "";
-    Object.keys(FEATURE_STYLES).forEach((id) => delete FEATURE_STYLES[id]);
-    for (let i = 0; i < FEATURE_COUNT; i++) {
-      const id = `feature_${i + 1}`;
-      removeFeatureCompletely(id);
+    const id = `feature_${++featureSerial}`;
+    const [offsetX, offsetY] = FEATURE_POSITIONS[index];
+    const cx = featureOrigin.lng + offsetX * span * 2;
+    const cy = featureOrigin.lat + offsetY * span * 2;
+    const fc = { type: "FeatureCollection", features: [randomPolygon(cx, cy, span * 0.82)] };
+    FEATURES[id] = fc;
+    map.addSource(id, { type: "geojson", data: fc });
 
-      const col = i % 2, row = (i / 2) | 0;
-      const cx = c.lng + (col - 0.5) * span * 2.2;
-      const cy = c.lat + (0.5 - row) * span * 2.2;
-      const fc = { type: "FeatureCollection", features: [randomPolygon(cx, cy, span)] };
-      FEATURES[id] = fc;
-      map.addSource(id, { type: "geojson", data: fc });
+    const option = document.createElement("option");
+    option.value = id;
+    option.textContent = `Polygon ${featureSerial}`;
+    sel.appendChild(option);
 
-      const o = document.createElement("option");
-      o.value = id; o.textContent = `Polygon ${i + 1}`;
-      sel.appendChild(o);
-
-      FEATURE_STYLES[id] = featureStyleFor(i);
-      state.layer = { source: id };
-      loadStyle(FEATURE_STYLES[id]);
-      rebuildPolygonLayers(id);
-    }
+    FEATURE_STYLES[id] = featureStyleFor(index);
+    state.layer = { source: id };
+    loadStyle(FEATURE_STYLES[id]);
+    rebuildPolygonLayers(id);
+    map.addLayer({
+      id: `${id}__idle`,
+      type: "fill",
+      source: id,
+      paint: { "fill-color": "#cbd2cf", "fill-opacity": 0.9 },
+    });
+    map.addLayer({
+      id: `${id}__idle_line`,
+      type: "line",
+      source: id,
+      paint: { "line-color": "#87928d", "line-width": 1.2, "line-opacity": 0.9 },
+    });
     renderFeatureChips();
-    selectLayer("feature_1");
+    selectLayer(id);
     fitAllFeatures();
+  }
+
+  function generateFeatures() {
+    Object.keys(FEATURES).forEach((id) => {
+      removeFeatureCompletely(id);
+      delete FEATURES[id];
+      delete FEATURE_STYLES[id];
+    });
+    $("layerSelect").innerHTML = "";
+    state.layer = null;
+    featureSerial = 0;
+    featureOrigin = map.getCenter();
+    addFeature();
   }
 
   function selectLayer(id) {
@@ -1429,8 +1488,11 @@
     loadStyle(FEATURE_STYLES[id] || DEFAULT_STYLE);
     $("layerSelect").value = id;
     const number = Number(id.split("_")[1]);
+    const count = Object.keys(FEATURES).length;
     $("activePolygonLabel").textContent = `Polygon ${number}`;
-    $("srcHint").textContent = `Polygon ${number} selected. Click any shape on the map to edit it.`;
+    $("srcHint").textContent = count === 1
+      ? "Adjust its style or add another polygon."
+      : `Polygon ${number} selected. Click another shape to edit it.`;
     document.querySelectorAll(".feature-chip").forEach((button) => {
       button.classList.toggle("active", button.dataset.feature === id);
     });
@@ -1498,6 +1560,7 @@
     const p = e.target.dataset.p; if (!p) return;
     state.pattern = p;
     document.querySelectorAll("#patternPills .pill").forEach((el) => el.classList.toggle("active", el.dataset.p === p));
+    updatePatternControlAvailability();
     renderPreview(); rebuildLayers();
   });
 
@@ -1529,9 +1592,41 @@
   function setGeometricFieldsetEnabled(enabled) {
     $("geometricFieldset").classList.toggle("dimmed", !enabled);
   }
+  function updatePatternControlAvailability() {
+    const angleEnabled = state.pattern === "hachures" || state.pattern === "cross";
+    const textureEnabled = state.pattern !== "solid";
+    $("angleControl").classList.toggle("is-disabled", !angleEnabled);
+    document.querySelectorAll("#angleSeg button").forEach((button) => {
+      button.disabled = !angleEnabled;
+    });
+    $("textureScaleControl").classList.toggle("is-disabled", !textureEnabled);
+    $("weight").disabled = !textureEnabled;
+    $("tile").disabled = !textureEnabled;
+  }
+  function updateSvgControlAvailability() {
+    document.querySelectorAll("[data-svg-options]").forEach((group) => {
+      group.classList.toggle("is-disabled", !state.svgFill.on);
+      group.querySelectorAll("button, input, select, textarea").forEach((control) => {
+        control.disabled = !state.svgFill.on;
+      });
+    });
+  }
+  function updateAppearanceControlAvailability() {
+    [
+      ["[data-bg-options]", state.bg.on],
+      ["[data-line-options]", state.outline.on],
+    ].forEach(([selector, enabled]) => {
+      const group = document.querySelector(selector);
+      group.classList.toggle("is-disabled", !enabled);
+      group.querySelectorAll("button, input, select, textarea").forEach((control) => {
+        control.disabled = !enabled;
+      });
+    });
+  }
   $("svgFillToggle").addEventListener("change", (e) => {
     state.svgFill.on = e.target.checked;
     setGeometricFieldsetEnabled(!state.svgFill.on);
+    updateSvgControlAvailability();
     rebuildLayers();
   });
   $("svgNoCutToggle").addEventListener("change", (e) => {
@@ -1573,14 +1668,22 @@
   });
 
   // Background
-  $("bgToggle").addEventListener("change", (e) => { state.bg.on = e.target.checked; rebuildLayers(); });
+  $("bgToggle").addEventListener("change", (e) => {
+    state.bg.on = e.target.checked;
+    updateAppearanceControlAvailability();
+    rebuildLayers();
+  });
   bindColor("bgColor", "bgColorHex", (v) => { state.bg.color = v; repaint(); });
   $("bgOpacity").addEventListener("input", (e) => {
     state.bg.opacity = +e.target.value; $("bgOpacityVal").textContent = state.bg.opacity.toFixed(2); repaint();
   });
 
   // Preview outline
-  $("lineToggle").addEventListener("change", (e) => { state.outline.on = e.target.checked; rebuildLayers(); });
+  $("lineToggle").addEventListener("change", (e) => {
+    state.outline.on = e.target.checked;
+    updateAppearanceControlAvailability();
+    rebuildLayers();
+  });
   bindColor("lineColor", "lineColorHex", (v) => { state.outline.color = v; repaint(); });
   $("lineWidth").addEventListener("input", (e) => {
     state.outline.width = +e.target.value; $("lineWidthVal").textContent = state.outline.width.toFixed(2) + " px"; repaint();
@@ -1598,7 +1701,7 @@
   });
 
   // Source
-  $("reloadCatalog").addEventListener("click", generateFeatures);
+  $("reloadCatalog").addEventListener("click", addFeature);
   $("layerSelect").addEventListener("change", (e) => selectLayer(e.target.value));
 
   // Export / config
@@ -1683,6 +1786,9 @@ map.on("load", async () => {
       const preset = DASH_PRESETS[button.dataset.d] || [];
       button.classList.toggle("active", JSON.stringify(preset) === JSON.stringify(state.outline.dash || []));
     });
+    updatePatternControlAvailability();
+    updateSvgControlAvailability();
+    updateAppearanceControlAvailability();
     renderPreview();
   }
 
@@ -1695,7 +1801,7 @@ map.on("load", async () => {
 
   function polygonLayerIds() {
     return Object.keys(FEATURES)
-      .flatMap((id) => [`${id}__line`, `${id}__pat`, `${id}__bg`])
+      .flatMap((id) => [`${id}__idle_line`, `${id}__idle`, `${id}__line`, `${id}__pat`, `${id}__bg`])
       .filter((id) => map.getLayer(id));
   }
 
