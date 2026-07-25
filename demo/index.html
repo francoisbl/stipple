@@ -322,32 +322,6 @@
       background-size: 72px 72px;
     }
     #map { position: absolute; inset: 0; }
-    .map-caption {
-      position: absolute;
-      z-index: 3;
-      left: 22px;
-      bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 9px 12px;
-      color: var(--ink);
-      background: rgba(255,255,255,.9);
-      border: 1px solid rgba(186, 199, 192, .8);
-      border-radius: 9px;
-      box-shadow: 0 8px 24px rgba(23, 35, 31, .09);
-      backdrop-filter: blur(10px);
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .map-caption::before {
-      content: "";
-      width: 7px;
-      height: 7px;
-      background: var(--coral);
-      border-radius: 50%;
-      box-shadow: 0 0 0 4px rgba(240, 106, 79, .13);
-    }
     .maplibregl-ctrl-group {
       overflow: hidden;
       border: 1px solid var(--line-strong);
@@ -394,186 +368,515 @@
     @media (max-width: 430px) {
       .pill-group { grid-template-columns: 1fr 1fr; }
       .export-grid { grid-template-columns: 1fr; }
-      .map-caption { left: 14px; bottom: 14px; }
+    }
+
+    /* Cartographic workbench */
+    #app {
+      display: grid;
+      grid-template: 68px minmax(0, 1fr) / 1fr;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .app-header {
+      position: relative;
+      z-index: 6;
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1fr);
+      align-items: center;
+      gap: 22px;
+      padding: 0 20px;
+      background: rgba(251, 252, 251, .96);
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 4px 18px rgba(23, 35, 31, .05);
+      backdrop-filter: blur(12px);
+    }
+    .app-brand { min-width: 0; }
+    .app-brand .product-kicker { margin: 0 0 3px; font-size: 9px; }
+    .app-brand h1 { font-size: 18px; white-space: nowrap; }
+    .app-tagline {
+      justify-self: end;
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .tool-tabs {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 4px;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: 11px;
+    }
+    .tool-tab {
+      min-height: 34px;
+      padding: 0 14px;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tool-tab:hover { color: var(--accent); }
+    .tool-tab.active { color: #fff; background: var(--ink); }
+    .workspace { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+    .map-shell { position: absolute; inset: 0; min-width: 0; height: auto; }
+    .map-shell::after { display: none; }
+    .source-palette,
+    .basemap-palette {
+      position: absolute;
+      z-index: 4;
+      top: 16px;
+      padding: 12px;
+      background: rgba(255, 255, 255, .94);
+      border: 1px solid rgba(186, 199, 192, .85);
+      border-radius: 12px;
+      box-shadow: 0 10px 28px rgba(23, 35, 31, .1);
+      backdrop-filter: blur(12px);
+    }
+    .source-palette { left: 16px; width: 315px; }
+    .basemap-palette { right: 58px; }
+    .palette-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .palette-label small {
+      color: var(--ink-soft);
+      font: 400 9px/1 "IBM Plex Mono", monospace;
+    }
+    .source-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+    .source-line select { height: 36px; }
+    .source-line button,
+    .basemap-button {
+      min-height: 36px;
+      padding: 0 11px;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      font-size: 10.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .source-line button:hover,
+    .basemap-button:hover { color: var(--accent); border-color: var(--accent); }
+    .feature-chips { display: flex; gap: 5px; margin-top: 9px; }
+    .feature-chip {
+      flex: 1;
+      min-height: 27px;
+      padding: 0;
+      color: var(--ink-soft);
+      background: var(--surface-soft);
+      border: 1px solid transparent;
+      border-radius: 7px;
+      font: 500 9px/1 "IBM Plex Mono", monospace;
+      cursor: pointer;
+    }
+    .feature-chip.active {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+    #srcHint { margin: 8px 0 0; font-size: 10px; }
+    .basemap-options { display: flex; gap: 5px; }
+    .basemap-button { min-width: 58px; padding: 0 9px; }
+    .basemap-button.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+    #panel.control-dock {
+      position: absolute;
+      z-index: 5;
+      left: 50%;
+      bottom: 18px;
+      width: min(1120px, calc(100% - 48px));
+      max-height: min(360px, calc(100% - 130px));
+      padding: 0;
+      overflow: hidden;
+      transform: translateX(-50%);
+      background: rgba(251, 252, 251, .97);
+      border: 1px solid rgba(186, 199, 192, .9);
+      border-radius: 14px;
+      box-shadow: 0 18px 44px rgba(23, 35, 31, .14);
+      backdrop-filter: blur(14px);
+      counter-reset: none;
+      transition: transform .2s, opacity .2s;
+    }
+    #panel.control-dock.collapsed {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, calc(100% + 30px));
+    }
+    .dock-head {
+      height: 43px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 15px;
+      border-bottom: 1px solid var(--line);
+    }
+    .dock-context { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .dock-context strong { font-size: 12px; }
+    .dock-context span { color: var(--ink-soft); font-size: 10.5px; }
+    .selection-dot { width: 7px; height: 7px; background: var(--coral); border-radius: 50%; }
+    .dock-close {
+      padding: 5px 8px;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 0;
+      font-size: 10.5px;
+      cursor: pointer;
+    }
+    .dock-close:hover { color: var(--ink); }
+    .tool-panel { display: none; max-height: 300px; overflow: auto; padding: 16px 18px 18px; }
+    .tool-panel.active { display: block; }
+    .tool-panel fieldset {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      counter-increment: none;
+    }
+    .tool-panel legend {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+    .tool-panel legend::before { display: none; }
+    .geometry-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 1.45fr) minmax(210px, 1fr) minmax(190px, .85fr) minmax(200px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .control-block {
+      min-width: 0;
+      padding-right: 18px;
+      border-right: 1px solid var(--line);
+    }
+    .control-block:last-child { padding-right: 0; border-right: 0; }
+    .control-block > label:first-child { margin-top: 0; }
+    .control-title {
+      display: block;
+      margin: 0 0 9px;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pill-group { grid-template-columns: repeat(3, 1fr); }
+    .pill { min-height: 34px; }
+    .preview-canvas { width: 58px; height: 58px; }
+    .svg-layout {
+      display: grid;
+      grid-template-columns: minmax(250px, .9fr) minmax(220px, 1fr) minmax(220px, 1fr);
+      gap: 22px;
+    }
+    .svg-column { min-width: 0; }
+    .svg-column + .svg-column { padding-left: 20px; border-left: 1px solid var(--line); }
+    .appearance-layout { display: grid; grid-template-columns: 1fr 1.4fr; gap: 28px; }
+    .appearance-layout fieldset + fieldset { padding-left: 26px; border-left: 1px solid var(--line); }
+    .appearance-layout legend {
+      position: static;
+      width: auto;
+      height: auto;
+      clip: auto;
+      margin-bottom: 10px;
+      font-size: 11px;
+    }
+    .output-layout { display: grid; grid-template-columns: 330px 1fr; gap: 18px; }
+    .output-layout .export-grid { padding-top: 0; }
+    .output-layout textarea { height: 150px; }
+    .maplibregl-ctrl-bottom-right { bottom: 10px; }
+    .toast { bottom: 24px; }
+    @media (max-width: 980px) {
+      .app-header { grid-template-columns: 1fr auto; }
+      .app-tagline { display: none; }
+      .geometry-grid { grid-template-columns: 1fr 1fr; }
+      .control-block:nth-child(2) { border-right: 0; }
+      .svg-layout { grid-template-columns: 1fr 1fr; }
+      .svg-column:last-child { grid-column: 1 / -1; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); }
+    }
+    @media (max-width: 700px) {
+      #app { grid-template-rows: auto minmax(0, 1fr); }
+      .app-header { display: block; padding: 12px 14px 10px; }
+      .app-brand { margin-bottom: 10px; }
+      .tool-tabs { overflow-x: auto; }
+      .tool-tab { flex: 1; padding: 0 10px; }
+      .source-palette { top: 10px; left: 10px; width: calc(100% - 20px); }
+      .basemap-palette { top: 132px; left: 10px; right: auto; }
+      .basemap-button { min-width: 0; }
+      #panel.control-dock {
+        bottom: 10px;
+        width: calc(100% - 20px);
+        max-height: 46%;
+      }
+      .dock-context span { display: none; }
+      .tool-panel { max-height: calc(46vh - 44px); }
+      .geometry-grid,
+      .svg-layout,
+      .appearance-layout,
+      .output-layout { grid-template-columns: 1fr; }
+      .control-block,
+      .svg-column + .svg-column,
+      .appearance-layout fieldset + fieldset {
+        padding: 0 0 14px;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .control-block:last-child,
+      .svg-column:last-child,
+      .appearance-layout fieldset:last-child { border-bottom: 0; }
+      .output-layout textarea { height: 120px; }
+      .maplibregl-ctrl-top-right { top: 185px; }
     }
   </style>
 </head>
 <body>
   <div id="app">
-    <div id="panel">
-      <header class="studio-head">
+    <header class="app-header">
+      <div class="app-brand">
         <span class="product-kicker">MapLibre pattern studio</span>
         <h1>maplibre-pattern-fills</h1>
-        <p class="sub">Design and export geometric or SVG fill patterns for MapLibre GL JS.</p>
-      </header>
-
-      <fieldset>
-        <legend>Test geometry</legend>
-        <label>Shape</label>
-        <div class="row tight">
-          <select id="layerSelect"></select>
-        </div>
-        <button class="action ghost" id="reloadCatalog">Regenerate shapes</button>
-        <div class="hint" id="srcHint"></div>
-      </fieldset>
-
-      <fieldset id="geometricFieldset">
-        <legend>Geometric pattern</legend>
-        <div class="pill-group" id="patternPills">
-          <div class="pill" data-p="solid">Solid</div>
-          <div class="pill" data-p="stipple">Stipple</div>
-          <div class="pill" data-p="hachures">Hachures</div>
-          <div class="pill" data-p="cross">Crosshatch</div>
-          <div class="pill" data-p="grid">Grid</div>
-          <div class="pill" data-p="dots">Dots</div>
-        </div>
-
-        <label>Hachure angle</label>
-        <div class="seg" id="angleSeg">
-          <button data-a="0">0°</button>
-          <button data-a="45" class="active">45°</button>
-          <button data-a="90">90°</button>
-          <button data-a="-45">-45°</button>
-        </div>
-
-        <div class="row" style="margin-top:10px; align-items:flex-start">
-          <div style="flex:0 0 auto">
-            <label>Tile preview</label>
-            <canvas class="preview-canvas" id="tilePreview" width="32" height="32"></canvas>
-          </div>
-          <div style="flex:1">
-            <label>Pattern colour</label>
-            <div class="row tight">
-              <input type="color" id="patColor" value="#2c6a5b" style="flex:0 0 auto" />
-              <input type="text" id="patColorHex" value="#2c6a5b" />
-            </div>
-            <label>Opacity <span class="val" id="patOpacityVal">1.00</span></label>
-            <input type="range" id="patOpacity" min="0" max="1" step="0.05" value="1" />
-          </div>
-        </div>
-
-        <label>Stroke weight <span class="val" id="weightVal">2.00 px</span></label>
-        <input type="range" id="weight" min="0.1" max="8" step="0.1" value="2" />
-
-        <label>Density: tile size <span class="val" id="tileVal">16 px</span></label>
-        <input type="range" id="tile" min="4" max="72" step="1" value="16" />
-        <p class="hint">Smaller tile = denser repeat. Any pixel size tiles seamlessly; powers of two are not required.</p>
-      </fieldset>
-
-      <fieldset id="svgFillFieldset">
-        <legend>SVG pattern</legend>
-        <div class="switch">
-          <label style="margin:0">Use SVG fill instead of geometric pattern</label>
-          <input type="checkbox" id="svgFillToggle" />
-        </div>
-        <div class="switch" style="margin-top:6px">
-          <label style="margin:0">Reduce edge clipping (experimental)</label>
-          <input type="checkbox" id="svgNoCutToggle" />
-        </div>
-        <p class="hint" id="noCutHint">A repeating texture always clips hard at the polygon boundary. This experimental mode uses a sampled clearance approximation to reduce cut icons, leaving a margin near the edge. Narrow or highly concave boundaries can still fall between samples.</p>
-        <label>Sample</label>
-        <select id="svgFillSample">
-          <optgroup label="Vegetation">
-            <option value="grass-tuft">Grass tuft</option>
-            <option value="fern">Fern</option>
-            <option value="wildflower">Wildflower</option>
-            <option value="small-bush">Small bush</option>
-          </optgroup>
-          <optgroup label="Trees">
-            <option value="round-canopy">Round canopy</option>
-            <option value="conifer">Conifer</option>
-            <option value="palm">Palm</option>
-          </optgroup>
-          <optgroup label="Water">
-            <option value="reeds">Reeds</option>
-            <option value="ripple">Ripple</option>
-            <option value="wave-lines">Wave lines</option>
-            <option value="droplet">Droplet</option>
-          </optgroup>
-          <optgroup label="Shapes">
-            <option value="triangles">Triangles</option>
-            <option value="hexagon">Hexagon</option>
-            <option value="confetti">Confetti</option>
-          </optgroup>
-          <optgroup label="Custom">
-            <option value="custom">Custom SVG…</option>
-          </optgroup>
-        </select>
-        <div class="custom-svg-panel hidden" id="svgFillCustomPanel">
-          <label style="margin-top:0">Paste SVG markup or upload a file</label>
-          <textarea id="svgFillCustomText" placeholder="<svg>...</svg>"></textarea>
-          <input type="file" id="svgFillCustomFile" accept=".svg,image/svg+xml" />
-          <button class="action ghost" id="svgFillCustomApply">Use this SVG</button>
-        </div>
-        <label>Density (stamps / 100×100px) <span class="val" id="svgDensityVal">1.40</span></label>
-        <input type="range" id="svgDensity" min="0.1" max="6" step="0.1" value="1.4" />
-        <label>Stamp size <span class="val" id="svgStampSizeVal">28 px</span></label>
-        <input type="range" id="svgStampSize" min="10" max="60" step="1" value="28" />
-        <div class="switch" style="margin-top:9px">
-          <label style="margin:0">Stagger rows (quincunx grid)</label>
-          <input type="checkbox" id="svgStagger" checked />
-        </div>
-        <label>Position jitter <span class="val" id="svgPosJitterVal">±0.15</span></label>
-        <input type="range" id="svgPosJitter" min="0" max="1" step="0.05" value="0.15" />
-        <label>Rotation jitter <span class="val" id="svgRotJitterVal">±0°</span></label>
-        <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="0" />
-        <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.00</span></label>
-        <input type="range" id="svgScaleJitter" min="0" max="0.8" step="0.05" value="0" />
-        <label>Seed (deterministic variation)</label>
-        <input type="text" id="svgSeed" value="1" />
-        <p class="hint">Rasterized once via the browser's native SVG renderer, then repeated on a regular, lightly staggered grid. This is the classic cartographic layout used for orchard and marsh map fills. Raise the jitters for a more natural scatter.</p>
-      </fieldset>
-
-      <fieldset id="bgFieldset">
-        <legend>Fill backdrop</legend>
-        <div class="switch">
-          <label style="margin:0">Enable background</label>
-          <input type="checkbox" id="bgToggle" checked />
-        </div>
-        <div class="row tight" style="margin-top:8px">
-          <input type="color" id="bgColor" value="#dce8e3" style="flex:0 0 auto" />
-          <input type="text" id="bgColorHex" value="#dce8e3" />
-        </div>
-        <label>Background opacity <span class="val" id="bgOpacityVal">0.35</span></label>
-        <input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35" />
-      </fieldset>
-
-      <fieldset>
-        <legend>Boundary</legend>
-        <div class="switch">
-          <label style="margin:0">Enable outline</label>
-          <input type="checkbox" id="lineToggle" checked />
-        </div>
-        <div class="row tight" style="margin-top:8px">
-          <input type="color" id="lineColor" value="#234c46" style="flex:0 0 auto" />
-          <input type="text" id="lineColorHex" value="#234c46" />
-        </div>
-        <label>Width <span class="val" id="lineWidthVal">1.50 px</span></label>
-        <input type="range" id="lineWidth" min="0.1" max="6" step="0.1" value="1.5" />
-        <label>Dash style</label>
-        <div class="seg" id="dashSeg">
-          <button data-d="solid" class="active">Solid</button>
-          <button data-d="dotted">Dotted</button>
-          <button data-d="dashdot">Dash-dot</button>
-        </div>
-        <label>dasharray (editable, space separated)</label>
-        <input type="text" id="dashInput" value="" placeholder="e.g. 2 4  (empty = solid)" />
-        <p class="hint">Native <code>line-dasharray</code> expression. It uses no canvas and remains a declarative style property.</p>
-      </fieldset>
-
-      <div class="export-grid">
-        <button class="action primary" id="exportBtn">Export style</button>
-        <button class="action" id="exportJsBtn">Copy integration</button>
-        <button class="action ghost" id="copyConfigBtn">Copy preset</button>
-        <button class="action ghost" id="importConfigBtn">Load preset</button>
       </div>
-      <p class="hint">Exports contain the polygon fill, its optional background, and its preview outline.</p>
-      <textarea id="ioArea" placeholder="style.json / preset config output appears here. Paste a config and click “Load”."></textarea>
-    </div>
-    <div class="map-shell">
-      <div id="map"></div>
-      <div class="map-caption">Live pattern canvas</div>
-    </div>
+      <nav class="tool-tabs" id="toolTabs" aria-label="Style tools">
+        <button type="button" class="tool-tab active" data-tool="pattern">Pattern</button>
+        <button type="button" class="tool-tab" data-tool="svg">SVG</button>
+        <button type="button" class="tool-tab" data-tool="appearance">Appearance</button>
+        <button type="button" class="tool-tab" data-tool="export">Export</button>
+      </nav>
+      <p class="app-tagline">Style polygons directly on the map</p>
+    </header>
+
+    <main class="workspace">
+      <div class="map-shell">
+        <div id="map"></div>
+
+        <aside class="source-palette" aria-label="Polygon selection">
+          <div class="palette-label">
+            <span>Polygons</span>
+            <small>click to edit</small>
+          </div>
+          <div class="source-line">
+            <select id="layerSelect" aria-label="Selected polygon"></select>
+            <button type="button" id="reloadCatalog">New shapes</button>
+          </div>
+          <div class="feature-chips" id="featureChips"></div>
+          <div class="hint" id="srcHint"></div>
+        </aside>
+
+        <aside class="basemap-palette" aria-label="Basemap">
+          <div class="palette-label"><span>Basemap</span></div>
+          <div class="basemap-options" id="basemapOptions">
+            <button type="button" class="basemap-button active" data-basemap="neutral">Neutral</button>
+            <button type="button" class="basemap-button" data-basemap="streets">Streets</button>
+            <button type="button" class="basemap-button" data-basemap="topo">Topo</button>
+            <button type="button" class="basemap-button" data-basemap="aerial">Aerial</button>
+          </div>
+        </aside>
+      </div>
+
+      <section id="panel" class="control-dock" aria-label="Polygon style editor">
+        <div class="dock-head">
+          <div class="dock-context">
+            <span class="selection-dot" aria-hidden="true"></span>
+            <strong id="activePolygonLabel">Polygon 1</strong>
+            <span>editing selected polygon</span>
+          </div>
+          <button type="button" class="dock-close" id="dockClose">Hide controls</button>
+        </div>
+
+        <div class="tool-panel active" data-tool-panel="pattern">
+          <fieldset id="geometricFieldset">
+            <legend>Geometric pattern</legend>
+            <div class="geometry-grid">
+              <div class="control-block">
+                <span class="control-title">Pattern family</span>
+                <div class="pill-group" id="patternPills">
+                  <div class="pill" data-p="solid">Solid</div>
+                  <div class="pill" data-p="stipple">Stipple</div>
+                  <div class="pill" data-p="hachures">Hachures</div>
+                  <div class="pill" data-p="cross">Crosshatch</div>
+                  <div class="pill" data-p="grid">Grid</div>
+                  <div class="pill" data-p="dots">Dots</div>
+                </div>
+              </div>
+
+              <div class="control-block">
+                <span class="control-title">Direction</span>
+                <div class="seg" id="angleSeg">
+                  <button data-a="0">0°</button>
+                  <button data-a="45" class="active">45°</button>
+                  <button data-a="90">90°</button>
+                  <button data-a="-45">-45°</button>
+                </div>
+                <label>Pattern colour</label>
+                <div class="row tight">
+                  <input type="color" id="patColor" value="#2c6a5b" style="flex:0 0 auto" />
+                  <input type="text" id="patColorHex" value="#2c6a5b" />
+                </div>
+              </div>
+
+              <div class="control-block">
+                <span class="control-title">Tile preview</span>
+                <div class="row" style="align-items:flex-start">
+                  <canvas class="preview-canvas" id="tilePreview" width="32" height="32"></canvas>
+                  <div>
+                    <label style="margin-top:0">Opacity <span class="val" id="patOpacityVal">1.00</span></label>
+                    <input type="range" id="patOpacity" min="0" max="1" step="0.05" value="1" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="control-block">
+                <span class="control-title">Scale</span>
+                <label style="margin-top:0">Stroke weight <span class="val" id="weightVal">2.00 px</span></label>
+                <input type="range" id="weight" min="0.1" max="8" step="0.1" value="2" />
+                <label>Tile size <span class="val" id="tileVal">16 px</span></label>
+                <input type="range" id="tile" min="4" max="72" step="1" value="16" />
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="tool-panel" data-tool-panel="svg">
+          <fieldset id="svgFillFieldset">
+            <legend>SVG pattern</legend>
+            <div class="svg-layout">
+              <div class="svg-column">
+                <div class="switch">
+                  <label style="margin:0">Use SVG pattern</label>
+                  <input type="checkbox" id="svgFillToggle" />
+                </div>
+                <label>Sample</label>
+                <select id="svgFillSample">
+                  <optgroup label="Vegetation">
+                    <option value="grass-tuft">Grass tuft</option>
+                    <option value="fern">Fern</option>
+                    <option value="wildflower">Wildflower</option>
+                    <option value="small-bush">Small bush</option>
+                  </optgroup>
+                  <optgroup label="Trees">
+                    <option value="round-canopy">Round canopy</option>
+                    <option value="conifer">Conifer</option>
+                    <option value="palm">Palm</option>
+                  </optgroup>
+                  <optgroup label="Water">
+                    <option value="reeds">Reeds</option>
+                    <option value="ripple">Ripple</option>
+                    <option value="wave-lines">Wave lines</option>
+                    <option value="droplet">Droplet</option>
+                  </optgroup>
+                  <optgroup label="Shapes">
+                    <option value="triangles">Triangles</option>
+                    <option value="hexagon">Hexagon</option>
+                    <option value="confetti">Confetti</option>
+                  </optgroup>
+                  <optgroup label="Custom">
+                    <option value="custom">Custom SVG…</option>
+                  </optgroup>
+                </select>
+                <div class="custom-svg-panel hidden" id="svgFillCustomPanel">
+                  <label style="margin-top:0">Paste SVG markup or upload a file</label>
+                  <textarea id="svgFillCustomText" placeholder="<svg>...</svg>"></textarea>
+                  <input type="file" id="svgFillCustomFile" accept=".svg,image/svg+xml" />
+                  <button class="action ghost" id="svgFillCustomApply">Use this SVG</button>
+                </div>
+              </div>
+
+              <div class="svg-column">
+                <label style="margin-top:0">Density <span class="val" id="svgDensityVal">1.40</span></label>
+                <input type="range" id="svgDensity" min="0.1" max="6" step="0.1" value="1.4" />
+                <label>Stamp size <span class="val" id="svgStampSizeVal">28 px</span></label>
+                <input type="range" id="svgStampSize" min="10" max="60" step="1" value="28" />
+                <div class="switch" style="margin-top:9px">
+                  <label style="margin:0">Stagger rows</label>
+                  <input type="checkbox" id="svgStagger" checked />
+                </div>
+                <label>Seed</label>
+                <input type="text" id="svgSeed" value="1" />
+              </div>
+
+              <div class="svg-column">
+                <label style="margin-top:0">Position jitter <span class="val" id="svgPosJitterVal">±0.15</span></label>
+                <input type="range" id="svgPosJitter" min="0" max="1" step="0.05" value="0.15" />
+                <label>Rotation jitter <span class="val" id="svgRotJitterVal">±0°</span></label>
+                <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="0" />
+                <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.00</span></label>
+                <input type="range" id="svgScaleJitter" min="0" max="0.8" step="0.05" value="0" />
+                <div class="switch" style="margin-top:9px">
+                  <label style="margin:0">Reduce edge clipping</label>
+                  <input type="checkbox" id="svgNoCutToggle" />
+                </div>
+                <p class="hint" id="noCutHint">Experimental clearance sampling leaves a margin near polygon edges.</p>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="tool-panel" data-tool-panel="appearance">
+          <div class="appearance-layout">
+            <fieldset id="bgFieldset">
+              <legend>Fill backdrop</legend>
+              <div class="switch">
+                <label style="margin:0">Enable background</label>
+                <input type="checkbox" id="bgToggle" checked />
+              </div>
+              <div class="row tight" style="margin-top:8px">
+                <input type="color" id="bgColor" value="#dce8e3" style="flex:0 0 auto" />
+                <input type="text" id="bgColorHex" value="#dce8e3" />
+              </div>
+              <label>Background opacity <span class="val" id="bgOpacityVal">0.35</span></label>
+              <input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35" />
+            </fieldset>
+
+            <fieldset>
+              <legend>Boundary</legend>
+              <div class="switch">
+                <label style="margin:0">Enable outline</label>
+                <input type="checkbox" id="lineToggle" checked />
+              </div>
+              <div class="row tight" style="margin-top:8px">
+                <input type="color" id="lineColor" value="#234c46" style="flex:0 0 auto" />
+                <input type="text" id="lineColorHex" value="#234c46" />
+              </div>
+              <label>Width <span class="val" id="lineWidthVal">1.50 px</span></label>
+              <input type="range" id="lineWidth" min="0.1" max="6" step="0.1" value="1.5" />
+              <label>Dash style</label>
+              <div class="seg" id="dashSeg">
+                <button data-d="solid" class="active">Solid</button>
+                <button data-d="dotted">Dotted</button>
+                <button data-d="dashdot">Dash-dot</button>
+              </div>
+              <label>Custom dasharray</label>
+              <input type="text" id="dashInput" value="" placeholder="e.g. 2 4" />
+            </fieldset>
+          </div>
+        </div>
+
+        <div class="tool-panel" data-tool-panel="export">
+          <div class="output-layout">
+            <div>
+              <div class="export-grid">
+                <button class="action primary" id="exportBtn">Copy style.json</button>
+                <button class="action" id="exportJsBtn">Copy integration</button>
+                <button class="action ghost" id="copyConfigBtn">Copy preset</button>
+                <button class="action ghost" id="importConfigBtn">Load preset</button>
+              </div>
+              <p class="hint">Export the style of the selected polygon.</p>
+            </div>
+            <textarea id="ioArea" placeholder="Exported style or preset JSON appears here."></textarea>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
   <div class="toast" id="toast"></div>
 
@@ -732,20 +1035,86 @@
     outline: { on: true, color: "#234c46", width: 1.5, dash: [] },
     svgFill: { on: false, noCut: false, sample: "grass-tuft", customSvg: "", density: 1.4, stampSize: 28, stagger: true, positionJitter: 0.15, rotationJitterDeg: 0, scaleJitter: 0, seed: "1" },
   };
+  const FEATURE_STYLES = {};
+
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function currentStyle() {
+    return clone({
+      pattern: state.pattern,
+      angle: state.angle,
+      patColor: state.patColor,
+      patOpacity: state.patOpacity,
+      weight: state.weight,
+      tile: state.tile,
+      bg: state.bg,
+      outline: state.outline,
+      svgFill: state.svgFill,
+    });
+  }
+
+  function loadStyle(style) {
+    const selectedLayer = state.layer;
+    Object.assign(state, clone(style), { layer: selectedLayer });
+  }
+
+  function rememberActiveStyle() {
+    if (state.layer) FEATURE_STYLES[state.layer.source] = currentStyle();
+  }
+  const DEFAULT_STYLE = currentStyle();
+  const FEATURE_PRESETS = [
+    { pattern: "stipple", patColor: "#2c6a5b", tile: 16, bg: { color: "#dce8e3", opacity: 0.38 } },
+    { pattern: "hachures", patColor: "#d65f45", angle: 45, tile: 20, weight: 1.5, bg: { color: "#f3ded7", opacity: 0.42 } },
+    { pattern: "dots", patColor: "#315f86", tile: 22, weight: 2.4, bg: { color: "#dce7ef", opacity: 0.4 } },
+    { pattern: "cross", patColor: "#675d4d", angle: 0, tile: 18, weight: 1.3, bg: { color: "#ebe6d9", opacity: 0.44 } },
+  ];
+
+  function featureStyleFor(index) {
+    const style = clone(DEFAULT_STYLE);
+    const preset = FEATURE_PRESETS[index % FEATURE_PRESETS.length];
+    Object.assign(style, preset);
+    style.bg = { ...style.bg, ...preset.bg };
+    style.outline = { ...style.outline, color: preset.patColor };
+    return style;
+  }
 
   function resolveSvgFillSample() {
     return state.svgFill.sample === "custom" ? state.svgFill.customSvg : SVG_PATTERN_SAMPLES[state.svgFill.sample];
   }
-  // Map
-  // Self-contained basemap (no network dependency). A flat background is
-  // enough to judge fill styles. Swap in a real basemap style if you like.
+  // Map and optional context layers.
   const map = new maplibregl.Map({
     container: "map",
     style: {
       version: 8,
       glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-      sources: {},
-      layers: [{ id: "bg", type: "background", paint: { "background-color": "#e9eeec" } }],
+      sources: {
+        streets: {
+          type: "raster",
+          tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          attribution: "© OpenStreetMap contributors",
+        },
+        topo: {
+          type: "raster",
+          tiles: ["https://a.tile.opentopomap.org/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          attribution: "© OpenStreetMap contributors, SRTM | © OpenTopoMap",
+        },
+        aerial: {
+          type: "raster",
+          tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+          tileSize: 256,
+          attribution: "Tiles © Esri",
+        },
+      },
+      layers: [
+        { id: "bg", type: "background", paint: { "background-color": "#e9eeec" } },
+        { id: "basemap-streets", type: "raster", source: "streets", layout: { visibility: "none" }, paint: { "raster-saturation": -0.35, "raster-opacity": 0.82 } },
+        { id: "basemap-topo", type: "raster", source: "topo", layout: { visibility: "none" }, paint: { "raster-saturation": -0.2, "raster-opacity": 0.86 } },
+        { id: "basemap-aerial", type: "raster", source: "aerial", layout: { visibility: "none" }, paint: { "raster-saturation": -0.25, "raster-brightness-max": 0.82 } },
+      ],
     },
     center: [4.62, 50.62], zoom: 12,
   });
@@ -789,6 +1158,7 @@
       imageId: geomImageId(), pattern: state.pattern, size: state.tile,
       color: state.patColor, weight: state.weight, angle: state.angle,
     });
+    rememberActiveStyle();
   }
 
   async function syncSvgTexture() {
@@ -805,6 +1175,7 @@
       scaleJitter: state.svgFill.scaleJitter,
       seed: state.svgFill.seed,
     });
+    rememberActiveStyle();
   }
 
   // Experimental mode using sampled clearance to reduce clipped SVG stamps.
@@ -830,6 +1201,7 @@
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
       scaleJitter: state.svgFill.scaleJitter,
     });
+    rememberActiveStyle();
   }
 
   function removeSvgIconScatter() {
@@ -880,6 +1252,8 @@
     const id = state.layer.source;
     removeStyleLayers(id);
     rebuildPolygonLayers(id);
+    rememberActiveStyle();
+    showSelection(id);
   }
 
   // Lightweight paint updates for sliders (no layer rebuild).
@@ -898,6 +1272,7 @@
       map.setPaintProperty(line, "line-color", state.outline.color);
       map.setPaintProperty(line, "line-width", state.outline.width);
     }
+    rememberActiveStyle();
   }
 
   // Export a polygon style fragment.
@@ -970,10 +1345,58 @@
     if (map.getSource(id)) map.removeSource(id);
   }
 
+  function showSelection(id) {
+    if (map.getLayer("active-selection")) map.removeLayer("active-selection");
+    if (!id || !map.getSource(id)) return;
+    map.addLayer({
+      id: "active-selection",
+      type: "line",
+      source: id,
+      paint: {
+        "line-color": "#f06a4f",
+        "line-width": 2.5,
+        "line-opacity": 0.95,
+        "line-dasharray": [1, 1.5],
+      },
+    });
+  }
+
+  function renderFeatureChips() {
+    const chips = $("featureChips");
+    chips.innerHTML = "";
+    Object.keys(FEATURES).forEach((id, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "feature-chip";
+      button.dataset.feature = id;
+      button.textContent = String(index + 1).padStart(2, "0");
+      button.addEventListener("click", () => selectLayer(id));
+      chips.appendChild(button);
+    });
+  }
+
+  function fitAllFeatures() {
+    const allCoords = Object.values(FEATURES).flatMap((fc) => fc.features[0].geometry.coordinates[0]);
+    const bounds = allCoords.reduce(
+      (acc, [x, y]) => [Math.min(acc[0], x), Math.min(acc[1], y), Math.max(acc[2], x), Math.max(acc[3], y)],
+      [180, 90, -180, -90],
+    );
+    const compact = window.innerWidth < 700;
+    map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {
+      padding: compact
+        ? { top: 190, right: 30, bottom: 310, left: 30 }
+        : { top: 100, right: 90, bottom: 300, left: 370 },
+      maxZoom: 13.5,
+      duration: 450,
+    });
+  }
+
   function generateFeatures() {
     const c = map.getCenter(), span = 0.03;
     const sel = $("layerSelect");
+    if (map.getLayer("active-selection")) map.removeLayer("active-selection");
     sel.innerHTML = "";
+    Object.keys(FEATURE_STYLES).forEach((id) => delete FEATURE_STYLES[id]);
     for (let i = 0; i < FEATURE_COUNT; i++) {
       const id = `feature_${i + 1}`;
       removeFeatureCompletely(id);
@@ -986,34 +1409,67 @@
       map.addSource(id, { type: "geojson", data: fc });
 
       const o = document.createElement("option");
-      o.value = id; o.textContent = `Feature ${i + 1}`;
+      o.value = id; o.textContent = `Polygon ${i + 1}`;
       sel.appendChild(o);
-    }
-    state.layer = null;
-    selectLayer("feature_1");
 
+      FEATURE_STYLES[id] = featureStyleFor(i);
+      state.layer = { source: id };
+      loadStyle(FEATURE_STYLES[id]);
+      rebuildPolygonLayers(id);
+    }
+    renderFeatureChips();
+    selectLayer("feature_1");
+    fitAllFeatures();
   }
 
   function selectLayer(id) {
     if (!id || !FEATURES[id]) return;
-    if (state.layer) removeStyleLayers(state.layer.source);
+    if (state.layer && state.layer.source !== id) rememberActiveStyle();
     state.layer = { source: id };
+    loadStyle(FEATURE_STYLES[id] || DEFAULT_STYLE);
     $("layerSelect").value = id;
-    $("srcHint").textContent = `Test GeoJSON source: ${id} (${FEATURES[id].features[0].geometry.type})`;
-    rebuildLayers();
-    const coords = FEATURES[id].features[0].geometry.coordinates[0];
-    const bounds = coords.reduce(
-      (acc, [x, y]) => [Math.min(acc[0], x), Math.min(acc[1], y), Math.max(acc[2], x), Math.max(acc[3], y)],
-      [180, 90, -180, -90],
-    );
-    map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {
-      padding: 90,
-      maxZoom: 14,
-      duration: 350,
+    const number = Number(id.split("_")[1]);
+    $("activePolygonLabel").textContent = `Polygon ${number}`;
+    $("srcHint").textContent = `Polygon ${number} selected. Click any shape on the map to edit it.`;
+    document.querySelectorAll(".feature-chip").forEach((button) => {
+      button.classList.toggle("active", button.dataset.feature === id);
     });
+    applyStateToUI();
+    showSelection(id);
   }
 
   // UI wiring
+  function openTool(tool) {
+    $("panel").classList.remove("collapsed");
+    document.querySelectorAll(".tool-tab").forEach((button) => {
+      button.classList.toggle("active", button.dataset.tool === tool);
+    });
+    document.querySelectorAll("[data-tool-panel]").forEach((panel) => {
+      panel.classList.toggle("active", panel.dataset.toolPanel === tool);
+    });
+  }
+
+  $("toolTabs").addEventListener("click", (event) => {
+    const tool = event.target.dataset.tool;
+    if (tool) openTool(tool);
+  });
+  $("dockClose").addEventListener("click", () => $("panel").classList.add("collapsed"));
+
+  function setBasemap(name) {
+    ["streets", "topo", "aerial"].forEach((id) => {
+      map.setLayoutProperty(`basemap-${id}`, "visibility", name === id ? "visible" : "none");
+    });
+    map.setPaintProperty("bg", "background-color", name === "neutral" ? "#e9eeec" : "#d8dfdc");
+    document.querySelectorAll(".basemap-button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.basemap === name);
+    });
+  }
+
+  $("basemapOptions").addEventListener("click", (event) => {
+    const basemap = event.target.dataset.basemap;
+    if (basemap) setBasemap(basemap);
+  });
+
   function bindColor(colorId, hexId, apply) {
     const col = $(colorId), hex = $(hexId);
     col.addEventListener("input", () => { hex.value = col.value; apply(col.value); });
@@ -1181,14 +1637,14 @@ map.on("load", async () => {
     toast("Integration snippet copied");
   });
   $("copyConfigBtn").addEventListener("click", () => {
-    $("ioArea").value = JSON.stringify(state, null, 2);
+    $("ioArea").value = JSON.stringify(currentStyle(), null, 2);
     navigator.clipboard?.writeText($("ioArea").value);
     toast("Preset config copied");
   });
   $("importConfigBtn").addEventListener("click", () => {
     try {
       const cfg = JSON.parse($("ioArea").value);
-      Object.assign(state, cfg);
+      loadStyle(cfg);
       applyStateToUI();
       if (state.layer) rebuildLayers();
       toast("Config loaded");
@@ -1223,6 +1679,10 @@ map.on("load", async () => {
     setGeometricFieldsetEnabled(!state.svgFill.on);
     document.querySelectorAll("#patternPills .pill").forEach((el) => el.classList.toggle("active", el.dataset.p === state.pattern));
     document.querySelectorAll("#angleSeg button").forEach((b) => b.classList.toggle("active", +b.dataset.a === state.angle));
+    document.querySelectorAll("#dashSeg button").forEach((button) => {
+      const preset = DASH_PRESETS[button.dataset.d] || [];
+      button.classList.toggle("active", JSON.stringify(preset) === JSON.stringify(state.outline.dash || []));
+    });
     renderPreview();
   }
 
@@ -1231,6 +1691,21 @@ map.on("load", async () => {
   // pixel density unless recomputed after each pan/zoom.
   map.on("moveend", () => {
     if (state.svgFill.on && state.svgFill.noCut) syncSvgIconScatter();
+  });
+
+  function polygonLayerIds() {
+    return Object.keys(FEATURES)
+      .flatMap((id) => [`${id}__line`, `${id}__pat`, `${id}__bg`])
+      .filter((id) => map.getLayer(id));
+  }
+
+  map.on("click", (event) => {
+    const hit = map.queryRenderedFeatures(event.point, { layers: polygonLayerIds() })[0];
+    if (hit?.source && FEATURES[hit.source]) selectLayer(hit.source);
+  });
+  map.on("mousemove", (event) => {
+    const overPolygon = map.queryRenderedFeatures(event.point, { layers: polygonLayerIds() }).length > 0;
+    map.getCanvas().style.cursor = overPolygon ? "pointer" : "";
   });
 
   // Startup
