@@ -19,7 +19,7 @@ export interface ScatterPointsOptions {
   density?: number;
   /** Deterministic variation seed. Default 1. */
   seed?: number | string;
-  /** Points sampled around the disc boundary for the erosion test. Default 12; higher is stricter but slower. */
+  /** Points sampled around the disc boundary for the erosion test. Default 24; higher is stricter but slower. */
   samples?: number;
   /** +/- rotation jitter applied to each point, in degrees. Default 0. */
   rotationJitterDeg?: number;
@@ -71,7 +71,7 @@ function discFitsInside(x: number, y: number, radius: number, rings: Ring[], sam
  */
 export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[] {
   const {
-    radius, density = 1, seed = 1, samples = 12,
+    radius, density = 1, seed = 1, samples = 24,
     rotationJitterDeg = 0, scaleJitter = 0, positionJitter = 0.15, stagger = true,
   } = options;
   if (!Number.isFinite(radius) || radius < 0) {
@@ -110,13 +110,20 @@ export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOpti
   const rand = mulberry32(seedNum);
   const cell = 100 / Math.sqrt(density);
   const points: ScatteredPoint[] = [];
+  const width = maxX - minX;
+  const height = maxY - minY;
+  const columns = Math.max(1, Math.floor(width / cell));
+  const rows = Math.max(1, Math.floor(height / cell));
+  const startX = minX + (width - (columns - 1) * cell) / 2;
+  const startY = minY + (height - (rows - 1) * cell) / 2;
 
-  let row = 0;
-  for (let y = minY; y <= maxY; y += cell, row++) {
-    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
-    for (let x = minX; x <= maxX; x += cell) {
-      const jx = x + rowOffset + (rand() - 0.5) * cell * positionJitter;
-      const jy = y + (rand() - 0.5) * cell * positionJitter;
+  for (let row = 0; row < rows; row++) {
+    const rowOffset = stagger && columns > 1
+      ? (row % 2 === 0 ? -cell / 4 : cell / 4)
+      : 0;
+    for (let column = 0; column < columns; column++) {
+      const jx = startX + column * cell + rowOffset + (rand() - 0.5) * cell * positionJitter;
+      const jy = startY + row * cell + (rand() - 0.5) * cell * positionJitter;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
       // Erosion test uses this point's actual scaled radius, so a

@@ -9,7 +9,7 @@ vi.mock("../../src/maplibre/loadSvgImage", () => ({
   loadSvgImage: loadSvgImageMock,
 }));
 
-import { installSvgPatternFill } from "../../src/maplibre/svgPattern";
+import { createSvgScatterTile, installSvgPatternFill } from "../../src/maplibre/svgPattern";
 
 function createMapMock() {
   const images = new Set<string>();
@@ -57,6 +57,17 @@ beforeEach(() => {
 });
 
 describe("installSvgPatternFill", () => {
+  it("renders a high-density tile at the requested physical size", async () => {
+    const tile = await createSvgScatterTile({
+      imageId: "svg",
+      svg: "<svg />",
+      tileSize: 32,
+      pixelRatio: 2,
+    });
+    expect(tile.width).toBe(64);
+    expect(tile.height).toBe(64);
+  });
+
   it("is a no-op for an already installed equivalent definition", async () => {
     const { map } = createMapMock();
     const options = { imageId: "svg", svg: "<svg />", tileSize: 32 };
@@ -66,6 +77,11 @@ describe("installSvgPatternFill", () => {
 
     expect(loadSvgImageMock).toHaveBeenCalledTimes(1);
     expect(map.addImage).toHaveBeenCalledTimes(1);
+    expect(map.addImage).toHaveBeenCalledWith(
+      "svg",
+      expect.objectContaining({ width: 32, height: 32 }),
+      { pixelRatio: 1 },
+    );
     expect(map.updateImage).not.toHaveBeenCalled();
   });
 

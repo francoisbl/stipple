@@ -27,7 +27,7 @@ export interface ScatterIconPointsOptions {
   density?: number;
   /** Deterministic variation seed. Default 1. */
   seed?: number | string;
-  /** Erosion-test resolution (see {@link scatterPointsInPolygon}). Default 12. */
+  /** Erosion-test resolution (see {@link scatterPointsInPolygon}). Default 24. */
   samples?: number;
   /** +/- rotation jitter per point, in degrees. Default 0. */
   rotationJitterDeg?: number;

@@ -4,6 +4,8 @@ import type { PatternType, TileContext, TileImage } from "./types";
 export interface MakeTileOptions {
   /** Override how the drawing context is created. Mainly useful for tests. */
   contextFactory?: (size: number) => { ctx: TileContext; toTileImage: () => TileImage };
+  /** Raster pixels per MapLibre layout pixel. Use 2 for high-density displays. Default 1. */
+  pixelRatio?: number;
 }
 
 function defaultContextFactory(size: number): { ctx: TileContext; toTileImage: () => TileImage } {
@@ -43,37 +45,43 @@ export function makeTile(
   angle: number,
   options: MakeTileOptions = {},
 ): TileImage {
-  const { ctx, toTileImage } = (options.contextFactory ?? defaultContextFactory)(size);
-  ctx.clearRect(0, 0, size, size); // transparent: whatever sits below shows through
+  const pixelRatio = options.pixelRatio ?? 1;
+  if (!Number.isFinite(pixelRatio) || pixelRatio <= 0) {
+    throw new RangeError("pixelRatio must be a finite number greater than 0");
+  }
+  const physicalSize = Math.max(1, Math.round(size * pixelRatio));
+  const renderScale = physicalSize / size;
+  const { ctx, toTileImage } = (options.contextFactory ?? defaultContextFactory)(physicalSize);
+  ctx.clearRect(0, 0, physicalSize, physicalSize); // transparent: whatever sits below shows through
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = weight;
+  ctx.lineWidth = weight * renderScale;
   ctx.lineCap = "round";
 
   // Parallel lines at the given angle (0 / 45 / 90 / -45), swept from -size to
   // 2*size so the tile edges line up seamlessly with their neighbours.
   const drawHachures = (deg: number) => {
     ctx.beginPath();
-    const step = Math.max(size / 2, 4);
+    const step = Math.max(physicalSize / 2, 4 * renderScale);
     if (deg === 0) {
-      for (let y = 0; y <= size; y += step) {
-        ctx.moveTo(0, y + 0.5);
-        ctx.lineTo(size, y + 0.5);
+      for (let y = 0; y <= physicalSize; y += step) {
+        ctx.moveTo(0, y + 0.5 * renderScale);
+        ctx.lineTo(physicalSize, y + 0.5 * renderScale);
       }
     } else if (deg === 90) {
-      for (let x = 0; x <= size; x += step) {
-        ctx.moveTo(x + 0.5, 0);
-        ctx.lineTo(x + 0.5, size);
+      for (let x = 0; x <= physicalSize; x += step) {
+        ctx.moveTo(x + 0.5 * renderScale, 0);
+        ctx.lineTo(x + 0.5 * renderScale, physicalSize);
       }
     } else if (deg === 45) {
-      for (let o = -size; o <= size * 2; o += step) {
+      for (let o = -physicalSize; o <= physicalSize * 2; o += step) {
         ctx.moveTo(o, 0);
-        ctx.lineTo(o + size, size);
+        ctx.lineTo(o + physicalSize, physicalSize);
       }
     } else {
-      for (let o = -size; o <= size * 2; o += step) {
-        ctx.moveTo(o + size, 0);
-        ctx.lineTo(o, size);
+      for (let o = -physicalSize; o <= physicalSize * 2; o += step) {
+        ctx.moveTo(o + physicalSize, 0);
+        ctx.lineTo(o, physicalSize);
       }
     }
     ctx.stroke();
@@ -90,10 +98,10 @@ export function makeTile(
     case "grid": {
       // Stroke on two edges only so it lines up with the neighbouring tile.
       ctx.beginPath();
-      ctx.moveTo(0.5, 0);
-      ctx.lineTo(0.5, size);
-      ctx.moveTo(0, 0.5);
-      ctx.lineTo(size, 0.5);
+      ctx.moveTo(0.5 * renderScale, 0);
+      ctx.lineTo(0.5 * renderScale, physicalSize);
+      ctx.moveTo(0, 0.5 * renderScale);
+      ctx.lineTo(physicalSize, 0.5 * renderScale);
       ctx.stroke();
       break;
     }
@@ -101,15 +109,15 @@ export function makeTile(
       // Offset grid of dots ("scatter" look). Deterministic, so seamless.
       // Cell count scales with tile size so density stays smooth across the
       // whole size range, rather than jumping only at a few breakpoints.
-      const r = weight * 0.6;
+      const r = weight * renderScale * 0.6;
       const cells = Math.max(2, Math.round(size / 6));
-      const s = size / cells;
+      const s = physicalSize / cells;
       for (let i = 0; i < cells; i++) {
         for (let j = 0; j < cells; j++) {
           const cx = (i + (j % 2 ? 0.75 : 0.25)) * s;
           const cy = (j + 0.5) * s;
           ctx.beginPath();
-          ctx.arc(cx % size, cy % size, r, 0, Math.PI * 2);
+          ctx.arc(cx % physicalSize, cy % physicalSize, r, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -117,9 +125,9 @@ export function makeTile(
     }
     case "dots": {
       // Regular single-dot repeat, seamless by construction.
-      const r = Math.max(weight * 0.5, 1);
+      const r = Math.max(weight * renderScale * 0.5, renderScale);
       ctx.beginPath();
-      ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2);
+      ctx.arc(physicalSize / 2, physicalSize / 2, r, 0, Math.PI * 2);
       ctx.fill();
       break;
     }

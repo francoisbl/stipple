@@ -36,6 +36,8 @@ interface MakeTileOptions {
         ctx: TileContext;
         toTileImage: () => TileImage;
     };
+    /** Raster pixels per MapLibre layout pixel. Use 2 for high-density displays. Default 1. */
+    pixelRatio?: number;
 }
 /**
  * Renders one seamless pattern tile (any pixel size; MapLibre's
@@ -85,7 +87,7 @@ interface ScatterPointsOptions {
     density?: number;
     /** Deterministic variation seed. Default 1. */
     seed?: number | string;
-    /** Points sampled around the disc boundary for the erosion test. Default 12; higher is stricter but slower. */
+    /** Points sampled around the disc boundary for the erosion test. Default 24; higher is stricter but slower. */
     samples?: number;
     /** +/- rotation jitter applied to each point, in degrees. Default 0. */
     rotationJitterDeg?: number;
@@ -211,6 +213,8 @@ interface SyncPatternTextureOptions {
     color: string;
     weight: number;
     angle: number;
+    /** Raster pixels per MapLibre layout pixel. Defaults to the display ratio, capped at 2. */
+    pixelRatio?: number;
 }
 /**
  * (Re)generates a fill-pattern texture with {@link makeTile} and pushes it to
@@ -289,7 +293,7 @@ interface SvgPatternOptions {
     imageId: string;
     /** Raw `<svg>...</svg>` markup, used as the repeatable stamp. */
     svg: string;
-    /** Size of the generated meta-tile in px. Default 192. */
+    /** Size of the generated meta-tile in layout px. Default 288. */
     tileSize?: number;
     /** Rendered size of each SVG stamp in px. Default 28. */
     stampSize?: number;
@@ -305,6 +309,8 @@ interface SvgPatternOptions {
     positionJitter?: number;
     /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout (orchard/marsh map fills). Default true. */
     stagger?: boolean;
+    /** Raster pixels per MapLibre layout pixel. Defaults to the display ratio, capped at 2 when installed. */
+    pixelRatio?: number;
 }
 /**
  * Rasterizes an SVG into a large seamless "meta-tile" repeated on a grid
@@ -358,7 +364,7 @@ interface ScatterIconPointsOptions {
     density?: number;
     /** Deterministic variation seed. Default 1. */
     seed?: number | string;
-    /** Erosion-test resolution (see {@link scatterPointsInPolygon}). Default 12. */
+    /** Erosion-test resolution (see {@link scatterPointsInPolygon}). Default 24. */
     samples?: number;
     /** +/- rotation jitter per point, in degrees. Default 0. */
     rotationJitterDeg?: number;
@@ -390,7 +396,7 @@ interface InstallSvgIconScatterOptions {
     size?: number;
     density?: number;
     seed?: number | string;
-    /** Clearance-circle samples. Default 12; higher is stricter but slower. */
+    /** Clearance-circle samples. Default 24; higher is stricter but slower. */
     samples?: number;
     rotationJitterDeg?: number;
     /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
@@ -399,6 +405,8 @@ interface InstallSvgIconScatterOptions {
     positionJitter?: number;
     /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
     stagger?: boolean;
+    /** Symbol opacity. Default 1. */
+    opacity?: number;
 }
 /**
  * @experimental

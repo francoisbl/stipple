@@ -1,6 +1,6 @@
 import {
   scatterPointsInPolygon
-} from "./chunk-33HMN42D.js";
+} from "./chunk-6NK6HUOO.js";
 import {
   loadSvgImage
 } from "./chunk-Z7LWPO7O.js";
@@ -78,7 +78,8 @@ async function installSvgIconScatter(map, options) {
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
-    stagger
+    stagger,
+    opacity = 1
   } = options;
   await addSvgIcon(map, { id: iconId, svg, size });
   const points = scatterIconPoints({
@@ -109,8 +110,13 @@ async function installSvgIconScatter(map, options) {
         "icon-rotate": ["get", "rotation"],
         "icon-size": ["get", "scale"],
         "icon-allow-overlap": true
+      },
+      paint: {
+        "icon-opacity": opacity
       }
     });
+  } else {
+    map.setPaintProperty(layerId, "icon-opacity", opacity);
   }
 }
 export {

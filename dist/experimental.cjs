@@ -73,7 +73,7 @@ function scatterPointsInPolygon(rings, options) {
     radius,
     density = 1,
     seed = 1,
-    samples = 12,
+    samples = 24,
     rotationJitterDeg = 0,
     scaleJitter = 0,
     positionJitter = 0.15,
@@ -113,12 +113,17 @@ function scatterPointsInPolygon(rings, options) {
   const rand = mulberry32(seedNum);
   const cell = 100 / Math.sqrt(density);
   const points = [];
-  let row = 0;
-  for (let y = minY; y <= maxY; y += cell, row++) {
-    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
-    for (let x = minX; x <= maxX; x += cell) {
-      const jx = x + rowOffset + (rand() - 0.5) * cell * positionJitter;
-      const jy = y + (rand() - 0.5) * cell * positionJitter;
+  const width = maxX - minX;
+  const height = maxY - minY;
+  const columns = Math.max(1, Math.floor(width / cell));
+  const rows = Math.max(1, Math.floor(height / cell));
+  const startX = minX + (width - (columns - 1) * cell) / 2;
+  const startY = minY + (height - (rows - 1) * cell) / 2;
+  for (let row = 0; row < rows; row++) {
+    const rowOffset = stagger && columns > 1 ? row % 2 === 0 ? -cell / 4 : cell / 4 : 0;
+    for (let column = 0; column < columns; column++) {
+      const jx = startX + column * cell + rowOffset + (rand() - 0.5) * cell * positionJitter;
+      const jy = startY + row * cell + (rand() - 0.5) * cell * positionJitter;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
       if (discFitsInside(jx, jy, radius * scale, rings, samples)) points.push({ x: jx, y: jy, rotation, scale });
@@ -213,7 +218,8 @@ async function installSvgIconScatter(map, options) {
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
-    stagger
+    stagger,
+    opacity = 1
   } = options;
   await addSvgIcon(map, { id: iconId, svg, size });
   const points = scatterIconPoints({
@@ -244,8 +250,13 @@ async function installSvgIconScatter(map, options) {
         "icon-rotate": ["get", "rotation"],
         "icon-size": ["get", "scale"],
         "icon-allow-overlap": true
+      },
+      paint: {
+        "icon-opacity": opacity
       }
     });
+  } else {
+    map.setPaintProperty(layerId, "icon-opacity", opacity);
   }
 }
 // Annotate the CommonJS export names for ESM import in node:

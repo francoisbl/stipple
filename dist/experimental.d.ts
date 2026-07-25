@@ -32,7 +32,7 @@ interface ScatterIconPointsOptions {
     density?: number;
     /** Deterministic variation seed. Default 1. */
     seed?: number | string;
-    /** Erosion-test resolution (see {@link scatterPointsInPolygon}). Default 12. */
+    /** Erosion-test resolution (see {@link scatterPointsInPolygon}). Default 24. */
     samples?: number;
     /** +/- rotation jitter per point, in degrees. Default 0. */
     rotationJitterDeg?: number;
@@ -64,7 +64,7 @@ interface InstallSvgIconScatterOptions {
     size?: number;
     density?: number;
     seed?: number | string;
-    /** Clearance-circle samples. Default 12; higher is stricter but slower. */
+    /** Clearance-circle samples. Default 24; higher is stricter but slower. */
     samples?: number;
     rotationJitterDeg?: number;
     /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
@@ -73,6 +73,8 @@ interface InstallSvgIconScatterOptions {
     positionJitter?: number;
     /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
     stagger?: boolean;
+    /** Symbol opacity. Default 1. */
+    opacity?: number;
 }
 /**
  * @experimental

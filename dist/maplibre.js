@@ -1,7 +1,7 @@
 import {
   createSvgScatterLayout,
   makeTile
-} from "./chunk-FXXBZSDE.js";
+} from "./chunk-4HV6S564.js";
 import {
   loadSvgImage
 } from "./chunk-Z7LWPO7O.js";
@@ -105,7 +105,7 @@ function createSvgPatternDefinition(options) {
   return parsePatternDefinition({
     kind: "svg",
     svg: options.svg,
-    tileSize: options.tileSize ?? 192,
+    tileSize: options.tileSize ?? 288,
     stampSize: options.stampSize ?? 28,
     density: options.density ?? 1.4,
     seed: options.seed ?? 1,
@@ -118,25 +118,39 @@ function createSvgPatternDefinition(options) {
 
 // src/maplibre/syncPatternTexture.ts
 var installedPatterns = /* @__PURE__ */ new WeakMap();
+function resolvePixelRatio(value) {
+  const displayRatio = typeof globalThis.devicePixelRatio === "number" ? globalThis.devicePixelRatio : 1;
+  const ratio = value ?? Math.min(Math.max(displayRatio, 1), 2);
+  if (!Number.isFinite(ratio) || ratio <= 0) {
+    throw new RangeError("pixelRatio must be a finite number greater than 0");
+  }
+  return ratio;
+}
 function syncPatternTexture(map, options) {
   const { imageId, pattern, size, color, weight, angle } = options;
   if (pattern === "solid") return;
+  const pixelRatio = resolvePixelRatio(options.pixelRatio);
   let byImage = installedPatterns.get(map);
   if (!byImage) {
     byImage = /* @__PURE__ */ new Map();
     installedPatterns.set(map, byImage);
   }
-  const signature = JSON.stringify({ pattern, size, color, weight, angle });
+  const signature = JSON.stringify({ pattern, size, color, weight, angle, pixelRatio });
   const previous = byImage.get(imageId);
   if (map.hasImage(imageId) && previous?.signature === signature) return;
-  const tile = makeTile(pattern, size, color, weight, angle);
-  if (map.hasImage(imageId) && previous?.size === size) {
+  const tile = makeTile(pattern, size, color, weight, angle, { pixelRatio });
+  if (map.hasImage(imageId) && previous?.width === tile.width && previous.height === tile.height && previous.pixelRatio === pixelRatio) {
     map.updateImage(imageId, tile);
   } else {
     if (map.hasImage(imageId)) map.removeImage(imageId);
-    map.addImage(imageId, tile);
+    map.addImage(imageId, tile, { pixelRatio });
   }
-  byImage.set(imageId, { signature, size });
+  byImage.set(imageId, {
+    signature,
+    width: tile.width,
+    height: tile.height,
+    pixelRatio
+  });
   map.triggerRepaint();
 }
 
@@ -202,8 +216,17 @@ function buildStyleFragment(options) {
 }
 
 // src/maplibre/svgPattern.ts
+function resolvePixelRatio2(value, useDisplayRatio) {
+  const displayRatio = useDisplayRatio && typeof globalThis.devicePixelRatio === "number" ? globalThis.devicePixelRatio : 1;
+  const ratio = value ?? Math.min(Math.max(displayRatio, 1), 2);
+  if (!Number.isFinite(ratio) || ratio <= 0) {
+    throw new RangeError("pixelRatio must be a finite number greater than 0");
+  }
+  return ratio;
+}
 async function createSvgScatterTile(options) {
   const definition = createSvgPatternDefinition(options);
+  const pixelRatio = resolvePixelRatio2(options.pixelRatio, false);
   const {
     svg,
     tileSize,
@@ -217,10 +240,13 @@ async function createSvgScatterTile(options) {
   } = definition;
   const image = await loadSvgImage(svg);
   const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = tileSize;
+  const physicalTileSize = Math.max(1, Math.round(tileSize * pixelRatio));
+  const renderScale = physicalTileSize / tileSize;
+  canvas.width = canvas.height = physicalTileSize;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D canvas context unavailable");
-  ctx.clearRect(0, 0, tileSize, tileSize);
+  ctx.clearRect(0, 0, physicalTileSize, physicalTileSize);
+  ctx.scale(renderScale, renderScale);
   const placements = createSvgScatterLayout({
     tileSize,
     stampSize,
@@ -239,14 +265,19 @@ async function createSvgScatterTile(options) {
     ctx.drawImage(image, -stampSize / 2, -stampSize / 2, stampSize, stampSize);
     ctx.restore();
   }
-  const imageData = ctx.getImageData(0, 0, tileSize, tileSize);
-  return { width: tileSize, height: tileSize, data: new Uint8Array(imageData.data.buffer) };
+  const imageData = ctx.getImageData(0, 0, physicalTileSize, physicalTileSize);
+  return {
+    width: physicalTileSize,
+    height: physicalTileSize,
+    data: new Uint8Array(imageData.data.buffer)
+  };
 }
 var installedSvgPatterns = /* @__PURE__ */ new WeakMap();
 var svgPatternGenerations = /* @__PURE__ */ new WeakMap();
 async function installSvgPatternFill(map, options) {
   const definition = createSvgPatternDefinition(options);
-  const signature = serializePatternDefinition(definition);
+  const pixelRatio = resolvePixelRatio2(options.pixelRatio, true);
+  const signature = `${serializePatternDefinition(definition)}@${pixelRatio}`;
   let installedById = installedSvgPatterns.get(map);
   if (!installedById) {
     installedById = /* @__PURE__ */ new Map();
@@ -262,19 +293,20 @@ async function installSvgPatternFill(map, options) {
   }
   const generation = (generationsById.get(options.imageId) ?? 0) + 1;
   generationsById.set(options.imageId, generation);
-  const tile = await createSvgScatterTile(options);
+  const tile = await createSvgScatterTile({ ...options, pixelRatio });
   if (generationsById.get(options.imageId) !== generation) return;
   const previous = installedById.get(options.imageId);
-  if (map.hasImage(options.imageId) && previous?.width === tile.width && previous.height === tile.height) {
+  if (map.hasImage(options.imageId) && previous?.width === tile.width && previous.height === tile.height && previous.pixelRatio === pixelRatio) {
     map.updateImage(options.imageId, tile);
   } else {
     if (map.hasImage(options.imageId)) map.removeImage(options.imageId);
-    map.addImage(options.imageId, tile);
+    map.addImage(options.imageId, tile, { pixelRatio });
   }
   installedById.set(options.imageId, {
     signature,
     width: tile.width,
-    height: tile.height
+    height: tile.height,
+    pixelRatio
   });
   map.triggerRepaint();
 }

@@ -16,7 +16,7 @@ export interface InstallSvgIconScatterOptions {
   size?: number;
   density?: number;
   seed?: number | string;
-  /** Clearance-circle samples. Default 12; higher is stricter but slower. */
+  /** Clearance-circle samples. Default 24; higher is stricter but slower. */
   samples?: number;
   rotationJitterDeg?: number;
   /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
@@ -25,6 +25,8 @@ export interface InstallSvgIconScatterOptions {
   positionJitter?: number;
   /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
   stagger?: boolean;
+  /** Symbol opacity. Default 1. */
+  opacity?: number;
 }
 
 /**
@@ -57,6 +59,7 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
     scaleJitter,
     positionJitter,
     stagger,
+    opacity = 1,
   } = options;
 
   // Always rasterize because `size` may have changed since the image id was
@@ -97,6 +100,11 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
         "icon-size": ["get", "scale"],
         "icon-allow-overlap": true,
       },
+      paint: {
+        "icon-opacity": opacity,
+      },
     });
+  } else {
+    map.setPaintProperty(layerId, "icon-opacity", opacity);
   }
 }

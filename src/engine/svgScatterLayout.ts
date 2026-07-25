@@ -68,21 +68,30 @@ export function createSvgScatterLayout(options: SvgScatterLayoutOptions): SvgSta
   const seedNum = typeof seed === "string" ? hashStringToSeed(seed) : seed;
   if (!Number.isFinite(seedNum)) throw new RangeError("seed must be a finite number or a string");
   const rand = mulberry32(seedNum);
-  const cell = 100 / Math.sqrt(density);
-  const cols = Math.max(1, Math.ceil(tileSize / cell));
-  let rows = Math.max(1, Math.ceil(tileSize / cell));
-  if (stagger && rows % 2 !== 0) rows += 1;
+  const targetCell = 100 / Math.sqrt(density);
+  const cols = Math.max(1, Math.round(tileSize / targetCell));
+  let rows = Math.max(1, Math.round(tileSize / targetCell));
+  if (stagger && rows % 2 !== 0) {
+    const lower = Math.max(2, rows - 1);
+    const upper = rows + 1;
+    const targetCount = density * (tileSize * tileSize) / 10_000;
+    rows = Math.abs(cols * lower - targetCount) <= Math.abs(cols * upper - targetCount)
+      ? lower
+      : upper;
+  }
+  const cellWidth = tileSize / cols;
+  const cellHeight = tileSize / rows;
 
   const placements: SvgStampPlacement[] = [];
   let stampIndex = 0;
 
   for (let row = 0; row < rows; row++) {
-    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
+    const rowOffset = stagger && row % 2 === 1 ? cellWidth / 2 : 0;
     for (let col = 0; col < cols; col++, stampIndex++) {
-      const jitterX = (rand() - 0.5) * cell * positionJitter;
-      const jitterY = (rand() - 0.5) * cell * positionJitter;
-      const x = modulo(col * cell + cell / 2 + rowOffset + jitterX, tileSize);
-      const y = modulo(row * cell + cell / 2 + jitterY, tileSize);
+      const jitterX = (rand() - 0.5) * cellWidth * positionJitter;
+      const jitterY = (rand() - 0.5) * cellHeight * positionJitter;
+      const x = modulo(col * cellWidth + cellWidth / 2 + rowOffset + jitterX, tileSize);
+      const y = modulo(row * cellHeight + cellHeight / 2 + jitterY, tileSize);
       const rotationRad = (rand() * 2 - 1) * rotationJitterDeg * (Math.PI / 180);
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
 

@@ -20,4 +20,12 @@ describe("makeTile", () => {
     const tile = makeTile("solid", 8, "#ff0000", 2, 0);
     expect(tile.data.every((channel) => channel === 0)).toBe(true);
   });
+
+  it("oversamples without changing the logical pattern scale", () => {
+    const tile = makeTile("stipple", 16, "#1f4e79", 2, 45, { pixelRatio: 2 });
+    expect(tile.width).toBe(32);
+    expect(tile.height).toBe(32);
+    expect(tile.data).toHaveLength(32 * 32 * 4);
+    expect(tile.data.some((channel) => channel !== 0)).toBe(true);
+  });
 });

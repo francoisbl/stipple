@@ -4,7 +4,9 @@ import type { PatternType, TileSize } from "../engine/types";
 
 interface InstalledPattern {
   signature: string;
-  size: number;
+  width: number;
+  height: number;
+  pixelRatio: number;
 }
 
 // Last-installed state per (map, imageId), so equivalent repeated calls are
@@ -18,6 +20,19 @@ export interface SyncPatternTextureOptions {
   color: string;
   weight: number;
   angle: number;
+  /** Raster pixels per MapLibre layout pixel. Defaults to the display ratio, capped at 2. */
+  pixelRatio?: number;
+}
+
+function resolvePixelRatio(value?: number): number {
+  const displayRatio = typeof globalThis.devicePixelRatio === "number"
+    ? globalThis.devicePixelRatio
+    : 1;
+  const ratio = value ?? Math.min(Math.max(displayRatio, 1), 2);
+  if (!Number.isFinite(ratio) || ratio <= 0) {
+    throw new RangeError("pixelRatio must be a finite number greater than 0");
+  }
+  return ratio;
 }
 
 /**
@@ -29,6 +44,7 @@ export interface SyncPatternTextureOptions {
 export function syncPatternTexture(map: MaplibreMap, options: SyncPatternTextureOptions): void {
   const { imageId, pattern, size, color, weight, angle } = options;
   if (pattern === "solid") return;
+  const pixelRatio = resolvePixelRatio(options.pixelRatio);
 
   let byImage = installedPatterns.get(map);
   if (!byImage) {
@@ -36,18 +52,28 @@ export function syncPatternTexture(map: MaplibreMap, options: SyncPatternTexture
     installedPatterns.set(map, byImage);
   }
 
-  const signature = JSON.stringify({ pattern, size, color, weight, angle });
+  const signature = JSON.stringify({ pattern, size, color, weight, angle, pixelRatio });
   const previous = byImage.get(imageId);
   if (map.hasImage(imageId) && previous?.signature === signature) return;
 
-  const tile = makeTile(pattern, size, color, weight, angle);
+  const tile = makeTile(pattern, size, color, weight, angle, { pixelRatio });
 
-  if (map.hasImage(imageId) && previous?.size === size) {
+  if (
+    map.hasImage(imageId) &&
+    previous?.width === tile.width &&
+    previous.height === tile.height &&
+    previous.pixelRatio === pixelRatio
+  ) {
     map.updateImage(imageId, tile);
   } else {
     if (map.hasImage(imageId)) map.removeImage(imageId);
-    map.addImage(imageId, tile);
+    map.addImage(imageId, tile, { pixelRatio });
   }
-  byImage.set(imageId, { signature, size });
+  byImage.set(imageId, {
+    signature,
+    width: tile.width,
+    height: tile.height,
+    pixelRatio,
+  });
   map.triggerRepaint();
 }

@@ -23,6 +23,12 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
 ### Changed
 
 - MapLibre GL JS support is explicitly `>=4 <7`.
+- Generated geometric and SVG textures now follow the display pixel ratio,
+  capped at 2, while preserving their layout size.
+- SVG scatter grids now use exact periodic spacing instead of clustering near
+  meta-tile seams, with a larger default tile to make repetition less visible.
+- Experimental whole-icon scatter starts from a centred grid and uses 24
+  clearance samples by default.
 - The playground now focuses on polygon fills, uses MapLibre GL JS 6, and
   exports SVG pattern metadata.
 - Generic line styling and point-symbol helpers are no longer public APIs.

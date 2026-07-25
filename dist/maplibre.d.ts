@@ -76,6 +76,8 @@ interface SyncPatternTextureOptions {
     color: string;
     weight: number;
     angle: number;
+    /** Raster pixels per MapLibre layout pixel. Defaults to the display ratio, capped at 2. */
+    pixelRatio?: number;
 }
 /**
  * (Re)generates a fill-pattern texture with {@link makeTile} and pushes it to
@@ -154,7 +156,7 @@ interface SvgPatternOptions {
     imageId: string;
     /** Raw `<svg>...</svg>` markup, used as the repeatable stamp. */
     svg: string;
-    /** Size of the generated meta-tile in px. Default 192. */
+    /** Size of the generated meta-tile in layout px. Default 288. */
     tileSize?: number;
     /** Rendered size of each SVG stamp in px. Default 28. */
     stampSize?: number;
@@ -170,6 +172,8 @@ interface SvgPatternOptions {
     positionJitter?: number;
     /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout (orchard/marsh map fills). Default true. */
     stagger?: boolean;
+    /** Raster pixels per MapLibre layout pixel. Defaults to the display ratio, capped at 2 when installed. */
+    pixelRatio?: number;
 }
 /**
  * Rasterizes an SVG into a large seamless "meta-tile" repeated on a grid
