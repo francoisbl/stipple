@@ -23,7 +23,9 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
 ### Changed
 
 - MapLibre GL JS support is explicitly `>=4 <7`.
-- The playground now uses MapLibre GL JS 6 and exports SVG pattern metadata.
+- The playground now focuses on polygon fills, uses MapLibre GL JS 6, and
+  exports SVG pattern metadata.
+- Generic line styling and point-symbol helpers are no longer public APIs.
 - Equivalent geometric and SVG installations are idempotent.
 - SVG rendering prevents stale asynchronous work from replacing newer images.
 - Whole-icon scattering is explicitly experimental and uses the icon canvas's

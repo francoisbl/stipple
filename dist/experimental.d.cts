@@ -56,7 +56,7 @@ interface InstallSvgIconScatterOptions {
     sourceId: string;
     /** Symbol layer id. */
     layerId: string;
-    /** Image id passed to `addSvgIcon` (reused across calls if already installed). */
+    /** MapLibre image id used for the rasterized SVG. */
     iconId: string;
     polygon: PolygonGeometry;
     svg: string;

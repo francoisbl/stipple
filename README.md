@@ -1,8 +1,8 @@
 # maplibre-pattern-fills
 
-Textured fill patterns, tiled SVG scatter patterns, and SVG point icons for
-[MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/). Patterns are
-generated at runtime without pre-baked sprite sheets.
+A focused library and visual playground for designing, generating, and
+installing fill patterns in
+[MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/).
 
 **[Playground source](./demo/index.html)**
 
@@ -24,9 +24,6 @@ package generates that image for you:
   sample fills across four categories (vegetation, trees, water, shapes) as
   a starting point. Swap in your own SVG the same way, or paste/upload one
   directly in the demo.
-- **SVG point icons:** rasterize an SVG once via `addImage` and use it as
-  `icon-image` on a `symbol` layer, with the icon's rendered scale controlled
-  by MapLibre's native `icon-size` (no re-rasterization needed).
 - **Experimental no-cut icon scatter:** a repeating `fill-pattern` texture always clips
   hard at the polygon boundary, so a stamp near the edge shows only its
   overlapping part. `installSvgIconScatter` is the alternative: it places
@@ -39,15 +36,12 @@ package generates that image for you:
 - Flash-free live updates: colour/weight/angle changes call `updateImage`
   when the tile dimensions haven't changed, and fall back to
   `removeImage`/`addImage` only when they have.
-- **One style builder per geometry type:** `buildStyleFragment` (polygon:
-  background/pattern/outline), `buildLineStyleFragment` (line), and
-  `buildIconStyleFragment` + `installIconStyles` (point, metadata-driven like
-  the pattern fills). Each produces exactly the layer(s) for that geometry
-  type, so a style.json export is never an ambiguous mix.
+- **Polygon style fragments:** `buildStyleFragment` creates the pattern layer
+  with an optional background and outline so the fill can be previewed and
+  exported in context.
 
-Everything runs through MapLibre's public API (`addImage`, `updateImage`,
-`fill-pattern`, `line-dasharray`, `symbol`). It does not fork or patch
-MapLibre.
+Patterns run through MapLibre's public image and `fill-pattern` APIs. The
+package does not fork or patch MapLibre.
 
 ## Install
 
@@ -137,56 +131,15 @@ map.addLayer({
 });
 ```
 
-### SVG point icon
-
-```js
-import { addSvgIcon } from "maplibre-pattern-fills";
-
-const { id } = await addSvgIcon(map, { id: "tree-icon", svg: treeSvgMarkup, size: 28 });
-
-map.addLayer({
-  id: "trees", type: "symbol", source: "trees",
-  layout: { "icon-image": id, "icon-size": 1 },
-});
-```
-
-### Line style (exportable, no runtime install needed)
-
-```js
-import { buildLineStyleFragment } from "maplibre-pattern-fills";
-
-const fragment = buildLineStyleFragment({
-  source: "roads", sourceLayer: "roads",
-  line: { enabled: true, color: "#7c3d1c", width: 2, dash: [2, 4] },
-});
-// line-dasharray is a native declarative expression. The fragment's
-// layer is ready to use as-is, nothing to regenerate at runtime.
-```
-
-### Point icon style (exportable + regenerable, like the pattern fills)
-
-```js
-import { buildIconStyleFragment, installIconStyles } from "maplibre-pattern-fills";
-
-const fragment = buildIconStyleFragment({
-  source: "trees", sourceLayer: "trees",
-  icon: { svg: treeSvgMarkup, size: 28, imageId: "tree_icon_img" },
-});
-// ...paste fragment.sources/layers into your style, then:
-map.on("load", () => installIconStyles(map, map.getStyle()));
-```
-
 ## Demo / playground
 
 [`demo/index.html`](./demo/index.html) is a single, buildless HTML file with a
-full control panel for composing polygon fills, line styles, and point
-icons live on test features. Pick a geometry type at the top (Polygon /
-Line / Point); the panel and the style.json / integration-snippet export
-always match that one type exactly, so it's never ambiguous what you're
-shipping. Bring your own SVG by pasting markup or uploading a `.svg` file
-wherever a sample picker has a "Custom SVG…" option. It loads the library
-from the built `dist/index.global.js`, so run `npm run build` once, then
-open the file directly (no server needed):
+control panel for composing polygon fill patterns on test features. The
+background and outline controls provide visual context and are included in
+style fragment exports. Bring your own SVG by pasting markup or uploading a
+`.svg` file. The playground loads the library from
+`dist/index.global.js`, so run `npm run build` once, then open the file
+directly:
 
 ```sh
 npm install
@@ -204,9 +157,8 @@ For Cloudflare Pages, use `npm run build:site` as the build command and
   real Canvas 2D API in the browser and a small pure-JS software rasterizer in
   Node, so it runs identically in both.
 - `src/maplibre`: the MapLibre integration: `syncPatternTexture`,
-  `buildStyleFragment`, `buildLineStyleFragment`, `buildIconStyleFragment`,
-  `installPatternFills`, `installIconStyles`, `installSvgPatternFill`,
-  `installSvgIconScatter`, `addSvgIcon`, `scatterIconPoints`.
+  `buildStyleFragment`, `installPatternFills`, `observePatternFills`, and
+  `installSvgPatternFill`.
 - `demo/`: the playground UI described above.
 
 ## Entry points
@@ -214,7 +166,8 @@ For Cloudflare Pages, use `npm run build:site` as the build command and
 - `maplibre-pattern-fills`: backwards-compatible complete `0.x` surface.
 - `maplibre-pattern-fills/core`: pure raster and layout engine.
 - `maplibre-pattern-fills/maplibre`: stable MapLibre integration.
-- `maplibre-pattern-fills/experimental`: sampled whole-icon scattering.
+- `maplibre-pattern-fills/experimental`: sampled whole-stamp scattering for
+  reducing clipping at polygon boundaries.
 
 ## Migrating legacy pattern metadata
 
