@@ -1232,11 +1232,11 @@
             <div>
               <div class="export-grid">
                 <button class="action primary" id="exportBtn">Copy style.json</button>
-                <button class="action" id="exportJsBtn">Copy integration</button>
+                <button class="action" id="exportJsBtn">Copy MapLibre code</button>
                 <button class="action ghost" id="copyConfigBtn">Copy preset</button>
                 <button class="action ghost" id="importConfigBtn">Load preset</button>
               </div>
-              <p class="hint">Export the style of the selected polygon.</p>
+              <p class="hint">Export the selected style, or copy the code that adds it to an existing MapLibre map.</p>
             </div>
             <textarea id="ioArea" placeholder="Exported style or preset JSON appears here."></textarea>
           </div>
@@ -2094,25 +2094,54 @@
   });
 
   function buildIntegrationSnippet() {
-    return `// Paste the exported style.json's sources+layers into your map style,
-// then call installPatternFills once the style has loaded:
-
+    const fragment = JSON.stringify(buildExportedStyle(), null, 2);
+    return `// Put this import at the top of the module that creates your map.
+// Install the package first with: npm install maplibre-pattern-fills
 import { installPatternFills } from "maplibre-pattern-fills";
 
-map.on("load", async () => {
-  await installPatternFills(map, style); // \`style\` = the object exported above,
-                                          // or { layers: map.getStyle().layers }
-});
+// Use the id of a polygon source that already exists in your map.
+const SOURCE_ID = "my-polygons";
 
-// No bundler? Use the UMD build instead:
-// <scr` + `ipt src="https://unpkg.com/maplibre-pattern-fills/dist/index.global.js"></scr` + `ipt>
-// <scr` + `ipt>MaplibrePatternFills.installPatternFills(map, style)</scr` + `ipt>
+// Keep null for a GeoJSON source. For a vector source, enter its source-layer.
+const SOURCE_LAYER = null;
+
+const patternFill = ${fragment};
+
+async function addPatternFill(map) {
+  if (!map.getSource(SOURCE_ID)) {
+    throw new Error(\`MapLibre source "\${SOURCE_ID}" was not found\`);
+  }
+
+  const layers = patternFill.layers.map((exportedLayer) => {
+    const layer = structuredClone(exportedLayer);
+    layer.id = layer.id.replace("<source>", SOURCE_ID);
+    layer.source = SOURCE_ID;
+
+    if (SOURCE_LAYER) {
+      layer["source-layer"] = SOURCE_LAYER;
+    } else {
+      delete layer["source-layer"];
+    }
+
+    map.addLayer(layer);
+    return layer;
+  });
+
+  await installPatternFills(map, { layers });
+}
+
+// Put this after: const map = new maplibregl.Map({ ... })
+if (map.isStyleLoaded()) {
+  addPatternFill(map);
+} else {
+  map.once("load", () => addPatternFill(map));
+}
 `;
   }
   $("exportJsBtn").addEventListener("click", () => {
     $("ioArea").value = buildIntegrationSnippet();
     navigator.clipboard?.writeText($("ioArea").value);
-    toast("Integration snippet copied");
+    toast("Code for an existing MapLibre map copied");
   });
   $("copyConfigBtn").addEventListener("click", () => {
     $("ioArea").value = JSON.stringify(currentStyle(), null, 2);
