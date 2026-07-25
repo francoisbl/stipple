@@ -17,11 +17,11 @@ package generates that image for you:
 - **SVG scatter fills:** turn any SVG into a tileable fill by repeating it
   into a large seamless meta-tile. Choose a regular grid, offset rows, or a
   seamless natural distribution with minimum spacing. Everything is seeded,
-  so the same seed always reproduces the same texture. The demo ships 25
-  sample fills across vegetation, trees, agriculture, water, terrain, land
-  use, and abstract shapes. They use a consistent 64 by 64 canvas and can be
-  recoloured. Swap in your own SVG the same way, or paste/upload one directly
-  in the demo.
+  so the same seed always reproduces the same texture. The demo ships 26
+  recolourable samples on a consistent 64 by 64 canvas. The selector separates
+  conventional cartographic textures, immediately readable illustrative
+  symbols, and abstract patterns. Swap in your own SVG the same way, or
+  paste/upload one directly in the demo.
 - **Experimental whole-symbol scatter:** a repeating `fill-pattern` texture always clips
   hard at the polygon boundary, so a stamp near the edge shows only its
   overlapping part. `installSvgIconScatter` is the alternative: it places

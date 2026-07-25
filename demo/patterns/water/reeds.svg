@@ -1,14 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <g fill="none" stroke="#5a8f4f" stroke-width="3" stroke-linecap="round">
-    <path d="M12 60 L14 8" />
-    <path d="M24 60 C24 40 20 24 22 6" />
-    <path d="M36 60 L38 10" />
-    <path d="M48 60 C48 42 52 26 50 8" />
+  <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round">
+    <path d="M16 48V13M32 48V8M48 48V16"/>
+    <path d="M7 54C15 49 23 59 31 54C39 49 47 59 57 53"/>
   </g>
-  <g fill="#7ea55a">
-    <ellipse cx="14" cy="8" rx="2" ry="6" />
-    <ellipse cx="22" cy="6" rx="2" ry="6" />
-    <ellipse cx="38" cy="10" rx="2" ry="6" />
-    <ellipse cx="50" cy="8" rx="2" ry="6" />
+  <g fill="#2c6a5b">
+    <rect x="12" y="5" width="8" height="14" rx="4"/>
+    <rect x="28" y="0" width="8" height="14" rx="4"/>
+    <rect x="44" y="8" width="8" height="14" rx="4"/>
   </g>
 </svg>
