@@ -62,23 +62,6 @@
       border-bottom: 1px solid var(--line);
       margin-bottom: 4px;
     }
-    .brand-row { display: flex; align-items: center; gap: 12px; }
-    .brand-mark {
-      position: relative;
-      width: 32px;
-      height: 32px;
-      flex: 0 0 auto;
-      border: 1px solid var(--ink);
-      border-radius: 50%;
-    }
-    .brand-mark::before,
-    .brand-mark::after {
-      content: "";
-      position: absolute;
-      background: var(--coral);
-    }
-    .brand-mark::before { width: 40px; height: 2px; left: -5px; top: 14px; }
-    .brand-mark::after { width: 2px; height: 40px; left: 14px; top: -5px; }
     h1 {
       margin: 0;
       font-size: 21px;
@@ -96,7 +79,7 @@
     }
     .sub {
       max-width: 330px;
-      margin: 14px 0 0 44px;
+      margin: 12px 0 0;
       color: var(--ink-soft);
       font-size: 13px;
       line-height: 1.55;
@@ -420,10 +403,7 @@
     <div id="panel">
       <header class="studio-head">
         <span class="product-kicker">MapLibre pattern studio</span>
-        <div class="brand-row">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <h1>maplibre-pattern-fills</h1>
-        </div>
+        <h1>maplibre-pattern-fills</h1>
         <p class="sub">Design and export geometric or SVG fill patterns for MapLibre GL JS.</p>
       </header>
 
