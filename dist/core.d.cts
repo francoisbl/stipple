@@ -1,5 +1,7 @@
 import { T as TileContext, a as TileImage, P as PatternType } from './types-BhMN112m.cjs';
 export { H as HachureAngle, b as TileSize } from './types-BhMN112m.cjs';
+import { S as SvgDistributionMode } from './svgScatterLayout-hN4oRl9-.cjs';
+export { a as SvgScatterLayoutOptions, b as SvgStampPlacement, c as createSvgScatterLayout } from './svgScatterLayout-hN4oRl9-.cjs';
 
 interface MakeTileOptions {
     /** Override how the drawing context is created. Mainly useful for tests. */
@@ -58,8 +60,6 @@ interface ScatterPointsOptions {
     density?: number;
     /** Deterministic variation seed. Default 1. */
     seed?: number | string;
-    /** Points sampled around the disc boundary for the erosion test. Default 24; higher is stricter but slower. */
-    samples?: number;
     /** +/- rotation jitter applied to each point, in degrees. Default 0. */
     rotationJitterDeg?: number;
     /** +/- scale jitter applied to each point (as a fraction of `radius`). Default 0. The erosion test uses each point's actual scaled radius, so a bigger icon still never pokes outside the polygon. */
@@ -68,12 +68,15 @@ interface ScatterPointsOptions {
     positionJitter?: number;
     /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
     stagger?: boolean;
+    /** Point layout. Defaults to offset for backward compatibility. */
+    distribution?: SvgDistributionMode;
+    /** Extra minimum gap between natural-layout icon envelopes. Default 0. */
+    minSpacing?: number;
 }
 /**
- * Scatters points inside a (possibly holed) polygon whose center and sampled
- * clearance circle remain inside it. This approximates polygon erosion
- * cheaply; boundaries can still pass between samples. Deterministic for a
- * given seed.
+ * Scatters points inside a (possibly holed) polygon whose complete clearance
+ * circle remains inside it. Uses exact point-to-segment distances for every
+ * exterior and interior boundary. Deterministic for a given seed.
  *
  * `rings` should include the exterior ring first, followed by any hole
  * rings; coordinates are unit-agnostic (pass pixels for on-screen icon
@@ -82,31 +85,4 @@ interface ScatterPointsOptions {
  */
 declare function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[];
 
-interface SvgScatterLayoutOptions {
-    tileSize: number;
-    stampSize: number;
-    density: number;
-    seed: number | string;
-    rotationJitterDeg: number;
-    scaleJitter: number;
-    positionJitter: number;
-    stagger: boolean;
-}
-interface SvgStampPlacement {
-    /** Stable index shared by a logical stamp and all of its wrapped copies. */
-    stampIndex: number;
-    x: number;
-    y: number;
-    rotationRad: number;
-    scale: number;
-}
-/**
- * Builds the pure geometry for a seamless SVG scatter tile.
- *
- * Every placement sharing a `stampIndex` has the exact same rotation and
- * scale. Wrapped copies therefore reproduce the same logical stamp on the
- * opposite edge instead of consuming new random transforms.
- */
-declare function createSvgScatterLayout(options: SvgScatterLayoutOptions): SvgStampPlacement[];
-
-export { type MakeTileOptions, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, type SvgScatterLayoutOptions, type SvgStampPlacement, TileContext, TileImage, createMiniContext, createSvgScatterLayout, hashStringToSeed, makeTile, mulberry32, scatterPointsInPolygon };
+export { type MakeTileOptions, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, SvgDistributionMode, TileContext, TileImage, createMiniContext, hashStringToSeed, makeTile, mulberry32, scatterPointsInPolygon };

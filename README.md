@@ -15,24 +15,20 @@ package generates that image for you:
   Angle, weight, colour and tile size (the density control; any pixel size
   works, seamless either way) are all configurable.
 - **SVG scatter fills:** turn any SVG into a tileable fill by repeating it
-  into a large seamless meta-tile. Defaults to a regular, lightly staggered
-  grid (`stagger`), the classic cartographic symbol layout used for
-  official map fills such as orchards and marshes. Raise
-  `rotationJitterDeg`/`scaleJitter`/`positionJitter` for a more
-  natural, organic look instead (grass, foliage...). Everything is seeded,
-  so the same seed always reproduces the same texture. The demo ships 14
-  sample fills across four categories (vegetation, trees, water, shapes) as
-  a starting point. Swap in your own SVG the same way, or paste/upload one
-  directly in the demo.
-- **Experimental no-cut icon scatter:** a repeating `fill-pattern` texture always clips
+  into a large seamless meta-tile. Choose a regular grid, offset rows, or a
+  seamless natural distribution with minimum spacing. Everything is seeded,
+  so the same seed always reproduces the same texture. The demo ships 25
+  sample fills across vegetation, trees, agriculture, water, terrain, land
+  use, and abstract shapes. They use a consistent 64 by 64 canvas and can be
+  recoloured. Swap in your own SVG the same way, or paste/upload one directly
+  in the demo.
+- **Experimental whole-symbol scatter:** a repeating `fill-pattern` texture always clips
   hard at the polygon boundary, so a stamp near the edge shows only its
   overlapping part. `installSvgIconScatter` is the alternative: it places
-  SVG icons where a cheap sampled "erosion" test determines that their square
-  canvas fits inside the polygon. This is an approximation rather than an
-  exact geometry guarantee, especially for narrow or highly concave shapes.
-  Points are computed in screen pixels and frozen as lng/lat, so recompute on
-  `map.on('moveend', ...)` to keep density consistent as the user zooms
-  (the demo does this). This API may change before `1.0`.
+  SVG icons where exact boundary distances prove that their circular safety
+  envelope fits inside the polygon. Screen-sized symbols can be recomputed on
+  `map.on('zoomend', ...)`; map-sized symbols keep their positions and scale
+  with the map. This API may change before `1.0`.
 - Flash-free live updates: colour/weight/angle changes call `updateImage`
   when the tile dimensions haven't changed, and fall back to
   `removeImage`/`addImage` only when they have.
@@ -128,6 +124,8 @@ await installSvgPatternFill(map, {
   imageId: "grass_pattern",
   svg: grassSvgMarkup, // raw `<svg>...</svg>` string
   seed: "parcel-42",   // deterministic: same seed, same layout
+  distribution: "natural",
+  minSpacing: 4,
 });
 
 map.addLayer({
@@ -171,7 +169,7 @@ For Cloudflare Pages, use `npm run build:site` as the build command and
 - `maplibre-pattern-fills`: backwards-compatible complete `0.x` surface.
 - `maplibre-pattern-fills/core`: pure raster and layout engine.
 - `maplibre-pattern-fills/maplibre`: stable MapLibre integration.
-- `maplibre-pattern-fills/experimental`: sampled whole-stamp scattering for
+- `maplibre-pattern-fills/experimental`: whole-stamp scattering for
   reducing clipping at polygon boundaries.
 
 ## Migrating legacy pattern metadata

@@ -1,6 +1,6 @@
 import {
   scatterPointsInPolygon
-} from "./chunk-6NK6HUOO.js";
+} from "./chunk-RIGAT72J.js";
 import {
   loadSvgImage
 } from "./chunk-Z7LWPO7O.js";
@@ -15,7 +15,19 @@ function componentSeed(seed, index) {
   return typeof base === "string" ? `${base}:${index}` : base + Math.imul(index, 2654435761);
 }
 function scatterIconPoints(options) {
-  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
+  const {
+    map,
+    polygon,
+    iconRadiusPx,
+    density,
+    seed,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger,
+    distribution,
+    minSpacing
+  } = options;
   const points = toPolygons(polygon).flatMap((polygonRings, polygonIndex) => {
     const pixelRings = polygonRings.map(
       (ring) => ring.map(([lng, lat]) => {
@@ -27,11 +39,12 @@ function scatterIconPoints(options) {
       radius: iconRadiusPx,
       density,
       seed: componentSeed(seed, polygonIndex),
-      samples,
       rotationJitterDeg,
       scaleJitter,
       positionJitter,
-      stagger
+      stagger,
+      distribution,
+      minSpacing
     });
   });
   const features = points.map(({ x, y, rotation, scale }) => {
@@ -74,13 +87,18 @@ async function installSvgIconScatter(map, options) {
     size = 32,
     density,
     seed,
-    samples,
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
     stagger,
-    opacity = 1
+    distribution,
+    minSpacing,
+    opacity = 1,
+    scaleMode = "screen"
   } = options;
+  if (scaleMode !== "screen" && scaleMode !== "map") {
+    throw new TypeError("scaleMode must be screen or map");
+  }
   await addSvgIcon(map, { id: iconId, svg, size });
   const points = scatterIconPoints({
     map,
@@ -88,11 +106,12 @@ async function installSvgIconScatter(map, options) {
     iconRadiusPx: size / Math.SQRT2,
     density,
     seed,
-    samples,
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
-    stagger
+    stagger,
+    distribution,
+    minSpacing
   });
   const existingSource = map.getSource(sourceId);
   if (existingSource) {
@@ -100,6 +119,21 @@ async function installSvgIconScatter(map, options) {
   } else {
     map.addSource(sourceId, { type: "geojson", data: points });
   }
+  const iconSize = scaleMode === "map" ? [
+    "*",
+    ["get", "scale"],
+    [
+      "interpolate",
+      ["exponential", 2],
+      ["zoom"],
+      map.getZoom() - 8,
+      1 / 256,
+      map.getZoom(),
+      1,
+      map.getZoom() + 8,
+      256
+    ]
+  ] : ["get", "scale"];
   if (!map.getLayer(layerId)) {
     map.addLayer({
       id: layerId,
@@ -108,7 +142,7 @@ async function installSvgIconScatter(map, options) {
       layout: {
         "icon-image": iconId,
         "icon-rotate": ["get", "rotation"],
-        "icon-size": ["get", "scale"],
+        "icon-size": iconSize,
         "icon-allow-overlap": true
       },
       paint: {
@@ -116,6 +150,7 @@ async function installSvgIconScatter(map, options) {
       }
     });
   } else {
+    map.setLayoutProperty(layerId, "icon-size", iconSize);
     map.setPaintProperty(layerId, "icon-opacity", opacity);
   }
 }

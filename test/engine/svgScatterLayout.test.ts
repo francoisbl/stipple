@@ -82,4 +82,37 @@ describe("createSvgScatterLayout", () => {
       expect(gaps.every((gap) => Math.abs(gap - 64) < 1e-9)).toBe(true);
     }
   });
+
+  it("creates a deterministic seamless natural distribution with a minimum gap", () => {
+    const tileSize = 192;
+    const naturalOptions: SvgScatterLayoutOptions = {
+      ...options,
+      tileSize,
+      stampSize: 18,
+      density: 3,
+      scaleJitter: 0,
+      distribution: "natural",
+      minSpacing: 4,
+    };
+    const primary = createSvgScatterLayout(naturalOptions)
+      .filter(({ x, y }) => x >= 0 && x < tileSize && y >= 0 && y < tileSize);
+    expect(primary).toEqual(
+      createSvgScatterLayout(naturalOptions)
+        .filter(({ x, y }) => x >= 0 && x < tileSize && y >= 0 && y < tileSize),
+    );
+
+    for (let first = 0; first < primary.length; first++) {
+      for (let second = first + 1; second < primary.length; second++) {
+        const dx = Math.min(
+          Math.abs(primary[first].x - primary[second].x),
+          tileSize - Math.abs(primary[first].x - primary[second].x),
+        );
+        const dy = Math.min(
+          Math.abs(primary[first].y - primary[second].y),
+          tileSize - Math.abs(primary[first].y - primary[second].y),
+        );
+        expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(22);
+      }
+    }
+  });
 });

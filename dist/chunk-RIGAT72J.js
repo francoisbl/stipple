@@ -1,73 +1,34 @@
-import { hashStringToSeed, mulberry32 } from "./seededRandom";
-import type { SvgDistributionMode } from "./svgScatterLayout";
+import {
+  hashStringToSeed,
+  mulberry32
+} from "./chunk-GBEE6YET.js";
 
-/** A closed ring of [x, y] planar coordinates in any consistent unit. */
-export type Ring = Array<[number, number]>;
-
-export interface ScatteredPoint {
-  x: number;
-  y: number;
-  /** Seeded rotation in degrees for icon-rotate variety. 0 unless `rotationJitterDeg` is set. */
-  rotation: number;
-  /** Seeded scale multiplier for icon-size variety. 1 unless `scaleJitter` is set. */
-  scale: number;
-}
-
-export interface ScatterPointsOptions {
-  /** Required clearance from any edge (including holes) for a point to qualify, at scale 1. */
-  radius: number;
-  /** Approx. points per 100x100 unit area. Default 1. */
-  density?: number;
-  /** Deterministic variation seed. Default 1. */
-  seed?: number | string;
-  /** +/- rotation jitter applied to each point, in degrees. Default 0. */
-  rotationJitterDeg?: number;
-  /** +/- scale jitter applied to each point (as a fraction of `radius`). Default 0. The erosion test uses each point's actual scaled radius, so a bigger icon still never pokes outside the polygon. */
-  scaleJitter?: number;
-  /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15 gives a light irregularity, not a full organic scatter. 0 = exact grid. */
-  positionJitter?: number;
-  /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
-  stagger?: boolean;
-  /** Point layout. Defaults to offset for backward compatibility. */
-  distribution?: SvgDistributionMode;
-  /** Extra minimum gap between natural-layout icon envelopes. Default 0. */
-  minSpacing?: number;
-}
-
-function isInsideRings(x: number, y: number, rings: Ring[]): boolean {
+// src/engine/scatterPoints.ts
+function isInsideRings(x, y, rings) {
   let inside = false;
   for (const ring of rings) {
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
       const [xi, yi] = ring[i];
       const [xj, yj] = ring[j];
-      const crosses = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+      const crosses = yi > y !== yj > y && x < (xj - xi) * (y - yi) / (yj - yi) + xi;
       if (crosses) inside = !inside;
     }
   }
   return inside;
 }
-
-function squaredDistanceToSegment(
-  x: number,
-  y: number,
-  start: [number, number],
-  end: [number, number],
-): number {
+function squaredDistanceToSegment(x, y, start, end) {
   const dx = end[0] - start[0];
   const dy = end[1] - start[1];
   if (dx === 0 && dy === 0) return (x - start[0]) ** 2 + (y - start[1]) ** 2;
   const projection = Math.max(
     0,
-    Math.min(1, ((x - start[0]) * dx + (y - start[1]) * dy) / (dx * dx + dy * dy)),
+    Math.min(1, ((x - start[0]) * dx + (y - start[1]) * dy) / (dx * dx + dy * dy))
   );
   const nearestX = start[0] + projection * dx;
   const nearestY = start[1] + projection * dy;
   return (x - nearestX) ** 2 + (y - nearestY) ** 2;
 }
-
-// A point inside the polygon whose exact distance from every exterior and
-// interior boundary is at least the radius contains the complete disc.
-function discFitsInside(x: number, y: number, radius: number, rings: Ring[]): boolean {
+function discFitsInside(x, y, radius, rings) {
   if (!isInsideRings(x, y, rings)) return false;
   const squaredRadius = radius * radius;
   for (const ring of rings) {
@@ -79,22 +40,17 @@ function discFitsInside(x: number, y: number, radius: number, rings: Ring[]): bo
   }
   return true;
 }
-
-/**
- * Scatters points inside a (possibly holed) polygon whose complete clearance
- * circle remains inside it. Uses exact point-to-segment distances for every
- * exterior and interior boundary. Deterministic for a given seed.
- *
- * `rings` should include the exterior ring first, followed by any hole
- * rings; coordinates are unit-agnostic (pass pixels for on-screen icon
- * placement (see {@link scatterIconPoints}) or any planar unit
- * consistent with `radius`).
- */
-export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[] {
+function scatterPointsInPolygon(rings, options) {
   const {
-    radius, density = 1, seed = 1,
-    rotationJitterDeg = 0, scaleJitter = 0, positionJitter = 0.15, stagger = true,
-    distribution = stagger ? "offset" : "regular", minSpacing = 0,
+    radius,
+    density = 1,
+    seed = 1,
+    rotationJitterDeg = 0,
+    scaleJitter = 0,
+    positionJitter = 0.15,
+    stagger = true,
+    distribution = stagger ? "offset" : "regular",
+    minSpacing = 0
   } = options;
   if (!Number.isFinite(radius) || radius < 0) {
     throw new RangeError("radius must be a finite number greater than or equal to 0");
@@ -119,7 +75,6 @@ export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOpti
   }
   const exterior = rings[0] ?? [];
   if (exterior.length === 0) return [];
-
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -130,28 +85,23 @@ export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOpti
     if (y < minY) minY = y;
     if (y > maxY) maxY = y;
   }
-
   const seedNum = typeof seed === "string" ? hashStringToSeed(seed) : seed;
   const rand = mulberry32(seedNum);
   const cell = 100 / Math.sqrt(density);
-  const points: ScatteredPoint[] = [];
+  const points = [];
   const width = maxX - minX;
   const height = maxY - minY;
-
   if (distribution === "natural") {
-    const targetCount = Math.max(1, Math.round((density * width * height) / 10_000));
+    const targetCount = Math.max(1, Math.round(density * width * height / 1e4));
     const minimumDistance = radius * 2 * (1 + scaleJitter) + minSpacing;
     const conservativeRadius = radius * (1 + scaleJitter);
-
     while (points.length < targetCount) {
-      let best: [number, number] | undefined;
+      let best;
       let bestDistanceSquared = -1;
-
       for (let candidateIndex = 0; candidateIndex < 32; candidateIndex++) {
         const x = minX + rand() * width;
         const y = minY + rand() * height;
         if (!discFitsInside(x, y, conservativeRadius, rings)) continue;
-
         let nearestDistanceSquared = Infinity;
         for (const point of points) {
           const distanceSquared = (x - point.x) ** 2 + (y - point.y) ** 2;
@@ -162,37 +112,35 @@ export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOpti
           bestDistanceSquared = nearestDistanceSquared;
         }
       }
-
       if (!best || bestDistanceSquared < minimumDistance ** 2) break;
       points.push({
         x: best[0],
         y: best[1],
         rotation: (rand() * 2 - 1) * rotationJitterDeg,
-        scale: 1 + (rand() * 2 - 1) * scaleJitter,
+        scale: 1 + (rand() * 2 - 1) * scaleJitter
       });
     }
     return points;
   }
-
   const columns = Math.max(1, Math.floor(width / cell));
   const rows = Math.max(1, Math.floor(height / cell));
   const startX = minX + (width - (columns - 1) * cell) / 2;
   const startY = minY + (height - (rows - 1) * cell) / 2;
-
   for (let row = 0; row < rows; row++) {
-    const rowOffset = distribution === "offset" && columns > 1
-      ? (row % 2 === 0 ? -cell / 4 : cell / 4)
-      : 0;
+    const rowOffset = distribution === "offset" && columns > 1 ? row % 2 === 0 ? -cell / 4 : cell / 4 : 0;
     for (let column = 0; column < columns; column++) {
       const jitter = distribution === "offset" ? positionJitter : 0;
       const jx = startX + column * cell + rowOffset + (rand() - 0.5) * cell * jitter;
       const jy = startY + row * cell + (rand() - 0.5) * cell * jitter;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
-      // Erosion test uses this point's actual scaled radius, so a
-      // bigger-than-average icon still can't poke past the boundary.
       if (discFitsInside(jx, jy, radius * scale, rings)) points.push({ x: jx, y: jy, rotation, scale });
     }
   }
   return points;
 }
+
+export {
+  scatterPointsInPolygon
+};
+//# sourceMappingURL=chunk-RIGAT72J.js.map

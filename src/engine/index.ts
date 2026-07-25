@@ -6,4 +6,8 @@ export { mulberry32, hashStringToSeed } from "./seededRandom";
 export { scatterPointsInPolygon } from "./scatterPoints";
 export type { Ring, ScatteredPoint, ScatterPointsOptions } from "./scatterPoints";
 export { createSvgScatterLayout } from "./svgScatterLayout";
-export type { SvgScatterLayoutOptions, SvgStampPlacement } from "./svgScatterLayout";
+export type {
+  SvgDistributionMode,
+  SvgScatterLayoutOptions,
+  SvgStampPlacement,
+} from "./svgScatterLayout";

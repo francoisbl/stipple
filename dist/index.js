@@ -259,13 +259,27 @@ function isInsideRings(x, y, rings) {
   }
   return inside;
 }
-function discFitsInside(x, y, radius, rings, samples) {
+function squaredDistanceToSegment(x, y, start, end) {
+  const dx = end[0] - start[0];
+  const dy = end[1] - start[1];
+  if (dx === 0 && dy === 0) return (x - start[0]) ** 2 + (y - start[1]) ** 2;
+  const projection = Math.max(
+    0,
+    Math.min(1, ((x - start[0]) * dx + (y - start[1]) * dy) / (dx * dx + dy * dy))
+  );
+  const nearestX = start[0] + projection * dx;
+  const nearestY = start[1] + projection * dy;
+  return (x - nearestX) ** 2 + (y - nearestY) ** 2;
+}
+function discFitsInside(x, y, radius, rings) {
   if (!isInsideRings(x, y, rings)) return false;
-  for (let k = 0; k < samples; k++) {
-    const angle = k / samples * Math.PI * 2;
-    const px = x + Math.cos(angle) * radius;
-    const py = y + Math.sin(angle) * radius;
-    if (!isInsideRings(px, py, rings)) return false;
+  const squaredRadius = radius * radius;
+  for (const ring of rings) {
+    for (let index = 0; index < ring.length; index++) {
+      const start = ring[index];
+      const end = ring[(index + 1) % ring.length];
+      if (squaredDistanceToSegment(x, y, start, end) < squaredRadius) return false;
+    }
   }
   return true;
 }
@@ -274,20 +288,18 @@ function scatterPointsInPolygon(rings, options) {
     radius,
     density = 1,
     seed = 1,
-    samples = 24,
     rotationJitterDeg = 0,
     scaleJitter = 0,
     positionJitter = 0.15,
-    stagger = true
+    stagger = true,
+    distribution = stagger ? "offset" : "regular",
+    minSpacing = 0
   } = options;
   if (!Number.isFinite(radius) || radius < 0) {
     throw new RangeError("radius must be a finite number greater than or equal to 0");
   }
   if (!Number.isFinite(density) || density <= 0) {
     throw new RangeError("density must be a finite number greater than 0");
-  }
-  if (!Number.isInteger(samples) || samples < 3) {
-    throw new RangeError("samples must be an integer greater than or equal to 3");
   }
   if (!Number.isFinite(rotationJitterDeg) || rotationJitterDeg < 0) {
     throw new RangeError("rotationJitterDeg must be a finite number greater than or equal to 0");
@@ -297,6 +309,12 @@ function scatterPointsInPolygon(rings, options) {
   }
   if (!Number.isFinite(positionJitter) || positionJitter < 0) {
     throw new RangeError("positionJitter must be a finite number greater than or equal to 0");
+  }
+  if (!["regular", "offset", "natural"].includes(distribution)) {
+    throw new TypeError("distribution must be regular, offset, or natural");
+  }
+  if (!Number.isFinite(minSpacing) || minSpacing < 0) {
+    throw new RangeError("minSpacing must be a finite number greater than or equal to 0");
   }
   const exterior = rings[0] ?? [];
   if (exterior.length === 0) return [];
@@ -316,18 +334,50 @@ function scatterPointsInPolygon(rings, options) {
   const points = [];
   const width = maxX - minX;
   const height = maxY - minY;
+  if (distribution === "natural") {
+    const targetCount = Math.max(1, Math.round(density * width * height / 1e4));
+    const minimumDistance = radius * 2 * (1 + scaleJitter) + minSpacing;
+    const conservativeRadius = radius * (1 + scaleJitter);
+    while (points.length < targetCount) {
+      let best;
+      let bestDistanceSquared = -1;
+      for (let candidateIndex = 0; candidateIndex < 32; candidateIndex++) {
+        const x = minX + rand() * width;
+        const y = minY + rand() * height;
+        if (!discFitsInside(x, y, conservativeRadius, rings)) continue;
+        let nearestDistanceSquared = Infinity;
+        for (const point of points) {
+          const distanceSquared = (x - point.x) ** 2 + (y - point.y) ** 2;
+          if (distanceSquared < nearestDistanceSquared) nearestDistanceSquared = distanceSquared;
+        }
+        if (nearestDistanceSquared > bestDistanceSquared) {
+          best = [x, y];
+          bestDistanceSquared = nearestDistanceSquared;
+        }
+      }
+      if (!best || bestDistanceSquared < minimumDistance ** 2) break;
+      points.push({
+        x: best[0],
+        y: best[1],
+        rotation: (rand() * 2 - 1) * rotationJitterDeg,
+        scale: 1 + (rand() * 2 - 1) * scaleJitter
+      });
+    }
+    return points;
+  }
   const columns = Math.max(1, Math.floor(width / cell));
   const rows = Math.max(1, Math.floor(height / cell));
   const startX = minX + (width - (columns - 1) * cell) / 2;
   const startY = minY + (height - (rows - 1) * cell) / 2;
   for (let row = 0; row < rows; row++) {
-    const rowOffset = stagger && columns > 1 ? row % 2 === 0 ? -cell / 4 : cell / 4 : 0;
+    const rowOffset = distribution === "offset" && columns > 1 ? row % 2 === 0 ? -cell / 4 : cell / 4 : 0;
     for (let column = 0; column < columns; column++) {
-      const jx = startX + column * cell + rowOffset + (rand() - 0.5) * cell * positionJitter;
-      const jy = startY + row * cell + (rand() - 0.5) * cell * positionJitter;
+      const jitter = distribution === "offset" ? positionJitter : 0;
+      const jx = startX + column * cell + rowOffset + (rand() - 0.5) * cell * jitter;
+      const jy = startY + row * cell + (rand() - 0.5) * cell * jitter;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
-      if (discFitsInside(jx, jy, radius * scale, rings, samples)) points.push({ x: jx, y: jy, rotation, scale });
+      if (discFitsInside(jx, jy, radius * scale, rings)) points.push({ x: jx, y: jy, rotation, scale });
     }
   }
   return points;
@@ -347,6 +397,30 @@ function nonNegativeFinite(name, value) {
 function modulo(value, divisor) {
   return (value % divisor + divisor) % divisor;
 }
+function toroidalDistance(first, second, tileSize) {
+  const dx = Math.min(Math.abs(first.x - second.x), tileSize - Math.abs(first.x - second.x));
+  const dy = Math.min(Math.abs(first.y - second.y), tileSize - Math.abs(first.y - second.y));
+  return Math.hypot(dx, dy);
+}
+function createNaturalPositions(count, tileSize, minimumDistance, rand) {
+  const positions = [];
+  const candidateCount = 24;
+  while (positions.length < count) {
+    let best;
+    let bestDistance = -1;
+    for (let candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++) {
+      const candidate = { x: rand() * tileSize, y: rand() * tileSize };
+      const nearest = positions.length === 0 ? Infinity : Math.min(...positions.map((position) => toroidalDistance(candidate, position, tileSize)));
+      if (nearest > bestDistance) {
+        best = candidate;
+        bestDistance = nearest;
+      }
+    }
+    if (!best || positions.length > 0 && bestDistance < minimumDistance) break;
+    positions.push(best);
+  }
+  return positions;
+}
 function createSvgScatterLayout(options) {
   const {
     tileSize,
@@ -358,58 +432,76 @@ function createSvgScatterLayout(options) {
     positionJitter,
     stagger
   } = options;
+  const distribution = options.distribution ?? (stagger ? "offset" : "regular");
+  const minSpacing = options.minSpacing ?? 0;
   positiveFinite("tileSize", tileSize);
   positiveFinite("stampSize", stampSize);
   positiveFinite("density", density);
   nonNegativeFinite("rotationJitterDeg", rotationJitterDeg);
   nonNegativeFinite("scaleJitter", scaleJitter);
   nonNegativeFinite("positionJitter", positionJitter);
+  nonNegativeFinite("minSpacing", minSpacing);
+  if (!["regular", "offset", "natural"].includes(distribution)) {
+    throw new TypeError("distribution must be regular, offset, or natural");
+  }
   if (scaleJitter >= 1) {
     throw new RangeError("scaleJitter must be less than 1 so every stamp has a positive scale");
   }
   const seedNum = typeof seed === "string" ? hashStringToSeed(seed) : seed;
   if (!Number.isFinite(seedNum)) throw new RangeError("seed must be a finite number or a string");
   const rand = mulberry32(seedNum);
-  const targetCell = 100 / Math.sqrt(density);
-  const cols = Math.max(1, Math.round(tileSize / targetCell));
-  let rows = Math.max(1, Math.round(tileSize / targetCell));
-  if (stagger && rows % 2 !== 0) {
-    const lower = Math.max(2, rows - 1);
-    const upper = rows + 1;
-    const targetCount = density * (tileSize * tileSize) / 1e4;
-    rows = Math.abs(cols * lower - targetCount) <= Math.abs(cols * upper - targetCount) ? lower : upper;
-  }
-  const cellWidth = tileSize / cols;
-  const cellHeight = tileSize / rows;
-  const placements = [];
-  let stampIndex = 0;
-  for (let row = 0; row < rows; row++) {
-    const rowOffset = stagger && row % 2 === 1 ? cellWidth / 2 : 0;
-    for (let col = 0; col < cols; col++, stampIndex++) {
-      const jitterX = (rand() - 0.5) * cellWidth * positionJitter;
-      const jitterY = (rand() - 0.5) * cellHeight * positionJitter;
-      const x = modulo(col * cellWidth + cellWidth / 2 + rowOffset + jitterX, tileSize);
-      const y = modulo(row * cellHeight + cellHeight / 2 + jitterY, tileSize);
-      const rotationRad = (rand() * 2 - 1) * rotationJitterDeg * (Math.PI / 180);
-      const scale = 1 + (rand() * 2 - 1) * scaleJitter;
-      const extent = stampSize * scale * Math.SQRT2 / 2;
-      const minShiftX = Math.ceil((-extent - x) / tileSize);
-      const maxShiftX = Math.floor((tileSize + extent - x) / tileSize);
-      const minShiftY = Math.ceil((-extent - y) / tileSize);
-      const maxShiftY = Math.floor((tileSize + extent - y) / tileSize);
-      for (let shiftY = minShiftY; shiftY <= maxShiftY; shiftY++) {
-        for (let shiftX = minShiftX; shiftX <= maxShiftX; shiftX++) {
-          placements.push({
-            stampIndex,
-            x: x + shiftX * tileSize,
-            y: y + shiftY * tileSize,
-            rotationRad,
-            scale
-          });
-        }
+  const targetCount = Math.max(1, Math.round(density * (tileSize * tileSize) / 1e4));
+  let positions;
+  if (distribution === "natural") {
+    const minimumDistance = stampSize * Math.SQRT2 * (1 + scaleJitter) + minSpacing;
+    positions = createNaturalPositions(targetCount, tileSize, minimumDistance, rand);
+  } else {
+    const targetCell = 100 / Math.sqrt(density);
+    const cols = Math.max(1, Math.round(tileSize / targetCell));
+    let rows = Math.max(1, Math.round(tileSize / targetCell));
+    const isOffset = distribution === "offset";
+    if (isOffset && rows % 2 !== 0) {
+      const lower = Math.max(2, rows - 1);
+      const upper = rows + 1;
+      rows = Math.abs(cols * lower - targetCount) <= Math.abs(cols * upper - targetCount) ? lower : upper;
+    }
+    const cellWidth = tileSize / cols;
+    const cellHeight = tileSize / rows;
+    const jitterAmount = distribution === "regular" ? 0 : positionJitter;
+    positions = [];
+    for (let row = 0; row < rows; row++) {
+      const rowOffset = isOffset && row % 2 === 1 ? cellWidth / 2 : 0;
+      for (let col = 0; col < cols; col++) {
+        const jitterX = (rand() - 0.5) * cellWidth * jitterAmount;
+        const jitterY = (rand() - 0.5) * cellHeight * jitterAmount;
+        positions.push({
+          x: modulo(col * cellWidth + cellWidth / 2 + rowOffset + jitterX, tileSize),
+          y: modulo(row * cellHeight + cellHeight / 2 + jitterY, tileSize)
+        });
       }
     }
   }
+  const placements = [];
+  positions.forEach(({ x, y }, stampIndex) => {
+    const rotationRad = (rand() * 2 - 1) * rotationJitterDeg * (Math.PI / 180);
+    const scale = 1 + (rand() * 2 - 1) * scaleJitter;
+    const extent = stampSize * scale * Math.SQRT2 / 2;
+    const minShiftX = Math.ceil((-extent - x) / tileSize);
+    const maxShiftX = Math.floor((tileSize + extent - x) / tileSize);
+    const minShiftY = Math.ceil((-extent - y) / tileSize);
+    const maxShiftY = Math.floor((tileSize + extent - y) / tileSize);
+    for (let shiftY = minShiftY; shiftY <= maxShiftY; shiftY++) {
+      for (let shiftX = minShiftX; shiftX <= maxShiftX; shiftX++) {
+        placements.push({
+          stampIndex,
+          x: x + shiftX * tileSize,
+          y: y + shiftY * tileSize,
+          rotationRad,
+          scale
+        });
+      }
+    }
+  });
   return placements;
 }
 
@@ -473,6 +565,10 @@ function parsePatternDefinition(value) {
       throw new TypeError("seed must be a finite number or a non-empty string");
     }
     if (typeof value.stagger !== "boolean") throw new TypeError("stagger must be a boolean");
+    const distribution = value.distribution ?? (value.stagger ? "offset" : "regular");
+    if (distribution !== "regular" && distribution !== "offset" && distribution !== "natural") {
+      throw new TypeError("distribution must be regular, offset, or natural");
+    }
     return {
       kind: "svg",
       svg: nonEmptyString(value, "svg"),
@@ -483,7 +579,9 @@ function parsePatternDefinition(value) {
       rotationJitterDeg: nonNegativeNumber(value, "rotationJitterDeg"),
       scaleJitter,
       positionJitter: nonNegativeNumber(value, "positionJitter"),
-      stagger: value.stagger
+      stagger: distribution === "offset",
+      distribution,
+      minSpacing: value.minSpacing === void 0 ? 0 : nonNegativeNumber(value, "minSpacing")
     };
   }
   throw new TypeError('pattern definition kind must be "geometric" or "svg"');
@@ -508,6 +606,7 @@ function patternDefinitionId(definition, prefix = "mpf") {
   return `${prefix}_${(hash >>> 0).toString(16).padStart(8, "0")}`;
 }
 function createSvgPatternDefinition(options) {
+  const distribution = options.distribution ?? (options.stagger === false ? "regular" : "offset");
   return parsePatternDefinition({
     kind: "svg",
     svg: options.svg,
@@ -518,7 +617,9 @@ function createSvgPatternDefinition(options) {
     rotationJitterDeg: options.rotationJitterDeg ?? 0,
     scaleJitter: options.scaleJitter ?? 0,
     positionJitter: options.positionJitter ?? 0.15,
-    stagger: options.stagger ?? true
+    stagger: distribution === "offset",
+    distribution,
+    minSpacing: options.minSpacing ?? 0
   });
 }
 
@@ -656,7 +757,9 @@ async function createSvgScatterTile(options) {
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
-    stagger
+    stagger,
+    distribution,
+    minSpacing
   } = definition;
   const image = await loadSvgImage(svg);
   const canvas = document.createElement("canvas");
@@ -675,7 +778,9 @@ async function createSvgScatterTile(options) {
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
-    stagger
+    stagger,
+    distribution,
+    minSpacing
   });
   for (const placement of placements) {
     ctx.save();
@@ -817,7 +922,19 @@ function componentSeed(seed, index) {
   return typeof base === "string" ? `${base}:${index}` : base + Math.imul(index, 2654435761);
 }
 function scatterIconPoints(options) {
-  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
+  const {
+    map,
+    polygon,
+    iconRadiusPx,
+    density,
+    seed,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger,
+    distribution,
+    minSpacing
+  } = options;
   const points = toPolygons(polygon).flatMap((polygonRings, polygonIndex) => {
     const pixelRings = polygonRings.map(
       (ring) => ring.map(([lng, lat]) => {
@@ -829,11 +946,12 @@ function scatterIconPoints(options) {
       radius: iconRadiusPx,
       density,
       seed: componentSeed(seed, polygonIndex),
-      samples,
       rotationJitterDeg,
       scaleJitter,
       positionJitter,
-      stagger
+      stagger,
+      distribution,
+      minSpacing
     });
   });
   const features = points.map(({ x, y, rotation, scale }) => {
@@ -876,13 +994,18 @@ async function installSvgIconScatter(map, options) {
     size = 32,
     density,
     seed,
-    samples,
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
     stagger,
-    opacity = 1
+    distribution,
+    minSpacing,
+    opacity = 1,
+    scaleMode = "screen"
   } = options;
+  if (scaleMode !== "screen" && scaleMode !== "map") {
+    throw new TypeError("scaleMode must be screen or map");
+  }
   await addSvgIcon(map, { id: iconId, svg, size });
   const points = scatterIconPoints({
     map,
@@ -890,11 +1013,12 @@ async function installSvgIconScatter(map, options) {
     iconRadiusPx: size / Math.SQRT2,
     density,
     seed,
-    samples,
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
-    stagger
+    stagger,
+    distribution,
+    minSpacing
   });
   const existingSource = map.getSource(sourceId);
   if (existingSource) {
@@ -902,6 +1026,21 @@ async function installSvgIconScatter(map, options) {
   } else {
     map.addSource(sourceId, { type: "geojson", data: points });
   }
+  const iconSize = scaleMode === "map" ? [
+    "*",
+    ["get", "scale"],
+    [
+      "interpolate",
+      ["exponential", 2],
+      ["zoom"],
+      map.getZoom() - 8,
+      1 / 256,
+      map.getZoom(),
+      1,
+      map.getZoom() + 8,
+      256
+    ]
+  ] : ["get", "scale"];
   if (!map.getLayer(layerId)) {
     map.addLayer({
       id: layerId,
@@ -910,7 +1049,7 @@ async function installSvgIconScatter(map, options) {
       layout: {
         "icon-image": iconId,
         "icon-rotate": ["get", "rotation"],
-        "icon-size": ["get", "scale"],
+        "icon-size": iconSize,
         "icon-allow-overlap": true
       },
       paint: {
@@ -918,6 +1057,7 @@ async function installSvgIconScatter(map, options) {
       }
     });
   } else {
+    map.setLayoutProperty(layerId, "icon-size", iconSize);
     map.setPaintProperty(layerId, "icon-opacity", opacity);
   }
 }

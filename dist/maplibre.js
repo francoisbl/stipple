@@ -1,7 +1,7 @@
 import {
   createSvgScatterLayout,
   makeTile
-} from "./chunk-4HV6S564.js";
+} from "./chunk-FT2VDGKY.js";
 import {
   loadSvgImage
 } from "./chunk-Z7LWPO7O.js";
@@ -67,6 +67,10 @@ function parsePatternDefinition(value) {
       throw new TypeError("seed must be a finite number or a non-empty string");
     }
     if (typeof value.stagger !== "boolean") throw new TypeError("stagger must be a boolean");
+    const distribution = value.distribution ?? (value.stagger ? "offset" : "regular");
+    if (distribution !== "regular" && distribution !== "offset" && distribution !== "natural") {
+      throw new TypeError("distribution must be regular, offset, or natural");
+    }
     return {
       kind: "svg",
       svg: nonEmptyString(value, "svg"),
@@ -77,7 +81,9 @@ function parsePatternDefinition(value) {
       rotationJitterDeg: nonNegativeNumber(value, "rotationJitterDeg"),
       scaleJitter,
       positionJitter: nonNegativeNumber(value, "positionJitter"),
-      stagger: value.stagger
+      stagger: distribution === "offset",
+      distribution,
+      minSpacing: value.minSpacing === void 0 ? 0 : nonNegativeNumber(value, "minSpacing")
     };
   }
   throw new TypeError('pattern definition kind must be "geometric" or "svg"');
@@ -102,6 +108,7 @@ function patternDefinitionId(definition, prefix = "mpf") {
   return `${prefix}_${(hash >>> 0).toString(16).padStart(8, "0")}`;
 }
 function createSvgPatternDefinition(options) {
+  const distribution = options.distribution ?? (options.stagger === false ? "regular" : "offset");
   return parsePatternDefinition({
     kind: "svg",
     svg: options.svg,
@@ -112,7 +119,9 @@ function createSvgPatternDefinition(options) {
     rotationJitterDeg: options.rotationJitterDeg ?? 0,
     scaleJitter: options.scaleJitter ?? 0,
     positionJitter: options.positionJitter ?? 0.15,
-    stagger: options.stagger ?? true
+    stagger: distribution === "offset",
+    distribution,
+    minSpacing: options.minSpacing ?? 0
   });
 }
 
@@ -236,7 +245,9 @@ async function createSvgScatterTile(options) {
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
-    stagger
+    stagger,
+    distribution,
+    minSpacing
   } = definition;
   const image = await loadSvgImage(svg);
   const canvas = document.createElement("canvas");
@@ -255,7 +266,9 @@ async function createSvgScatterTile(options) {
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
-    stagger
+    stagger,
+    distribution,
+    minSpacing
   });
   for (const placement of placements) {
     ctx.save();

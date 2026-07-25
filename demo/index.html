@@ -1065,11 +1065,11 @@
                 <span class="family-label">Motifs</span>
                 <div class="pill-group motif-pills" id="motifPills">
                   <div class="pill" data-svg-sample="grass-tuft">Grass</div>
-                  <div class="pill" data-svg-sample="fern">Fern</div>
-                  <div class="pill" data-svg-sample="round-canopy">Trees</div>
-                  <div class="pill" data-svg-sample="reeds">Reeds</div>
-                  <div class="pill" data-svg-sample="ripple">Ripples</div>
-                  <div class="pill" data-svg-sample="confetti">Symbols</div>
+                  <div class="pill" data-svg-sample="orchard">Orchard</div>
+                  <div class="pill" data-svg-sample="marsh">Wetland</div>
+                  <div class="pill" data-svg-sample="sand">Sand</div>
+                  <div class="pill" data-svg-sample="rocks">Rocks</div>
+                  <div class="pill" data-svg-sample="cemetery">Symbols</div>
                 </div>
               </div>
 
@@ -1135,11 +1135,28 @@
                       <option value="conifer">Conifer</option>
                       <option value="palm">Palm</option>
                     </optgroup>
+                    <optgroup label="Agriculture">
+                      <option value="orchard">Orchard</option>
+                      <option value="vineyard">Vineyard</option>
+                      <option value="crop-rows">Crop rows</option>
+                      <option value="pasture">Pasture</option>
+                    </optgroup>
                     <optgroup label="Water">
                       <option value="reeds">Reeds</option>
                       <option value="ripple">Ripple</option>
                       <option value="wave-lines">Wave lines</option>
                       <option value="droplet">Droplet</option>
+                      <option value="marsh">Marsh</option>
+                    </optgroup>
+                    <optgroup label="Terrain">
+                      <option value="sand">Sand</option>
+                      <option value="gravel">Gravel</option>
+                      <option value="rocks">Rocks</option>
+                      <option value="scree">Scree</option>
+                    </optgroup>
+                    <optgroup label="Land use">
+                      <option value="cemetery">Cemetery</option>
+                      <option value="camping">Camping</option>
                     </optgroup>
                     <optgroup label="Shapes">
                       <option value="triangles">Triangles</option>
@@ -1177,26 +1194,41 @@
                 <input type="range" id="svgDensity" min="0.1" max="6" step="0.1" value="1.4" />
                 <label>Stamp size <span class="val" id="svgStampSizeVal">28 px</span></label>
                 <input type="range" id="svgStampSize" min="14" max="60" step="1" value="28" />
-                <div class="switch" style="margin-top:9px">
-                  <label style="margin:0">Stagger rows</label>
-                  <input type="checkbox" id="svgStagger" checked />
+                <label>Distribution</label>
+                <div class="seg" id="svgDistributionSeg">
+                  <button type="button" data-distribution="regular">Regular</button>
+                  <button type="button" data-distribution="offset" class="active">Offset</button>
+                  <button type="button" data-distribution="natural">Natural</button>
+                </div>
+                <div id="svgMinSpacingControl" class="is-disabled">
+                  <label>Minimum gap <span class="val" id="svgMinSpacingVal">4 px</span></label>
+                  <input type="range" id="svgMinSpacing" min="0" max="24" step="1" value="4" disabled />
                 </div>
                 <label>Seed</label>
                 <input type="text" id="svgSeed" value="1" />
               </div>
 
               <div class="svg-column" data-svg-options>
-                <label style="margin-top:0">Position jitter <span class="val" id="svgPosJitterVal">±0.15</span></label>
-                <input type="range" id="svgPosJitter" min="0" max="0.65" step="0.05" value="0.15" />
+                <div id="svgPositionJitterControl">
+                  <label style="margin-top:0">Position variation <span class="val" id="svgPosJitterVal">±0.15</span></label>
+                  <input type="range" id="svgPosJitter" min="0" max="0.65" step="0.05" value="0.15" />
+                </div>
                 <label>Rotation jitter <span class="val" id="svgRotJitterVal">±0°</span></label>
                 <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="0" />
                 <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.00</span></label>
                 <input type="range" id="svgScaleJitter" min="0" max="0.5" step="0.05" value="0" />
                 <div class="switch" style="margin-top:9px">
-                  <label style="margin:0">Reduce edge clipping</label>
+                  <label style="margin:0">Keep symbols inside</label>
                   <input type="checkbox" id="svgNoCutToggle" />
                 </div>
-                <p class="hint" id="noCutHint">Experimental clearance sampling leaves a margin near polygon edges.</p>
+                <div id="svgScaleModeControl" class="is-disabled">
+                  <label>Symbol scale</label>
+                  <div class="seg" id="svgScaleModeSeg">
+                    <button type="button" data-scale-mode="screen" class="active">Screen</button>
+                    <button type="button" data-scale-mode="map">Map</button>
+                  </div>
+                </div>
+                <p class="hint" id="noCutHint">Exact edge clearance keeps the complete symbol inside.</p>
                 <p class="hint" id="svgQualityHint">High-density rendering is automatic.</p>
               </div>
             </div>
@@ -1391,6 +1423,66 @@
     "droplet": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <path d="M32 6 C40 22 48 32 48 42 A16 16 0 1 1 16 42 C16 32 24 22 32 6 Z" fill="#3f7fa0" />
     </svg>`,
+    // Agriculture
+    "orchard": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round">
+        <circle cx="32" cy="27" r="16" />
+        <path d="M32 43 V58 M24 34 L40 20 M24 20 L40 34" />
+      </g>
+    </svg>`,
+    "vineyard": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 58 V8 M32 21 C23 13 16 15 13 22 C21 25 27 24 32 21 M32 35 C41 27 48 29 51 36 C43 39 37 38 32 35" />
+      </g>
+    </svg>`,
+    "crop-rows": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round">
+        <path d="M12 58 C22 44 18 24 28 6 M28 58 C38 44 34 24 44 6 M44 58 C54 44 50 24 58 10" />
+      </g>
+    </svg>`,
+    "pasture": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round">
+        <path d="M10 50 L18 36 L25 50 M23 50 L32 30 L40 50 M38 50 L47 38 L54 50" />
+      </g>
+    </svg>`,
+    // Wetlands and terrain
+    "marsh": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round">
+        <path d="M20 38 V12 M32 38 V7 M44 38 V15 M8 46 C16 41 24 51 32 46 C40 41 48 51 56 46 M8 56 C16 51 24 61 32 56 C40 51 48 61 56 56" />
+      </g>
+    </svg>`,
+    "sand": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="#2c6a5b">
+        <circle cx="14" cy="18" r="2.5" /><circle cx="38" cy="12" r="2.5" />
+        <circle cx="52" cy="34" r="2.5" /><circle cx="24" cy="42" r="2.5" />
+        <circle cx="42" cy="55" r="2.5" />
+      </g>
+    </svg>`,
+    "gravel": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#2c6a5b" stroke-width="3">
+        <circle cx="17" cy="18" r="6" /><circle cx="43" cy="15" r="5" />
+        <circle cx="31" cy="39" r="7" /><circle cx="51" cy="49" r="5" /><circle cx="11" cy="50" r="4" />
+      </g>
+    </svg>`,
+    "rocks": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linejoin="round">
+        <path d="M8 46 L16 27 L30 23 L38 45 Z M34 43 L43 17 L56 24 L59 46 Z" />
+      </g>
+    </svg>`,
+    "scree": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linejoin="round">
+        <path d="M12 45 L21 29 L30 45 Z M35 25 L43 11 L51 25 Z M37 55 L46 39 L55 55 Z" />
+      </g>
+    </svg>`,
+    // Land use
+    "cemetery": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <path d="M32 10 V54 M18 25 H46" fill="none" stroke="#2c6a5b" stroke-width="4" stroke-linecap="round" />
+    </svg>`,
+    "camping": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 52 L31 12 L57 52 Z M31 12 L38 52 M19 52 L31 33 L43 52" />
+      </g>
+    </svg>`,
     // Shapes
     "triangles": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <g fill="#c1622f">
@@ -1422,7 +1514,21 @@
     tile: 16,
     bg: { on: true, color: "#dce8e3", opacity: 0.35 },
     outline: { on: true, color: "#234c46", width: 1.5, dash: [] },
-    svgFill: { on: false, noCut: false, sample: "grass-tuft", customSvg: "", density: 1.4, stampSize: 28, stagger: true, positionJitter: 0.15, rotationJitterDeg: 0, scaleJitter: 0, seed: "1" },
+    svgFill: {
+      on: false,
+      noCut: false,
+      sample: "grass-tuft",
+      customSvg: "",
+      density: 1.4,
+      stampSize: 28,
+      distribution: "offset",
+      minSpacing: 4,
+      positionJitter: 0.15,
+      rotationJitterDeg: 0,
+      scaleJitter: 0,
+      scaleMode: "screen",
+      seed: "1",
+    },
   };
   const FEATURE_STYLES = {};
 
@@ -1446,7 +1552,16 @@
 
   function loadStyle(style) {
     const selectedLayer = state.layer;
-    Object.assign(state, clone(style), { layer: selectedLayer });
+    const loaded = clone(style);
+    const svgFill = {
+      ...state.svgFill,
+      ...(loaded.svgFill || {}),
+    };
+    svgFill.distribution = svgFill.distribution ?? (svgFill.stagger === false ? "regular" : "offset");
+    svgFill.minSpacing ??= 4;
+    svgFill.scaleMode ??= "screen";
+    delete svgFill.stagger;
+    Object.assign(state, loaded, { svgFill, layer: selectedLayer });
   }
 
   function rememberActiveStyle() {
@@ -1562,7 +1677,8 @@
       imageId: svgImageId(), svg,
       stampSize: state.svgFill.stampSize,
       density: state.svgFill.density,
-      stagger: state.svgFill.stagger,
+      distribution: state.svgFill.distribution,
+      minSpacing: state.svgFill.minSpacing,
       positionJitter: state.svgFill.positionJitter,
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
       scaleJitter: state.svgFill.scaleJitter,
@@ -1571,7 +1687,7 @@
     rememberActiveStyle();
   }
 
-  // Experimental mode using sampled clearance to reduce clipped SVG stamps.
+  // Experimental mode using exact boundary clearance for whole SVG stamps.
   const svgIconScatterIds = () => ({
     source: `${state.layer.source}__svgscatter`,
     layer: `${state.layer.source}__svgscatter_layer`,
@@ -1589,11 +1705,13 @@
       size: state.svgFill.stampSize,
       density: state.svgFill.density,
       seed: state.svgFill.seed,
-      stagger: state.svgFill.stagger,
+      distribution: state.svgFill.distribution,
+      minSpacing: state.svgFill.minSpacing,
       positionJitter: state.svgFill.positionJitter,
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
       scaleJitter: state.svgFill.scaleJitter,
       opacity: state.patOpacity,
+      scaleMode: state.svgFill.scaleMode,
     });
     rememberActiveStyle();
   }
@@ -1619,8 +1737,7 @@
 
     if (state.svgFill.on && state.svgFill.noCut) {
       // No fill-pattern layer at all. Whole icons are placed only where they
-      // pass a sampled clearance test inside the polygon. This is an
-      // experimental approximation for narrow or highly concave boundaries.
+      // pass an exact circular-clearance test inside the polygon.
       syncSvgIconScatter();
     } else if (state.svgFill.on) {
       syncSvgTexture();
@@ -1701,7 +1818,8 @@
       svg,
       stampSize: state.svgFill.stampSize,
       density: state.svgFill.density,
-      stagger: state.svgFill.stagger,
+      distribution: state.svgFill.distribution,
+      minSpacing: state.svgFill.minSpacing,
       positionJitter: state.svgFill.positionJitter,
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
       scaleJitter: state.svgFill.scaleJitter,
@@ -2032,12 +2150,37 @@
     $("svgBuiltInColor").classList.toggle("is-disabled", !builtInColor);
     $("svgPatColor").disabled = !builtInColor;
     $("svgPatColorHex").disabled = !builtInColor;
+    updateSvgDistributionControls();
+    updateSvgScaleModeControls();
+  }
+  function updateSvgDistributionControls() {
+    document.querySelectorAll("#svgDistributionSeg button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.distribution === state.svgFill.distribution);
+    });
+    const natural = state.svgFill.on && state.svgFill.distribution === "natural";
+    $("svgMinSpacingControl").classList.toggle("is-disabled", !natural);
+    $("svgMinSpacing").disabled = !natural;
+    const positionVariation = state.svgFill.on && state.svgFill.distribution === "offset";
+    $("svgPositionJitterControl").classList.toggle("is-disabled", !positionVariation);
+    $("svgPosJitter").disabled = !positionVariation;
+  }
+  function updateSvgScaleModeControls() {
+    document.querySelectorAll("#svgScaleModeSeg button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.scaleMode === state.svgFill.scaleMode);
+      button.disabled = !state.svgFill.on || !state.svgFill.noCut;
+    });
+    $("svgScaleModeControl").classList.toggle(
+      "is-disabled",
+      !state.svgFill.on || !state.svgFill.noCut,
+    );
   }
   function updateSvgQualityHint() {
     const cell = 100 / Math.sqrt(state.svgFill.density);
     const largestStamp = state.svgFill.stampSize * (1 + state.svgFill.scaleJitter);
     let message = "High-density rendering is automatic.";
-    if (largestStamp > cell * 0.9) {
+    if (state.svgFill.distribution === "natural") {
+      message = "Natural spacing prevents overlaps and visible rows.";
+    } else if (largestStamp > cell * 0.9) {
       message = "Symbols may overlap. Reduce size or density.";
     } else if (state.svgFill.stampSize < 18) {
       message = "Fine SVG details may fade at this symbol size.";
@@ -2067,6 +2210,7 @@
   });
   $("svgNoCutToggle").addEventListener("change", (e) => {
     state.svgFill.noCut = e.target.checked;
+    updateSvgScaleModeControls();
     if (state.svgFill.on) rebuildLayers();
   });
   $("svgFillSample").addEventListener("change", (e) => {
@@ -2085,9 +2229,25 @@
     updateSvgQualityHint();
     if (state.svgFill.on) syncSvgFill();
   });
-  $("svgStagger").addEventListener("change", (e) => {
-    state.svgFill.stagger = e.target.checked;
+  $("svgDistributionSeg").addEventListener("click", (event) => {
+    const distribution = event.target.dataset.distribution;
+    if (!distribution) return;
+    state.svgFill.distribution = distribution;
+    updateSvgDistributionControls();
+    updateSvgQualityHint();
     if (state.svgFill.on) syncSvgFill();
+  });
+  $("svgMinSpacing").addEventListener("input", (event) => {
+    state.svgFill.minSpacing = +event.target.value;
+    $("svgMinSpacingVal").textContent = state.svgFill.minSpacing + " px";
+    if (state.svgFill.on && state.svgFill.distribution === "natural") syncSvgFill();
+  });
+  $("svgScaleModeSeg").addEventListener("click", (event) => {
+    const scaleMode = event.target.dataset.scaleMode;
+    if (!scaleMode || !state.svgFill.noCut) return;
+    state.svgFill.scaleMode = scaleMode;
+    updateSvgScaleModeControls();
+    if (state.svgFill.on) rebuildLayers();
   });
   $("svgPosJitter").addEventListener("input", (e) => {
     state.svgFill.positionJitter = +e.target.value; $("svgPosJitterVal").textContent = "±" + state.svgFill.positionJitter.toFixed(2);
@@ -2177,7 +2337,8 @@
         svg,
         stampSize: state.svgFill.stampSize,
         density: state.svgFill.density,
-        stagger: state.svgFill.stagger,
+        distribution: state.svgFill.distribution,
+        minSpacing: state.svgFill.minSpacing,
         positionJitter: state.svgFill.positionJitter,
         rotationJitterDeg: state.svgFill.rotationJitterDeg,
         scaleJitter: state.svgFill.scaleJitter,
@@ -2440,11 +2601,14 @@ if (map.isStyleLoaded()) {
     $("svgFillCustomText").value = state.svgFill.customSvg;
     $("svgDensity").value = state.svgFill.density; $("svgDensityVal").textContent = state.svgFill.density.toFixed(2);
     $("svgStampSize").value = state.svgFill.stampSize; $("svgStampSizeVal").textContent = state.svgFill.stampSize + " px";
-    $("svgStagger").checked = state.svgFill.stagger;
+    $("svgMinSpacing").value = state.svgFill.minSpacing;
+    $("svgMinSpacingVal").textContent = state.svgFill.minSpacing + " px";
     $("svgPosJitter").value = state.svgFill.positionJitter; $("svgPosJitterVal").textContent = "±" + state.svgFill.positionJitter.toFixed(2);
     $("svgRotJitter").value = state.svgFill.rotationJitterDeg; $("svgRotJitterVal").textContent = "±" + state.svgFill.rotationJitterDeg + "°";
     $("svgScaleJitter").value = state.svgFill.scaleJitter; $("svgScaleJitterVal").textContent = "±" + state.svgFill.scaleJitter.toFixed(2);
     $("svgSeed").value = state.svgFill.seed;
+    updateSvgDistributionControls();
+    updateSvgScaleModeControls();
     updateSvgQualityHint();
     setGeometricFieldsetEnabled(!state.svgFill.on);
     updateFillChoiceUI();
@@ -2459,11 +2623,16 @@ if (map.isStyleLoaded()) {
     renderPreview();
   }
 
-  // No-cut icon positions are computed in screen pixels at call time, then
-  // frozen as lng/lat, so they drift out of sync with the current zoom's
-  // pixel density unless recomputed after each pan/zoom.
-  map.on("moveend", () => {
-    if (state.svgFill.on && state.svgFill.noCut) syncSvgIconScatter();
+  // Screen-sized symbols are recomputed only when the zoom scale changes.
+  // Map-sized symbols keep their initial positions and scale with the map.
+  map.on("zoomend", () => {
+    if (
+      state.svgFill.on &&
+      state.svgFill.noCut &&
+      state.svgFill.scaleMode === "screen"
+    ) {
+      syncSvgIconScatter();
+    }
   });
 
   function polygonLayerIds() {
