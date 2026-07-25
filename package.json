@@ -33,6 +33,7 @@
   "files": [
     "CHANGELOG.md",
     "dist",
+    "!dist/*.map",
     "ROADMAP.md",
     "schema"
   ],

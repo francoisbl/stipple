@@ -70,47 +70,7 @@ declare function mulberry32(seed: number): () => number;
 /** Turns an arbitrary string (e.g. a layer id) into a stable 32-bit seed. */
 declare function hashStringToSeed(str: string): number;
 
-/** A closed ring of [x, y] planar coordinates in any consistent unit. */
-type Ring = Array<[number, number]>;
-interface ScatteredPoint {
-    x: number;
-    y: number;
-    /** Seeded rotation in degrees for icon-rotate variety. 0 unless `rotationJitterDeg` is set. */
-    rotation: number;
-    /** Seeded scale multiplier for icon-size variety. 1 unless `scaleJitter` is set. */
-    scale: number;
-}
-interface ScatterPointsOptions {
-    /** Required clearance from any edge (including holes) for a point to qualify, at scale 1. */
-    radius: number;
-    /** Approx. points per 100x100 unit area. Default 1. */
-    density?: number;
-    /** Deterministic variation seed. Default 1. */
-    seed?: number | string;
-    /** Points sampled around the disc boundary for the erosion test. Default 24; higher is stricter but slower. */
-    samples?: number;
-    /** +/- rotation jitter applied to each point, in degrees. Default 0. */
-    rotationJitterDeg?: number;
-    /** +/- scale jitter applied to each point (as a fraction of `radius`). Default 0. The erosion test uses each point's actual scaled radius, so a bigger icon still never pokes outside the polygon. */
-    scaleJitter?: number;
-    /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15 gives a light irregularity, not a full organic scatter. 0 = exact grid. */
-    positionJitter?: number;
-    /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
-    stagger?: boolean;
-}
-/**
- * Scatters points inside a (possibly holed) polygon whose center and sampled
- * clearance circle remain inside it. This approximates polygon erosion
- * cheaply; boundaries can still pass between samples. Deterministic for a
- * given seed.
- *
- * `rings` should include the exterior ring first, followed by any hole
- * rings; coordinates are unit-agnostic (pass pixels for on-screen icon
- * placement (see {@link scatterIconPoints}) or any planar unit
- * consistent with `radius`).
- */
-declare function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[];
-
+type SvgDistributionMode = "regular" | "offset" | "natural";
 interface SvgScatterLayoutOptions {
     tileSize: number;
     stampSize: number;
@@ -120,6 +80,10 @@ interface SvgScatterLayoutOptions {
     scaleJitter: number;
     positionJitter: number;
     stagger: boolean;
+    /** Placement logic. Defaults to offset when stagger is true, regular otherwise. */
+    distribution?: SvgDistributionMode;
+    /** Minimum visible gap between stamps in natural mode, in layout px. Default 0. */
+    minSpacing?: number;
 }
 interface SvgStampPlacement {
     /** Stable index shared by a logical stamp and all of its wrapped copies. */
@@ -137,6 +101,48 @@ interface SvgStampPlacement {
  * opposite edge instead of consuming new random transforms.
  */
 declare function createSvgScatterLayout(options: SvgScatterLayoutOptions): SvgStampPlacement[];
+
+/** A closed ring of [x, y] planar coordinates in any consistent unit. */
+type Ring = Array<[number, number]>;
+interface ScatteredPoint {
+    x: number;
+    y: number;
+    /** Seeded rotation in degrees for icon-rotate variety. 0 unless `rotationJitterDeg` is set. */
+    rotation: number;
+    /** Seeded scale multiplier for icon-size variety. 1 unless `scaleJitter` is set. */
+    scale: number;
+}
+interface ScatterPointsOptions {
+    /** Required clearance from any edge (including holes) for a point to qualify, at scale 1. */
+    radius: number;
+    /** Approx. points per 100x100 unit area. Default 1. */
+    density?: number;
+    /** Deterministic variation seed. Default 1. */
+    seed?: number | string;
+    /** +/- rotation jitter applied to each point, in degrees. Default 0. */
+    rotationJitterDeg?: number;
+    /** +/- scale jitter applied to each point (as a fraction of `radius`). Default 0. The erosion test uses each point's actual scaled radius, so a bigger icon still never pokes outside the polygon. */
+    scaleJitter?: number;
+    /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15 gives a light irregularity, not a full organic scatter. 0 = exact grid. */
+    positionJitter?: number;
+    /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
+    stagger?: boolean;
+    /** Point layout. Defaults to offset for backward compatibility. */
+    distribution?: SvgDistributionMode;
+    /** Extra minimum gap between natural-layout icon envelopes. Default 0. */
+    minSpacing?: number;
+}
+/**
+ * Scatters points inside a (possibly holed) polygon whose complete clearance
+ * circle remains inside it. Uses exact point-to-segment distances for every
+ * exterior and interior boundary. Deterministic for a given seed.
+ *
+ * `rings` should include the exterior ring first, followed by any hole
+ * rings; coordinates are unit-agnostic (pass pixels for on-screen icon
+ * placement (see {@link scatterIconPoints}) or any planar unit
+ * consistent with `radius`).
+ */
+declare function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[];
 
 interface PatternFillConfig {
     pattern: PatternType;
@@ -180,6 +186,8 @@ interface SvgPatternDefinition {
     scaleJitter: number;
     positionJitter: number;
     stagger: boolean;
+    distribution: SvgDistributionMode;
+    minSpacing: number;
 }
 type PatternDefinition = GeometricPatternDefinition | SvgPatternDefinition;
 interface PatternMetadataV1 {
@@ -204,6 +212,8 @@ declare function createSvgPatternDefinition(options: {
     scaleJitter?: number;
     positionJitter?: number;
     stagger?: boolean;
+    distribution?: SvgDistributionMode;
+    minSpacing?: number;
 }): SvgPatternDefinition;
 
 interface SyncPatternTextureOptions {
@@ -309,6 +319,10 @@ interface SvgPatternOptions {
     positionJitter?: number;
     /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout (orchard/marsh map fills). Default true. */
     stagger?: boolean;
+    /** Regular grid, offset rows, or seamless blue-noise placement. */
+    distribution?: SvgDistributionMode;
+    /** Minimum gap between symbols in natural mode, in layout px. Default 0. */
+    minSpacing?: number;
     /** Raster pixels per MapLibre layout pixel. Defaults to the display ratio, capped at 2 when installed. */
     pixelRatio?: number;
 }
@@ -364,8 +378,6 @@ interface ScatterIconPointsOptions {
     density?: number;
     /** Deterministic variation seed. Default 1. */
     seed?: number | string;
-    /** Erosion-test resolution (see {@link scatterPointsInPolygon}). Default 24. */
-    samples?: number;
     /** +/- rotation jitter per point, in degrees. Default 0. */
     rotationJitterDeg?: number;
     /** +/- scale jitter per point (fraction of `iconRadiusPx`). Default 0. */
@@ -374,15 +386,20 @@ interface ScatterIconPointsOptions {
     positionJitter?: number;
     /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
     stagger?: boolean;
+    /** Regular grid, offset rows, or natural non-overlapping scatter. */
+    distribution?: SvgDistributionMode;
+    /** Extra minimum gap in screen pixels for natural distribution. */
+    minSpacing?: number;
 }
 /**
  * Computes scatter points inside a polygon, in the map's current screen
- * projection, using a sampled circular-clearance approximation around each
- * point. Bound to the current view: recompute after pan/zoom if the layout
- * should track it.
+ * projection, using exact distance to every polygon boundary around each
+ * point. Bound to the current scale: recompute after zoom if the layout
+ * should keep a fixed screen size.
  */
 declare function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatureCollection;
 
+type IconScaleMode = "screen" | "map";
 interface InstallSvgIconScatterOptions {
     /** GeoJSON source id to (re)create with the computed scatter points. */
     sourceId: string;
@@ -396,8 +413,6 @@ interface InstallSvgIconScatterOptions {
     size?: number;
     density?: number;
     seed?: number | string;
-    /** Clearance-circle samples. Default 24; higher is stricter but slower. */
-    samples?: number;
     rotationJitterDeg?: number;
     /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
     scaleJitter?: number;
@@ -405,24 +420,29 @@ interface InstallSvgIconScatterOptions {
     positionJitter?: number;
     /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
     stagger?: boolean;
+    /** Regular grid, offset rows, or natural non-overlapping scatter. */
+    distribution?: SvgDistributionMode;
+    /** Extra minimum gap in screen pixels for natural distribution. */
+    minSpacing?: number;
     /** Symbol opacity. Default 1. */
     opacity?: number;
+    /** Keep a fixed screen size, or scale with the map from the installation zoom. Default screen. */
+    scaleMode?: IconScaleMode;
 }
 /**
  * @experimental
  *
  * The no-cut alternative to {@link installSvgPatternFill}: instead of a
  * repeating texture (which always clips hard at the polygon edge),
- * places SVG icons where a sampled circular-clearance test says they fit
- * inside the polygon. This is an approximation, not an exact geometry
- * guarantee; very narrow or highly concave boundaries can fall between the
- * configured samples.
+ * places SVG icons where exact point-to-segment distances prove that their
+ * circular safety envelope fits inside the polygon. The envelope is
+ * conservative because it covers the complete rotated square icon canvas.
  *
  * Points are computed in screen pixels at call time, then frozen as
  * lng/lat, so density (icon count per screen area) drifts out of sync
  * with the current zoom unless you recompute after each pan/zoom, e.g.
- * `map.on('moveend', () => installSvgIconScatter(map, options))`.
+ * `map.on('zoomend', () => installSvgIconScatter(map, options))`.
  */
 declare function installSvgIconScatter(map: Map, options: InstallSvgIconScatterOptions): Promise<void>;
 
-export { type BackgroundFillConfig, type BuildStyleFragmentOptions, type GeometricPatternDefinition, type GeometricPatternType, type HachureAngle, type InstallSvgIconScatterOptions, LEGACY_PATTERN_METADATA_KEY, type MakeTileOptions, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type PatternType, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgPatternDefinition, type SvgPatternOptions, type SvgScatterLayoutOptions, type SvgStampPlacement, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, buildStyleFragment, createMiniContext, createSvgPatternDefinition, createSvgScatterLayout, createSvgScatterTile, hashStringToSeed, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, scatterIconPoints, scatterPointsInPolygon, serializePatternDefinition, syncPatternTexture };
+export { type BackgroundFillConfig, type BuildStyleFragmentOptions, type GeometricPatternDefinition, type GeometricPatternType, type HachureAngle, type IconScaleMode, type InstallSvgIconScatterOptions, LEGACY_PATTERN_METADATA_KEY, type MakeTileOptions, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type PatternType, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgDistributionMode, type SvgPatternDefinition, type SvgPatternOptions, type SvgScatterLayoutOptions, type SvgStampPlacement, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, buildStyleFragment, createMiniContext, createSvgPatternDefinition, createSvgScatterLayout, createSvgScatterTile, hashStringToSeed, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, scatterIconPoints, scatterPointsInPolygon, serializePatternDefinition, syncPatternTexture };

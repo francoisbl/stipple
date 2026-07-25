@@ -1,7 +1,14 @@
-import type { GeoJSONSource, Map as MaplibreMap } from "maplibre-gl";
+import type {
+  GeoJSONSource,
+  Map as MaplibreMap,
+  SymbolLayerSpecification,
+} from "maplibre-gl";
 import { addSvgIcon } from "./svgIcon";
 import type { PolygonGeometry } from "./scatterIconPoints";
 import { scatterIconPoints } from "./scatterIconPoints";
+import type { SvgDistributionMode } from "../engine/svgScatterLayout";
+
+export type IconScaleMode = "screen" | "map";
 
 export interface InstallSvgIconScatterOptions {
   /** GeoJSON source id to (re)create with the computed scatter points. */
@@ -16,8 +23,6 @@ export interface InstallSvgIconScatterOptions {
   size?: number;
   density?: number;
   seed?: number | string;
-  /** Clearance-circle samples. Default 24; higher is stricter but slower. */
-  samples?: number;
   rotationJitterDeg?: number;
   /** +/- scale jitter per icon (fraction of `size`). Default 0. Driven by the symbol layer's native `icon-size`, not by re-rasterizing. */
   scaleJitter?: number;
@@ -25,8 +30,14 @@ export interface InstallSvgIconScatterOptions {
   positionJitter?: number;
   /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
   stagger?: boolean;
+  /** Regular grid, offset rows, or natural non-overlapping scatter. */
+  distribution?: SvgDistributionMode;
+  /** Extra minimum gap in screen pixels for natural distribution. */
+  minSpacing?: number;
   /** Symbol opacity. Default 1. */
   opacity?: number;
+  /** Keep a fixed screen size, or scale with the map from the installation zoom. Default screen. */
+  scaleMode?: IconScaleMode;
 }
 
 /**
@@ -34,15 +45,14 @@ export interface InstallSvgIconScatterOptions {
  *
  * The no-cut alternative to {@link installSvgPatternFill}: instead of a
  * repeating texture (which always clips hard at the polygon edge),
- * places SVG icons where a sampled circular-clearance test says they fit
- * inside the polygon. This is an approximation, not an exact geometry
- * guarantee; very narrow or highly concave boundaries can fall between the
- * configured samples.
+ * places SVG icons where exact point-to-segment distances prove that their
+ * circular safety envelope fits inside the polygon. The envelope is
+ * conservative because it covers the complete rotated square icon canvas.
  *
  * Points are computed in screen pixels at call time, then frozen as
  * lng/lat, so density (icon count per screen area) drifts out of sync
  * with the current zoom unless you recompute after each pan/zoom, e.g.
- * `map.on('moveend', () => installSvgIconScatter(map, options))`.
+ * `map.on('zoomend', () => installSvgIconScatter(map, options))`.
  */
 export async function installSvgIconScatter(map: MaplibreMap, options: InstallSvgIconScatterOptions): Promise<void> {
   const {
@@ -54,13 +64,18 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
     size = 32,
     density,
     seed,
-    samples,
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
     stagger,
+    distribution,
+    minSpacing,
     opacity = 1,
+    scaleMode = "screen",
   } = options;
+  if (scaleMode !== "screen" && scaleMode !== "map") {
+    throw new TypeError("scaleMode must be screen or map");
+  }
 
   // Always rasterize because `size` may have changed since the image id was
   // last installed.
@@ -68,18 +83,19 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
 
   // The circumscribed radius covers every corner of the square icon canvas,
   // including when icon-rotate is used. scatterIconPoints applies each
-  // point's scale variation to this radius during its sampled erosion test.
+  // point's scale variation to this radius during its exact clearance test.
   const points = scatterIconPoints({
     map,
     polygon,
     iconRadiusPx: size / Math.SQRT2,
     density,
     seed,
-    samples,
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
     stagger,
+    distribution,
+    minSpacing,
   });
 
   const existingSource = map.getSource(sourceId) as GeoJSONSource | undefined;
@@ -89,6 +105,24 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
     map.addSource(sourceId, { type: "geojson", data: points as GeoJSON.GeoJSON });
   }
 
+  const iconSize = (scaleMode === "map"
+    ? [
+        "*",
+        ["get", "scale"],
+        [
+          "interpolate",
+          ["exponential", 2],
+          ["zoom"],
+          map.getZoom() - 8,
+          1 / 256,
+          map.getZoom(),
+          1,
+          map.getZoom() + 8,
+          256,
+        ],
+      ]
+    : ["get", "scale"]) as NonNullable<SymbolLayerSpecification["layout"]>["icon-size"];
+
   if (!map.getLayer(layerId)) {
     map.addLayer({
       id: layerId,
@@ -97,7 +131,7 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
       layout: {
         "icon-image": iconId,
         "icon-rotate": ["get", "rotation"],
-        "icon-size": ["get", "scale"],
+        "icon-size": iconSize,
         "icon-allow-overlap": true,
       },
       paint: {
@@ -105,6 +139,7 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
       },
     });
   } else {
+    map.setLayoutProperty(layerId, "icon-size", iconSize);
     map.setPaintProperty(layerId, "icon-opacity", opacity);
   }
 }

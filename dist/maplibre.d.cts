@@ -1,4 +1,5 @@
 import { P as PatternType, b as TileSize, a as TileImage } from './types-BhMN112m.cjs';
+import { S as SvgDistributionMode } from './svgScatterLayout-hN4oRl9-.cjs';
 import { Map } from 'maplibre-gl';
 
 interface PatternFillConfig {
@@ -43,6 +44,8 @@ interface SvgPatternDefinition {
     scaleJitter: number;
     positionJitter: number;
     stagger: boolean;
+    distribution: SvgDistributionMode;
+    minSpacing: number;
 }
 type PatternDefinition = GeometricPatternDefinition | SvgPatternDefinition;
 interface PatternMetadataV1 {
@@ -67,6 +70,8 @@ declare function createSvgPatternDefinition(options: {
     scaleJitter?: number;
     positionJitter?: number;
     stagger?: boolean;
+    distribution?: SvgDistributionMode;
+    minSpacing?: number;
 }): SvgPatternDefinition;
 
 interface SyncPatternTextureOptions {
@@ -172,6 +177,10 @@ interface SvgPatternOptions {
     positionJitter?: number;
     /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout (orchard/marsh map fills). Default true. */
     stagger?: boolean;
+    /** Regular grid, offset rows, or seamless blue-noise placement. */
+    distribution?: SvgDistributionMode;
+    /** Minimum gap between symbols in natural mode, in layout px. Default 0. */
+    minSpacing?: number;
     /** Raster pixels per MapLibre layout pixel. Defaults to the display ratio, capped at 2 when installed. */
     pixelRatio?: number;
 }

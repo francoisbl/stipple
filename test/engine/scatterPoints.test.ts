@@ -34,7 +34,6 @@ describe("scatterPointsInPolygon", () => {
 
   it("validates options that would otherwise cause invalid loops", () => {
     expect(() => scatterPointsInPolygon([exterior], { radius: 10, density: 0 })).toThrow(/density/);
-    expect(() => scatterPointsInPolygon([exterior], { radius: 10, samples: 2 })).toThrow(/samples/);
     expect(() => scatterPointsInPolygon([exterior], { radius: 10, scaleJitter: 1 })).toThrow(/scaleJitter/);
   });
 
@@ -48,5 +47,27 @@ describe("scatterPointsInPolygon", () => {
     expect(points).toHaveLength(36);
     expect(points.reduce((sum, point) => sum + point.x, 0) / points.length).toBe(150);
     expect(points.reduce((sum, point) => sum + point.y, 0) / points.length).toBe(150);
+  });
+
+  it("creates a deterministic natural layout with minimum spacing", () => {
+    const options = {
+      radius: 8,
+      density: 10,
+      distribution: "natural" as const,
+      minSpacing: 6,
+      seed: "natural-polygon",
+    };
+    const points = scatterPointsInPolygon([exterior], options);
+
+    expect(points).toEqual(scatterPointsInPolygon([exterior], options));
+    expect(points.length).toBeGreaterThan(5);
+    for (let first = 0; first < points.length; first++) {
+      for (let second = first + 1; second < points.length; second++) {
+        expect(Math.hypot(
+          points[first].x - points[second].x,
+          points[first].y - points[second].y,
+        )).toBeGreaterThanOrEqual(22);
+      }
+    }
   });
 });

@@ -37,7 +37,18 @@ describe("pattern definitions", () => {
       scaleJitter: 0,
       positionJitter: 0.15,
       stagger: true,
+      distribution: "offset",
+      minSpacing: 0,
     });
+  });
+
+  it("normalizes legacy stagger metadata to a distribution mode", () => {
+    const definition = createSvgPatternDefinition({
+      svg: "<svg />",
+      stagger: false,
+    });
+    expect(definition.distribution).toBe("regular");
+    expect(definition.stagger).toBe(false);
   });
 
   it("rejects malformed untrusted definitions and metadata", () => {

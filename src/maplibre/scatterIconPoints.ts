@@ -1,6 +1,7 @@
 import type { Map as MaplibreMap } from "maplibre-gl";
 import type { Ring } from "../engine/scatterPoints";
 import { scatterPointsInPolygon } from "../engine/scatterPoints";
+import type { SvgDistributionMode } from "../engine/svgScatterLayout";
 
 export type PolygonGeometry =
   | { type: "Polygon"; coordinates: number[][][] }
@@ -27,8 +28,6 @@ export interface ScatterIconPointsOptions {
   density?: number;
   /** Deterministic variation seed. Default 1. */
   seed?: number | string;
-  /** Erosion-test resolution (see {@link scatterPointsInPolygon}). Default 24. */
-  samples?: number;
   /** +/- rotation jitter per point, in degrees. Default 0. */
   rotationJitterDeg?: number;
   /** +/- scale jitter per point (fraction of `iconRadiusPx`). Default 0. */
@@ -37,6 +36,10 @@ export interface ScatterIconPointsOptions {
   positionJitter?: number;
   /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
   stagger?: boolean;
+  /** Regular grid, offset rows, or natural non-overlapping scatter. */
+  distribution?: SvgDistributionMode;
+  /** Extra minimum gap in screen pixels for natural distribution. */
+  minSpacing?: number;
 }
 
 function toPolygons(polygon: PolygonGeometry): number[][][][] {
@@ -50,12 +53,15 @@ function componentSeed(seed: number | string | undefined, index: number): number
 
 /**
  * Computes scatter points inside a polygon, in the map's current screen
- * projection, using a sampled circular-clearance approximation around each
- * point. Bound to the current view: recompute after pan/zoom if the layout
- * should track it.
+ * projection, using exact distance to every polygon boundary around each
+ * point. Bound to the current scale: recompute after zoom if the layout
+ * should keep a fixed screen size.
  */
 export function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatureCollection {
-  const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
+  const {
+    map, polygon, iconRadiusPx, density, seed, rotationJitterDeg, scaleJitter,
+    positionJitter, stagger, distribution, minSpacing,
+  } = options;
 
   const points = toPolygons(polygon).flatMap((polygonRings, polygonIndex) => {
     const pixelRings: Ring[] = polygonRings.map((ring) =>
@@ -69,11 +75,12 @@ export function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatu
       radius: iconRadiusPx,
       density,
       seed: componentSeed(seed, polygonIndex),
-      samples,
       rotationJitterDeg,
       scaleJitter,
       positionJitter,
       stagger,
+      distribution,
+      minSpacing,
     });
   });
 

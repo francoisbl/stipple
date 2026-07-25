@@ -98,6 +98,13 @@
         },
         "stagger": {
           "type": "boolean"
+        },
+        "distribution": {
+          "enum": ["regular", "offset", "natural"]
+        },
+        "minSpacing": {
+          "type": "number",
+          "minimum": 0
         }
       }
     }

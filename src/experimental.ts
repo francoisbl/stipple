@@ -7,6 +7,9 @@ export type {
   ScatterIconPointsOptions,
 } from "./maplibre/scatterIconPoints";
 
-/** Experimental sampled polygon-clearance approximation. */
+/** Experimental whole-symbol placement with exact polygon-boundary clearance. */
 export { installSvgIconScatter } from "./maplibre/svgIconScatter";
-export type { InstallSvgIconScatterOptions } from "./maplibre/svgIconScatter";
+export type {
+  IconScaleMode,
+  InstallSvgIconScatterOptions,
+} from "./maplibre/svgIconScatter";

@@ -1,4 +1,5 @@
 import type { PatternType } from "../engine/types";
+import type { SvgDistributionMode } from "../engine/svgScatterLayout";
 
 export const PATTERN_METADATA_KEY = "maplibre-pattern-fills:v1" as const;
 export const LEGACY_PATTERN_METADATA_KEY = "enhanced:pattern" as const;
@@ -25,6 +26,8 @@ export interface SvgPatternDefinition {
   scaleJitter: number;
   positionJitter: number;
   stagger: boolean;
+  distribution: SvgDistributionMode;
+  minSpacing: number;
 }
 
 export type PatternDefinition = GeometricPatternDefinition | SvgPatternDefinition;
@@ -103,6 +106,14 @@ export function parsePatternDefinition(value: unknown): PatternDefinition {
       throw new TypeError("seed must be a finite number or a non-empty string");
     }
     if (typeof value.stagger !== "boolean") throw new TypeError("stagger must be a boolean");
+    const distribution = value.distribution ?? (value.stagger ? "offset" : "regular");
+    if (
+      distribution !== "regular" &&
+      distribution !== "offset" &&
+      distribution !== "natural"
+    ) {
+      throw new TypeError("distribution must be regular, offset, or natural");
+    }
 
     return {
       kind: "svg",
@@ -114,7 +125,11 @@ export function parsePatternDefinition(value: unknown): PatternDefinition {
       rotationJitterDeg: nonNegativeNumber(value, "rotationJitterDeg"),
       scaleJitter,
       positionJitter: nonNegativeNumber(value, "positionJitter"),
-      stagger: value.stagger,
+      stagger: distribution === "offset",
+      distribution,
+      minSpacing: value.minSpacing === undefined
+        ? 0
+        : nonNegativeNumber(value, "minSpacing"),
     };
   }
 
@@ -156,7 +171,10 @@ export function createSvgPatternDefinition(options: {
   scaleJitter?: number;
   positionJitter?: number;
   stagger?: boolean;
+  distribution?: SvgDistributionMode;
+  minSpacing?: number;
 }): SvgPatternDefinition {
+  const distribution = options.distribution ?? (options.stagger === false ? "regular" : "offset");
   return parsePatternDefinition({
     kind: "svg",
     svg: options.svg,
@@ -167,6 +185,8 @@ export function createSvgPatternDefinition(options: {
     rotationJitterDeg: options.rotationJitterDeg ?? 0,
     scaleJitter: options.scaleJitter ?? 0,
     positionJitter: options.positionJitter ?? 0.15,
-    stagger: options.stagger ?? true,
+    stagger: distribution === "offset",
+    distribution,
+    minSpacing: options.minSpacing ?? 0,
   }) as SvgPatternDefinition;
 }

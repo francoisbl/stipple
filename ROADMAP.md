@@ -99,12 +99,13 @@ Acceptance criteria:
 
 ### P0: Correct the no-cut contract
 
-- Mark the API and documentation as experimental.
-- Replace “nothing is ever cut” with an accurate description of the sampled
-  approximation.
-- Account for the transformed icon bounds, not only `size / 2`.
-- Decide whether `1.0` will use exact point-to-edge distances, polygon
-  buffering, or keep a documented approximation.
+- [x] Mark the API and documentation as experimental.
+- [x] Replace sampled clearance with exact point-to-edge distances for every
+  exterior and interior polygon boundary.
+- [x] Account for the transformed icon bounds with a conservative
+  circumscribed radius.
+- Keep the feature experimental while its zoom and projection behavior is
+  evaluated in production use.
 
 Acceptance criteria:
 
