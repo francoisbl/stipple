@@ -25,8 +25,7 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
   use, plus an illustrative grape motif, bringing the demo library to 26
   recolourable samples.
 - Screen-fixed and map-scaled modes for experimental whole-symbol scatter.
-- A visually separated sample library for cartographic textures, illustrative
-  symbols, and abstract patterns.
+- A sample library organized into concrete thematic families.
 
 ### Changed
 
@@ -46,7 +45,7 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
 - Whole-icon scattering is explicitly experimental and uses the icon canvas's
   circumscribed clearance radius.
 - Ambiguous grass, vineyard, orchard, crop, shrub, gravel, boulder, scree,
-  reed, ripple, and deciduous-tree motifs have been redrawn for legibility at
+  reed, and ripple motifs have been redrawn or simplified for legibility at
   the playground's default stamp size.
 
 ### Fixed
