@@ -4,19 +4,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>maplibre-pattern-fills · Playground</title>
-  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <!-- Built by `npm run build` (tsup) — see ../dist. Committed so this demo stays
+  <link href="https://unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <!-- Built by `npm run build` (tsup); see ../dist. Committed so this demo stays
        a single, buildless HTML file you can open directly (file://), fork, or
-       host as-is (e.g. GitHub Pages). Run `npm run build` again after editing
+       host as-is. Run `npm run build` again after editing
        anything under ../src. -->
   <script src="../dist/index.global.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500;1,600&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    /* Studio palette: warm paper + ink, one terracotta accent, one moss
-       secondary — a drafting table, not a dashboard. */
+    /* Studio palette: warm paper and ink, with terracotta and moss accents. */
     :root {
       --paper: #f4efe4; --panel: #fffcf5; --panel-2: #faf5e9;
       --line: #ddd3bd; --line-strong: #b9ab8c;
@@ -182,9 +180,9 @@
         <label>Stroke weight <span class="val" id="weightVal">2.00 px</span></label>
         <input type="range" id="weight" min="0.1" max="8" step="0.1" value="2" />
 
-        <label>Density — tile size <span class="val" id="tileVal">16 px</span></label>
+        <label>Density: tile size <span class="val" id="tileVal">16 px</span></label>
         <input type="range" id="tile" min="4" max="72" step="1" value="16" />
-        <p class="hint">Smaller tile = denser repeat. Any pixel size tiles seamlessly — not limited to powers of two.</p>
+        <p class="hint">Smaller tile = denser repeat. Any pixel size tiles seamlessly; powers of two are not required.</p>
       </fieldset>
 
       <fieldset id="svgFillFieldset">
@@ -194,10 +192,10 @@
           <input type="checkbox" id="svgFillToggle" />
         </div>
         <div class="switch" style="margin-top:6px">
-          <label style="margin:0">Avoid cutting at edges (place as whole icons)</label>
+          <label style="margin:0">Reduce edge clipping (experimental)</label>
           <input type="checkbox" id="svgNoCutToggle" />
         </div>
-        <p class="hint" id="noCutHint">A repeating texture always clips hard at the polygon boundary — any stamp whose center falls near the edge shows only its overlapping part. This mode instead places whole icons only where they fit entirely inside the shape, leaving a clear margin near the edge instead of a cut one.</p>
+        <p class="hint" id="noCutHint">A repeating texture always clips hard at the polygon boundary. This experimental mode uses a sampled clearance approximation to reduce cut icons, leaving a margin near the edge. Narrow or highly concave boundaries can still fall between samples.</p>
         <label>Sample</label>
         <select id="svgFillSample">
           <optgroup label="Vegetation">
@@ -248,7 +246,7 @@
         <input type="range" id="svgScaleJitter" min="0" max="0.8" step="0.05" value="0" />
         <label>Seed (deterministic variation)</label>
         <input type="text" id="svgSeed" value="1" />
-        <p class="hint">Rasterized once via the browser's native SVG renderer, then repeated on a regular, lightly staggered grid — the classic cartographic symbol layout (orchard/marsh map fills). Raise the jitters for a more natural, organic scatter instead.</p>
+        <p class="hint">Rasterized once via the browser's native SVG renderer, then repeated on a regular, lightly staggered grid. This is the classic cartographic layout used for orchard and marsh map fills. Raise the jitters for a more natural scatter.</p>
       </fieldset>
 
       <fieldset id="bgFieldset">
@@ -285,7 +283,7 @@
         </div>
         <label>dasharray (editable, space separated)</label>
         <input type="text" id="dashInput" value="" placeholder="e.g. 2 4  (empty = solid)" />
-        <p class="hint">Native <code>line-dasharray</code> expression — no canvas involved, stays a plain declarative style property.</p>
+        <p class="hint">Native <code>line-dasharray</code> expression. It uses no canvas and remains a declarative style property.</p>
       </fieldset>
 
       <fieldset id="pointIconFieldset" class="hidden">
@@ -332,40 +330,30 @@
         <input type="range" id="pointIconSize" min="12" max="80" step="1" value="32" />
         <label>Rotation <span class="val" id="pointIconRotationVal">0°</span></label>
         <input type="range" id="pointIconRotation" min="0" max="359" step="1" value="0" />
-        <p class="hint">One whole icon per point feature — rasterized once via <code>addSvgIcon</code>, scale driven by native <code>icon-size</code>. No scattering/tiling involved, that's a polygon-fill concept.</p>
+        <p class="hint">One whole icon per point feature, rasterized once via <code>addSvgIcon</code>. Scale is driven by the native <code>icon-size</code>. Scattering and tiling only apply to polygon fills.</p>
       </fieldset>
 
       <button class="action" id="exportBtn">⬇ Export style.json</button>
       <button class="action" id="exportJsBtn">⬇ Export integration snippet</button>
       <button class="action ghost" id="copyConfigBtn">⧉ Copy config (preset)</button>
       <button class="action ghost" id="importConfigBtn">⤓ Load a config…</button>
-      <p class="hint">Export always reflects the single geometry type selected above — polygon fill, line style, or point icon — so it's always clear what you're shipping.</p>
+      <p class="hint">Export reflects the geometry type selected above: polygon fill, line style, or point icon.</p>
       <textarea id="ioArea" placeholder="style.json / preset config output appears here. Paste a config and click “Load”."></textarea>
     </div>
     <div id="map"></div>
   </div>
   <div class="toast" id="toast"></div>
 
-  <script>
-  // ───────────────────────────────────────────────────────────────────────────
-  //  maplibre-pattern-fills — playground / demo
-  //
-  //  This file is UI glue only: it wires the panel controls to the library
-  //  (window.MaplibrePatternFills, built from ../src by tsup). The actual
-  //  pattern engine, MapLibre integration, and SVG rasterization all live in
-  //  the package — see ../src/engine and ../src/maplibre.
-  //
-  //  One geometry type is active at a time (Polygon / Line / Point), picked
-  //  at the top of the panel — test features and the exported style always
-  //  match it exactly, so it's never ambiguous what a given export produces:
-  //    Polygon → tinted background / fill pattern / outline (3-layer stack)
-  //    Line     → a single styled line layer
-  //    Point    → a single SVG icon per point feature
-  // ───────────────────────────────────────────────────────────────────────────
+  <script type="module">
+  import * as maplibregl from "https://unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl.mjs";
+
+  // UI controls for the browser bundle built in ../dist.
+  // The selected geometry type also determines the exported style.
 
   const {
     makeTile, syncPatternTexture, buildStyleFragment, buildLineStyleFragment, buildIconStyleFragment,
     installSvgPatternFill, addSvgIcon, installSvgIconScatter, installIconStyles, DASH_PRESETS,
+    createSvgPatternDefinition, patternDefinitionId, PATTERN_METADATA_KEY,
   } = window.MaplibrePatternFills;
 
   const $ = (id) => document.getElementById(id);
@@ -375,7 +363,7 @@
   };
 
   // Bundled sample SVGs (kept in sync by hand with ./patterns/*.svg and
-  // ./icons/*.svg — inlined here so the demo works from file:// with zero
+  // ./icons/*.svg). They are inlined so the demo works from file:// with zero
   // server: browsers block fetch() of local files, but a checked-in string
   // constant has no such restriction).
   const SVG_PATTERN_SAMPLES = {
@@ -508,10 +496,10 @@
   // organic samples used as polygon fills also work fine as one-off icons).
   const ALL_ICON_SAMPLES = { ...SVG_ICON_SAMPLES, ...SVG_PATTERN_SAMPLES };
 
-  // State — serializable as-is as a "preset" config.
+  // State, serializable as-is as a preset config.
   const state = {
     geometryType: "polygon", // polygon | line | point
-    layer: null,             // { source } — id of the selected GeoJSON test source
+    layer: null,             // { source }, id of the selected GeoJSON test source
     pattern: "stipple",      // solid | stipple | hachures | cross | grid | dots
     angle: 45,
     patColor: "#7c3d1c",
@@ -532,7 +520,7 @@
   }
 
   // ── Map ───────────────────────────────────────────────────────────────────
-  // Self-contained basemap (no network dependency) — a flat background is
+  // Self-contained basemap (no network dependency). A flat background is
   // enough to judge fill styles. Swap in a real basemap style if you like.
   const map = new maplibregl.Map({
     container: "map",
@@ -648,8 +636,9 @@
     }
 
     if (state.svgFill.on && state.svgFill.noCut) {
-      // No fill-pattern layer at all — whole icons placed only where they
-      // fit entirely inside the polygon, so nothing is ever cut at the edge.
+      // No fill-pattern layer at all. Whole icons are placed only where they
+      // pass a sampled clearance test inside the polygon. This is an
+      // experimental approximation for narrow or highly concave boundaries.
       syncSvgIconScatter();
     } else if (state.svgFill.on) {
       syncSvgTexture();
@@ -738,17 +727,44 @@
         rotationDeg: state.pointIcon.rotation || undefined,
       });
     }
-    return buildStyleFragment({
+    const fragment = buildStyleFragment({
       source: "<source>",
       sourceLayer: "<source-layer>",
       bg: { enabled: state.bg.on, color: state.bg.color, opacity: state.bg.opacity },
       pattern: {
-        pattern: state.svgFill.on ? "hachures" : state.pattern, // SVG fills aren't (yet) expressible in the metadata schema — see hint below
+        pattern: state.svgFill.on ? "hachures" : state.pattern,
         tile: state.tile, color: state.patColor, opacity: state.patOpacity,
         weight: state.weight, angle: state.angle,
       },
       line: { enabled: state.line.on, color: state.line.color, width: state.line.width, dash: state.line.dash },
     });
+    if (!state.svgFill.on) return fragment;
+
+    const patternLayerIndex = fragment.layers.findIndex((layer) => layer.id === "<source>__pat");
+    if (state.svgFill.noCut) {
+      // No-cut scatter depends on live polygon geometry and remains an
+      // experimental runtime operation, so do not export a placeholder fill.
+      if (patternLayerIndex >= 0) fragment.layers.splice(patternLayerIndex, 1);
+      return fragment;
+    }
+
+    const svg = resolveSvgFillSample() || "<!-- paste a custom SVG in the panel first -->";
+    const definition = createSvgPatternDefinition({
+      svg,
+      stampSize: state.svgFill.stampSize,
+      density: state.svgFill.density,
+      stagger: state.svgFill.stagger,
+      positionJitter: state.svgFill.positionJitter,
+      rotationJitterDeg: state.svgFill.rotationJitterDeg,
+      scaleJitter: state.svgFill.scaleJitter,
+      seed: state.svgFill.seed,
+    });
+    const imageId = patternDefinitionId(definition);
+    fragment.layers[patternLayerIndex].paint["fill-pattern"] = imageId;
+    fragment.layers[patternLayerIndex].metadata = {
+      [PATTERN_METADATA_KEY]: { imageId, definition },
+    };
+    return fragment;
   }
 
   // ── Test features (random GeoJSON, no backend dependency) ───────────────────
@@ -1026,8 +1042,8 @@
     navigator.clipboard?.writeText($("ioArea").value);
     if (state.geometryType === "polygon" && state.svgFill.on) {
       toast(state.svgFill.noCut
-        ? "style.json copied — note: no-cut icon scatter needs live polygon geometry, so it isn't in the metadata schema; wire installSvgIconScatter() manually"
-        : "style.json copied — note: SVG fills aren't in the metadata schema yet, wire installSvgPatternFill() manually for this layer");
+        ? "style.json copied. Note: no-cut icon scatter needs live polygon geometry, so it isn't in the metadata schema; wire installSvgIconScatter() manually"
+        : "runtime-extended style copied. installPatternFills will restore its SVG texture");
     } else {
       toast(`${state.geometryType} style.json copied to clipboard`);
     }
@@ -1036,7 +1052,7 @@
   function buildIntegrationSnippet() {
     if (state.geometryType === "line") {
       return `// Paste the exported style.json's sources+layers into your map style.
-// line-dasharray is a native declarative expression — nothing to install
+// line-dasharray is a native declarative expression; nothing to install
 // at runtime, no canvas involved, unlike the polygon/point cases below.
 `;
     }
@@ -1061,9 +1077,9 @@ map.on("load", async () => {
 
 import { installPatternFills } from "maplibre-pattern-fills";
 
-map.on("load", () => {
-  installPatternFills(map, style); // \`style\` = the object exported above,
-                                    // or { layers: map.getStyle().layers }
+map.on("load", async () => {
+  await installPatternFills(map, style); // \`style\` = the object exported above,
+                                          // or { layers: map.getStyle().layers }
 });
 
 // No bundler? Use the UMD build instead:
@@ -1130,7 +1146,7 @@ map.on("load", () => {
   }
 
   // No-cut icon positions are computed in screen pixels at call time, then
-  // frozen as lng/lat — so they drift out of sync with the current zoom's
+  // frozen as lng/lat, so they drift out of sync with the current zoom's
   // pixel density unless recomputed after each pan/zoom.
   map.on("moveend", () => {
     if (state.geometryType === "polygon" && state.svgFill.on && state.svgFill.noCut) syncSvgIconScatter();

@@ -1,5 +1,5 @@
 export type PatternType = "solid" | "stipple" | "hachures" | "cross" | "grid" | "dots";
-/** Tile edge length in px. Any size works (MapLibre doesn't require power-of-two fill-pattern images) — larger tiles read as a lower-density pattern. */
+/** Tile edge length in px. MapLibre does not require power-of-two fill-pattern images. Larger tiles read as a lower-density pattern. */
 export type TileSize = number;
 export type HachureAngle = 0 | 45 | 90 | -45;
 

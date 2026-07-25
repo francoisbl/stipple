@@ -2,9 +2,14 @@ import type { Map as MaplibreMap } from "maplibre-gl";
 import { makeTile } from "../engine/makeTile";
 import type { PatternType, TileSize } from "../engine/types";
 
-// Last-installed signature per (map, imageId), so repeated calls know whether
-// updateImage (flash-free) or removeImage+addImage (dimensions changed) applies.
-const signatures = new WeakMap<MaplibreMap, Map<string, string>>();
+interface InstalledPattern {
+  signature: string;
+  size: number;
+}
+
+// Last-installed state per (map, imageId), so equivalent repeated calls are
+// no-ops and changed calls can choose updateImage or addImage safely.
+const installedPatterns = new WeakMap<MaplibreMap, Map<string, InstalledPattern>>();
 
 export interface SyncPatternTextureOptions {
   imageId: string;
@@ -17,7 +22,7 @@ export interface SyncPatternTextureOptions {
 
 /**
  * (Re)generates a fill-pattern texture with {@link makeTile} and pushes it to
- * the map — `updateImage` when the tile dimensions are unchanged (no flash),
+ * the map. Uses `updateImage` when the tile dimensions are unchanged (no flash),
  * or `removeImage` + `addImage` when the pattern type or tile size changed.
  * Safe to call on every UI change (colour picker, slider drag, etc).
  */
@@ -25,21 +30,24 @@ export function syncPatternTexture(map: MaplibreMap, options: SyncPatternTexture
   const { imageId, pattern, size, color, weight, angle } = options;
   if (pattern === "solid") return;
 
-  let bySource = signatures.get(map);
-  if (!bySource) {
-    bySource = new Map();
-    signatures.set(map, bySource);
+  let byImage = installedPatterns.get(map);
+  if (!byImage) {
+    byImage = new Map();
+    installedPatterns.set(map, byImage);
   }
 
-  const signature = `${pattern}@${size}`;
+  const signature = JSON.stringify({ pattern, size, color, weight, angle });
+  const previous = byImage.get(imageId);
+  if (map.hasImage(imageId) && previous?.signature === signature) return;
+
   const tile = makeTile(pattern, size, color, weight, angle);
 
-  if (map.hasImage(imageId) && bySource.get(imageId) === signature) {
+  if (map.hasImage(imageId) && previous?.size === size) {
     map.updateImage(imageId, tile);
   } else {
     if (map.hasImage(imageId)) map.removeImage(imageId);
     map.addImage(imageId, tile);
-    bySource.set(imageId, signature);
   }
+  byImage.set(imageId, { signature, size });
   map.triggerRepaint();
 }

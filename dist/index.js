@@ -274,6 +274,24 @@ function scatterPointsInPolygon(rings, options) {
     positionJitter = 0.15,
     stagger = true
   } = options;
+  if (!Number.isFinite(radius) || radius < 0) {
+    throw new RangeError("radius must be a finite number greater than or equal to 0");
+  }
+  if (!Number.isFinite(density) || density <= 0) {
+    throw new RangeError("density must be a finite number greater than 0");
+  }
+  if (!Number.isInteger(samples) || samples < 3) {
+    throw new RangeError("samples must be an integer greater than or equal to 3");
+  }
+  if (!Number.isFinite(rotationJitterDeg) || rotationJitterDeg < 0) {
+    throw new RangeError("rotationJitterDeg must be a finite number greater than or equal to 0");
+  }
+  if (!Number.isFinite(scaleJitter) || scaleJitter < 0 || scaleJitter >= 1) {
+    throw new RangeError("scaleJitter must be a finite number greater than or equal to 0 and less than 1");
+  }
+  if (!Number.isFinite(positionJitter) || positionJitter < 0) {
+    throw new RangeError("positionJitter must be a finite number greater than or equal to 0");
+  }
   const exterior = rings[0] ?? [];
   if (exterior.length === 0) return [];
   let minX = Infinity;
@@ -304,6 +322,79 @@ function scatterPointsInPolygon(rings, options) {
   return points;
 }
 
+// src/engine/svgScatterLayout.ts
+function positiveFinite(name, value) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`${name} must be a finite number greater than 0`);
+  }
+}
+function nonNegativeFinite(name, value) {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${name} must be a finite number greater than or equal to 0`);
+  }
+}
+function modulo(value, divisor) {
+  return (value % divisor + divisor) % divisor;
+}
+function createSvgScatterLayout(options) {
+  const {
+    tileSize,
+    stampSize,
+    density,
+    seed,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger
+  } = options;
+  positiveFinite("tileSize", tileSize);
+  positiveFinite("stampSize", stampSize);
+  positiveFinite("density", density);
+  nonNegativeFinite("rotationJitterDeg", rotationJitterDeg);
+  nonNegativeFinite("scaleJitter", scaleJitter);
+  nonNegativeFinite("positionJitter", positionJitter);
+  if (scaleJitter >= 1) {
+    throw new RangeError("scaleJitter must be less than 1 so every stamp has a positive scale");
+  }
+  const seedNum = typeof seed === "string" ? hashStringToSeed(seed) : seed;
+  if (!Number.isFinite(seedNum)) throw new RangeError("seed must be a finite number or a string");
+  const rand = mulberry32(seedNum);
+  const cell = 100 / Math.sqrt(density);
+  const cols = Math.max(1, Math.ceil(tileSize / cell));
+  let rows = Math.max(1, Math.ceil(tileSize / cell));
+  if (stagger && rows % 2 !== 0) rows += 1;
+  const placements = [];
+  let stampIndex = 0;
+  for (let row = 0; row < rows; row++) {
+    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
+    for (let col = 0; col < cols; col++, stampIndex++) {
+      const jitterX = (rand() - 0.5) * cell * positionJitter;
+      const jitterY = (rand() - 0.5) * cell * positionJitter;
+      const x = modulo(col * cell + cell / 2 + rowOffset + jitterX, tileSize);
+      const y = modulo(row * cell + cell / 2 + jitterY, tileSize);
+      const rotationRad = (rand() * 2 - 1) * rotationJitterDeg * (Math.PI / 180);
+      const scale = 1 + (rand() * 2 - 1) * scaleJitter;
+      const extent = stampSize * scale * Math.SQRT2 / 2;
+      const minShiftX = Math.ceil((-extent - x) / tileSize);
+      const maxShiftX = Math.floor((tileSize + extent - x) / tileSize);
+      const minShiftY = Math.ceil((-extent - y) / tileSize);
+      const maxShiftY = Math.floor((tileSize + extent - y) / tileSize);
+      for (let shiftY = minShiftY; shiftY <= maxShiftY; shiftY++) {
+        for (let shiftX = minShiftX; shiftX <= maxShiftX; shiftX++) {
+          placements.push({
+            stampIndex,
+            x: x + shiftX * tileSize,
+            y: y + shiftY * tileSize,
+            rotationRad,
+            scale
+          });
+        }
+      }
+    }
+  }
+  return placements;
+}
+
 // src/maplibre/types.ts
 var DASH_PRESETS = {
   solid: [],
@@ -311,25 +402,136 @@ var DASH_PRESETS = {
   dashdot: [4, 2, 1, 2]
 };
 
+// src/maplibre/patternDefinition.ts
+var PATTERN_METADATA_KEY = "maplibre-pattern-fills:v1";
+var LEGACY_PATTERN_METADATA_KEY = "enhanced:pattern";
+var geometricTypes = /* @__PURE__ */ new Set([
+  "stipple",
+  "hachures",
+  "cross",
+  "grid",
+  "dots"
+]);
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function finiteNumber(record, key) {
+  const value = record[key];
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new TypeError(`${key} must be a finite number`);
+  }
+  return value;
+}
+function positiveNumber(record, key) {
+  const value = finiteNumber(record, key);
+  if (value <= 0) throw new RangeError(`${key} must be greater than 0`);
+  return value;
+}
+function nonNegativeNumber(record, key) {
+  const value = finiteNumber(record, key);
+  if (value < 0) throw new RangeError(`${key} must be greater than or equal to 0`);
+  return value;
+}
+function nonEmptyString(record, key) {
+  const value = record[key];
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new TypeError(`${key} must be a non-empty string`);
+  }
+  return value;
+}
+function parsePatternDefinition(value) {
+  if (!isRecord(value)) throw new TypeError("pattern definition must be an object");
+  if (value.kind === "geometric") {
+    if (typeof value.pattern !== "string" || !geometricTypes.has(value.pattern)) {
+      throw new TypeError("pattern must be a supported non-solid geometric pattern");
+    }
+    return {
+      kind: "geometric",
+      pattern: value.pattern,
+      size: positiveNumber(value, "size"),
+      color: nonEmptyString(value, "color"),
+      weight: positiveNumber(value, "weight"),
+      angle: finiteNumber(value, "angle")
+    };
+  }
+  if (value.kind === "svg") {
+    const scaleJitter = nonNegativeNumber(value, "scaleJitter");
+    if (scaleJitter >= 1) throw new RangeError("scaleJitter must be less than 1");
+    const seed = value.seed;
+    if ((typeof seed !== "string" || seed.length === 0) && (typeof seed !== "number" || !Number.isFinite(seed))) {
+      throw new TypeError("seed must be a finite number or a non-empty string");
+    }
+    if (typeof value.stagger !== "boolean") throw new TypeError("stagger must be a boolean");
+    return {
+      kind: "svg",
+      svg: nonEmptyString(value, "svg"),
+      tileSize: positiveNumber(value, "tileSize"),
+      stampSize: positiveNumber(value, "stampSize"),
+      density: positiveNumber(value, "density"),
+      seed,
+      rotationJitterDeg: nonNegativeNumber(value, "rotationJitterDeg"),
+      scaleJitter,
+      positionJitter: nonNegativeNumber(value, "positionJitter"),
+      stagger: value.stagger
+    };
+  }
+  throw new TypeError('pattern definition kind must be "geometric" or "svg"');
+}
+function parsePatternMetadata(value) {
+  if (!isRecord(value)) throw new TypeError("pattern metadata must be an object");
+  return {
+    imageId: nonEmptyString(value, "imageId"),
+    definition: parsePatternDefinition(value.definition)
+  };
+}
+function serializePatternDefinition(definition) {
+  return JSON.stringify(parsePatternDefinition(definition));
+}
+function patternDefinitionId(definition, prefix = "mpf") {
+  const serialized = serializePatternDefinition(definition);
+  let hash = 2166136261;
+  for (let index = 0; index < serialized.length; index++) {
+    hash ^= serialized.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${prefix}_${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+function createSvgPatternDefinition(options) {
+  return parsePatternDefinition({
+    kind: "svg",
+    svg: options.svg,
+    tileSize: options.tileSize ?? 192,
+    stampSize: options.stampSize ?? 28,
+    density: options.density ?? 1.4,
+    seed: options.seed ?? 1,
+    rotationJitterDeg: options.rotationJitterDeg ?? 0,
+    scaleJitter: options.scaleJitter ?? 0,
+    positionJitter: options.positionJitter ?? 0.15,
+    stagger: options.stagger ?? true
+  });
+}
+
 // src/maplibre/syncPatternTexture.ts
-var signatures = /* @__PURE__ */ new WeakMap();
+var installedPatterns = /* @__PURE__ */ new WeakMap();
 function syncPatternTexture(map, options) {
   const { imageId, pattern, size, color, weight, angle } = options;
   if (pattern === "solid") return;
-  let bySource = signatures.get(map);
-  if (!bySource) {
-    bySource = /* @__PURE__ */ new Map();
-    signatures.set(map, bySource);
+  let byImage = installedPatterns.get(map);
+  if (!byImage) {
+    byImage = /* @__PURE__ */ new Map();
+    installedPatterns.set(map, byImage);
   }
-  const signature = `${pattern}@${size}`;
+  const signature = JSON.stringify({ pattern, size, color, weight, angle });
+  const previous = byImage.get(imageId);
+  if (map.hasImage(imageId) && previous?.signature === signature) return;
   const tile = makeTile(pattern, size, color, weight, angle);
-  if (map.hasImage(imageId) && bySource.get(imageId) === signature) {
+  if (map.hasImage(imageId) && previous?.size === size) {
     map.updateImage(imageId, tile);
   } else {
     if (map.hasImage(imageId)) map.removeImage(imageId);
     map.addImage(imageId, tile);
-    bySource.set(imageId, signature);
   }
+  byImage.set(imageId, { signature, size });
   map.triggerRepaint();
 }
 
@@ -355,7 +557,15 @@ function buildStyleFragment(options) {
       paint: { "fill-color": pattern.color, "fill-opacity": pattern.opacity }
     });
   } else {
-    const imageId = `${source}__pat_img`;
+    const definition = {
+      kind: "geometric",
+      pattern: pattern.pattern,
+      size: pattern.tile,
+      color: pattern.color,
+      weight: pattern.weight,
+      angle: pattern.angle
+    };
+    const imageId = patternDefinitionId(definition);
     layers.push({
       id: `${source}__pat`,
       type: "fill",
@@ -363,14 +573,7 @@ function buildStyleFragment(options) {
       "source-layer": sourceLayer,
       paint: { "fill-pattern": imageId, "fill-opacity": pattern.opacity },
       metadata: {
-        "enhanced:pattern": {
-          type: pattern.pattern,
-          tile: pattern.tile,
-          color: pattern.color,
-          weight: pattern.weight,
-          angle: pattern.angle,
-          imageId
-        }
+        [PATTERN_METADATA_KEY]: { imageId, definition }
       }
     });
   }
@@ -441,22 +644,6 @@ function buildIconStyleFragment(options) {
   };
 }
 
-// src/maplibre/installPatternFills.ts
-function installPatternFills(map, style) {
-  for (const layer of style.layers) {
-    const p = layer.metadata?.["enhanced:pattern"];
-    if (!p) continue;
-    syncPatternTexture(map, {
-      imageId: p.imageId,
-      pattern: p.type,
-      size: p.tile,
-      color: p.color,
-      weight: p.weight,
-      angle: p.angle
-    });
-  }
-}
-
 // src/maplibre/loadSvgImage.ts
 async function loadSvgImage(svg) {
   const blob = new Blob([svg], { type: "image/svg+xml" });
@@ -469,6 +656,161 @@ async function loadSvgImage(svg) {
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+// src/maplibre/svgPattern.ts
+async function createSvgScatterTile(options) {
+  const definition = createSvgPatternDefinition(options);
+  const {
+    svg,
+    tileSize,
+    stampSize,
+    density,
+    seed,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger
+  } = definition;
+  const image = await loadSvgImage(svg);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = tileSize;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas context unavailable");
+  ctx.clearRect(0, 0, tileSize, tileSize);
+  const placements = createSvgScatterLayout({
+    tileSize,
+    stampSize,
+    density,
+    seed,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger
+  });
+  for (const placement of placements) {
+    ctx.save();
+    ctx.translate(placement.x, placement.y);
+    ctx.rotate(placement.rotationRad);
+    ctx.scale(placement.scale, placement.scale);
+    ctx.drawImage(image, -stampSize / 2, -stampSize / 2, stampSize, stampSize);
+    ctx.restore();
+  }
+  const imageData = ctx.getImageData(0, 0, tileSize, tileSize);
+  return { width: tileSize, height: tileSize, data: new Uint8Array(imageData.data.buffer) };
+}
+var installedSvgPatterns = /* @__PURE__ */ new WeakMap();
+var svgPatternGenerations = /* @__PURE__ */ new WeakMap();
+async function installSvgPatternFill(map, options) {
+  const definition = createSvgPatternDefinition(options);
+  const signature = serializePatternDefinition(definition);
+  let installedById = installedSvgPatterns.get(map);
+  if (!installedById) {
+    installedById = /* @__PURE__ */ new Map();
+    installedSvgPatterns.set(map, installedById);
+  }
+  if (map.hasImage(options.imageId) && installedById.get(options.imageId)?.signature === signature) {
+    return;
+  }
+  let generationsById = svgPatternGenerations.get(map);
+  if (!generationsById) {
+    generationsById = /* @__PURE__ */ new Map();
+    svgPatternGenerations.set(map, generationsById);
+  }
+  const generation = (generationsById.get(options.imageId) ?? 0) + 1;
+  generationsById.set(options.imageId, generation);
+  const tile = await createSvgScatterTile(options);
+  if (generationsById.get(options.imageId) !== generation) return;
+  const previous = installedById.get(options.imageId);
+  if (map.hasImage(options.imageId) && previous?.width === tile.width && previous.height === tile.height) {
+    map.updateImage(options.imageId, tile);
+  } else {
+    if (map.hasImage(options.imageId)) map.removeImage(options.imageId);
+    map.addImage(options.imageId, tile);
+  }
+  installedById.set(options.imageId, {
+    signature,
+    width: tile.width,
+    height: tile.height
+  });
+  map.triggerRepaint();
+}
+
+// src/maplibre/installPatternFills.ts
+function fromLegacyMetadata(value) {
+  if (!value || typeof value !== "object") return void 0;
+  const legacy = value;
+  if (legacy.type === "solid" || typeof legacy.type !== "string" || typeof legacy.tile !== "number" || typeof legacy.color !== "string" || typeof legacy.weight !== "number" || typeof legacy.angle !== "number" || typeof legacy.imageId !== "string") {
+    return void 0;
+  }
+  return {
+    imageId: legacy.imageId,
+    definition: {
+      kind: "geometric",
+      pattern: legacy.type,
+      size: legacy.tile,
+      color: legacy.color,
+      weight: legacy.weight,
+      angle: legacy.angle
+    }
+  };
+}
+async function installPatternFills(map, style) {
+  const installed = /* @__PURE__ */ new Map();
+  const pending = [];
+  for (const layer of style.layers) {
+    const metadata = layer.metadata;
+    if (!metadata) continue;
+    const rawV1 = metadata[PATTERN_METADATA_KEY];
+    const registration = rawV1 ? parsePatternMetadata(rawV1) : fromLegacyMetadata(metadata[LEGACY_PATTERN_METADATA_KEY]);
+    if (!registration) continue;
+    const signature = serializePatternDefinition(registration.definition);
+    const previous = installed.get(registration.imageId);
+    if (previous && previous !== signature) {
+      throw new Error(`Conflicting pattern definitions use image id "${registration.imageId}"`);
+    }
+    if (previous) continue;
+    installed.set(registration.imageId, signature);
+    const p = registration.definition;
+    if (p.kind === "geometric") {
+      syncPatternTexture(map, {
+        imageId: registration.imageId,
+        pattern: p.pattern,
+        size: p.size,
+        color: p.color,
+        weight: p.weight,
+        angle: p.angle
+      });
+    } else {
+      pending.push(installSvgPatternFill(map, { imageId: registration.imageId, ...p }));
+    }
+  }
+  await Promise.all(pending);
+}
+
+// src/maplibre/observePatternFills.ts
+function observePatternFills(map, options = {}) {
+  const getStyle = options.getStyle ?? (() => map.getStyle());
+  const onError = options.onError ?? ((error) => {
+    console.error("maplibre-pattern-fills: failed to restore pattern images", error);
+  });
+  let disposed = false;
+  const refresh = async () => {
+    if (disposed) return;
+    await installPatternFills(map, getStyle());
+  };
+  const onStyleLoad = () => {
+    void refresh().catch(onError);
+  };
+  map.on("style.load", onStyleLoad);
+  return {
+    refresh,
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      map.off("style.load", onStyleLoad);
+    }
+  };
 }
 
 // src/maplibre/svgIcon.ts
@@ -498,95 +840,33 @@ async function installIconStyles(map, style) {
   }
 }
 
-// src/maplibre/svgPattern.ts
-async function createSvgScatterTile(options) {
-  const {
-    svg,
-    tileSize = 192,
-    stampSize = 28,
-    density = 1.4,
-    seed = 1,
-    rotationJitterDeg = 0,
-    scaleJitter = 0,
-    positionJitter = 0.15,
-    stagger = true
-  } = options;
-  const image = await loadSvgImage(svg);
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = tileSize;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D canvas context unavailable");
-  ctx.clearRect(0, 0, tileSize, tileSize);
-  const seedNum = typeof seed === "string" ? hashStringToSeed(seed) : seed;
-  const rand = mulberry32(seedNum);
-  const cell = 100 / Math.sqrt(density);
-  const cols = Math.ceil(tileSize / cell);
-  let rows = Math.ceil(tileSize / cell);
-  if (stagger && rows % 2 !== 0) rows += 1;
-  const margin = stampSize;
-  const stamp = (cx, cy) => {
-    const rotation = (rand() * 2 - 1) * rotationJitterDeg * (Math.PI / 180);
-    const scale = 1 + (rand() * 2 - 1) * scaleJitter;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rotation);
-    ctx.scale(scale, scale);
-    ctx.drawImage(image, -stampSize / 2, -stampSize / 2, stampSize, stampSize);
-    ctx.restore();
-  };
-  for (let row = 0; row < rows; row++) {
-    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
-    for (let col = 0; col < cols; col++) {
-      const jitterX = (rand() - 0.5) * cell * positionJitter;
-      const jitterY = (rand() - 0.5) * cell * positionJitter;
-      const cx = col * cell + cell / 2 + rowOffset + jitterX;
-      const cy = row * cell + cell / 2 + jitterY;
-      stamp(cx, cy);
-      const nearLeft = cx < margin;
-      const nearRight = cx > tileSize - margin;
-      const nearTop = cy < margin;
-      const nearBottom = cy > tileSize - margin;
-      if (nearLeft) stamp(cx + tileSize, cy);
-      if (nearRight) stamp(cx - tileSize, cy);
-      if (nearTop) stamp(cx, cy + tileSize);
-      if (nearBottom) stamp(cx, cy - tileSize);
-      if (nearLeft && nearTop) stamp(cx + tileSize, cy + tileSize);
-      if (nearRight && nearTop) stamp(cx - tileSize, cy + tileSize);
-      if (nearLeft && nearBottom) stamp(cx + tileSize, cy - tileSize);
-      if (nearRight && nearBottom) stamp(cx - tileSize, cy - tileSize);
-    }
-  }
-  const imageData = ctx.getImageData(0, 0, tileSize, tileSize);
-  return { width: tileSize, height: tileSize, data: new Uint8Array(imageData.data.buffer) };
-}
-async function installSvgPatternFill(map, options) {
-  const tile = await createSvgScatterTile(options);
-  if (map.hasImage(options.imageId)) map.removeImage(options.imageId);
-  map.addImage(options.imageId, tile);
-  map.triggerRepaint();
-}
-
 // src/maplibre/scatterIconPoints.ts
-function toRings(polygon) {
-  return polygon.type === "Polygon" ? polygon.coordinates : polygon.coordinates.flat();
+function toPolygons(polygon) {
+  return polygon.type === "Polygon" ? [polygon.coordinates] : polygon.coordinates;
+}
+function componentSeed(seed, index) {
+  const base = seed ?? 1;
+  return typeof base === "string" ? `${base}:${index}` : base + Math.imul(index, 2654435761);
 }
 function scatterIconPoints(options) {
   const { map, polygon, iconRadiusPx, density, seed, samples, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
-  const pixelRings = toRings(polygon).map(
-    (ring) => ring.map(([lng, lat]) => {
-      const p = map.project([lng, lat]);
-      return [p.x, p.y];
-    })
-  );
-  const points = scatterPointsInPolygon(pixelRings, {
-    radius: iconRadiusPx,
-    density,
-    seed,
-    samples,
-    rotationJitterDeg,
-    scaleJitter,
-    positionJitter,
-    stagger
+  const points = toPolygons(polygon).flatMap((polygonRings, polygonIndex) => {
+    const pixelRings = polygonRings.map(
+      (ring) => ring.map(([lng, lat]) => {
+        const p = map.project([lng, lat]);
+        return [p.x, p.y];
+      })
+    );
+    return scatterPointsInPolygon(pixelRings, {
+      radius: iconRadiusPx,
+      density,
+      seed: componentSeed(seed, polygonIndex),
+      samples,
+      rotationJitterDeg,
+      scaleJitter,
+      positionJitter,
+      stagger
+    });
   });
   const features = points.map(({ x, y, rotation, scale }) => {
     const lngLat = map.unproject([x, y]);
@@ -601,9 +881,34 @@ function scatterIconPoints(options) {
 
 // src/maplibre/svgIconScatter.ts
 async function installSvgIconScatter(map, options) {
-  const { sourceId, layerId, iconId, polygon, svg, size = 32, density, seed, rotationJitterDeg, scaleJitter, positionJitter, stagger } = options;
+  const {
+    sourceId,
+    layerId,
+    iconId,
+    polygon,
+    svg,
+    size = 32,
+    density,
+    seed,
+    samples,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger
+  } = options;
   await addSvgIcon(map, { id: iconId, svg, size });
-  const points = scatterIconPoints({ map, polygon, iconRadiusPx: size / 2, density, seed, rotationJitterDeg, scaleJitter, positionJitter, stagger });
+  const points = scatterIconPoints({
+    map,
+    polygon,
+    iconRadiusPx: size / Math.SQRT2,
+    density,
+    seed,
+    samples,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger
+  });
   const existingSource = map.getSource(sourceId);
   if (existingSource) {
     existingSource.setData(points);
@@ -626,11 +931,15 @@ async function installSvgIconScatter(map, options) {
 }
 export {
   DASH_PRESETS,
+  LEGACY_PATTERN_METADATA_KEY,
+  PATTERN_METADATA_KEY,
   addSvgIcon,
   buildIconStyleFragment,
   buildLineStyleFragment,
   buildStyleFragment,
   createMiniContext,
+  createSvgPatternDefinition,
+  createSvgScatterLayout,
   createSvgScatterTile,
   hashStringToSeed,
   installIconStyles,
@@ -639,8 +948,13 @@ export {
   installSvgPatternFill,
   makeTile,
   mulberry32,
+  observePatternFills,
+  parsePatternDefinition,
+  parsePatternMetadata,
+  patternDefinitionId,
   scatterIconPoints,
   scatterPointsInPolygon,
+  serializePatternDefinition,
   syncPatternTexture
 };
 //# sourceMappingURL=index.js.map

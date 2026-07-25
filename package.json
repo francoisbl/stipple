@@ -1,7 +1,7 @@
 {
   "name": "maplibre-pattern-fills",
   "version": "0.1.0",
-  "description": "Textured fill patterns, tiled SVG fills, and SVG point icons for MapLibre GL JS — generated at runtime, no pre-baked sprite sheets.",
+  "description": "Textured fill patterns, tiled SVG fills, and SVG point icons for MapLibre GL JS, generated at runtime without pre-baked sprite sheets.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -12,24 +12,53 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "require": "./dist/core.cjs"
+    },
+    "./maplibre": {
+      "types": "./dist/maplibre.d.ts",
+      "import": "./dist/maplibre.js",
+      "require": "./dist/maplibre.cjs"
+    },
+    "./experimental": {
+      "types": "./dist/experimental.d.ts",
+      "import": "./dist/experimental.js",
+      "require": "./dist/experimental.cjs"
+    },
+    "./schema/pattern-metadata-v1.schema.json": "./schema/pattern-metadata-v1.schema.json"
   },
   "files": [
-    "dist"
+    "CHANGELOG.md",
+    "dist",
+    "ROADMAP.md",
+    "schema"
   ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
+    "build:site": "npm run build && node scripts/build-site.mjs",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit"
+    "package:check": "node scripts/check-package.mjs",
+    "prepublishOnly": "npm run validate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "validate": "npm test && npm run typecheck && npm run build && npm run package:check"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "peerDependencies": {
-    "maplibre-gl": ">=3.0.0"
+    "maplibre-gl": ">=4 <7"
   },
   "devDependencies": {
-    "maplibre-gl": "^4.7.1",
+    "maplibre-gl": "^6.0.0",
     "tsup": "^8.3.5",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.7"
   },
   "keywords": [
     "maplibre",
@@ -43,5 +72,12 @@
     "type": "git",
     "url": "git+https://github.com/francoisbl/maplibre-pattern-fills.git"
   },
-  "homepage": "https://github.com/francoisbl/maplibre-pattern-fills#readme"
+  "homepage": "https://github.com/francoisbl/maplibre-pattern-fills#readme",
+  "bugs": {
+    "url": "https://github.com/francoisbl/maplibre-pattern-fills/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
 }

@@ -26,7 +26,7 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
  * Minimal software rasterizer implementing just the {@link TileContext}
  * surface `makeTile` relies on (straight strokes with round caps, filled
  * circles). Lets the pattern engine run in Node without a DOM or a native
- * canvas dependency — the browser path uses the real Canvas 2D API instead,
+ * canvas dependency. The browser path uses the real Canvas 2D API instead,
  * this is only exercised server-side (tests, tooling, SSR previews).
  */
 export function createMiniContext(size: number): { ctx: TileContext; toTileImage: () => TileImage } {
@@ -56,7 +56,7 @@ export function createMiniContext(size: number): { ctx: TileContext; toTileImage
     buf[i + 3] = outA * 255;
   }
 
-  // Distance-to-segment (clamped projection) gives naturally rounded caps —
+  // Distance-to-segment (clamped projection) gives naturally rounded caps.
   // exactly what ctx.lineCap = "round" produces on a real canvas.
   function strokeSegment(x0: number, y0: number, x1: number, y1: number) {
     const half = lineWidth / 2;

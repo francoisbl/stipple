@@ -2,7 +2,7 @@ import { createMiniContext } from "./miniContext";
 import type { PatternType, TileContext, TileImage } from "./types";
 
 export interface MakeTileOptions {
-  /** Override how the drawing context is created — mainly useful for tests. */
+  /** Override how the drawing context is created. Mainly useful for tests. */
   contextFactory?: (size: number) => { ctx: TileContext; toTileImage: () => TileImage };
 }
 
@@ -24,15 +24,15 @@ function defaultContextFactory(size: number): { ctx: TileContext; toTileImage: (
 }
 
 /**
- * Renders one seamless pattern tile (any pixel size — MapLibre's
+ * Renders one seamless pattern tile (any pixel size; MapLibre's
  * `fill-pattern` doesn't require power-of-two images) as a raw RGBA buffer
  * ready for `map.addImage` / `map.updateImage`. Runs unchanged in the browser
- * (native canvas) or in Node (pure-JS {@link createMiniContext} rasterizer) —
+ * (native canvas) or in Node (pure-JS {@link createMiniContext} rasterizer).
  * same output shape either way. Larger tiles read as a lower-density pattern
  * (fewer repeats per unit area); use `size` as the density control.
  *
  * The pattern's visual parameters (angle, density, weight) only ever live in
- * this generated image, never in the style.json — regenerate with the exact
+ * this generated image, never in the style.json. Regenerate with the exact
  * same arguments wherever the tile is consumed to get an identical result.
  */
 export function makeTile(
@@ -98,7 +98,7 @@ export function makeTile(
       break;
     }
     case "stipple": {
-      // Offset grid of dots ("scatter" look) — deterministic, so seamless.
+      // Offset grid of dots ("scatter" look). Deterministic, so seamless.
       // Cell count scales with tile size so density stays smooth across the
       // whole size range, rather than jumping only at a few breakpoints.
       const r = weight * 0.6;
@@ -116,7 +116,7 @@ export function makeTile(
       break;
     }
     case "dots": {
-      // Regular single-dot repeat — seamless by construction.
+      // Regular single-dot repeat, seamless by construction.
       const r = Math.max(weight * 0.5, 1);
       ctx.beginPath();
       ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2);

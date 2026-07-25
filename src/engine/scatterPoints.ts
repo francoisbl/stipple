@@ -1,14 +1,14 @@
 import { hashStringToSeed, mulberry32 } from "./seededRandom";
 
-/** A closed ring of [x, y] planar coordinates (any consistent unit — pixels, degrees, meters). */
+/** A closed ring of [x, y] planar coordinates in any consistent unit. */
 export type Ring = Array<[number, number]>;
 
 export interface ScatteredPoint {
   x: number;
   y: number;
-  /** Seeded rotation in degrees, for icon-rotate variety — 0 unless `rotationJitterDeg` is set. */
+  /** Seeded rotation in degrees for icon-rotate variety. 0 unless `rotationJitterDeg` is set. */
   rotation: number;
-  /** Seeded scale multiplier, for icon-size variety — 1 unless `scaleJitter` is set. */
+  /** Seeded scale multiplier for icon-size variety. 1 unless `scaleJitter` is set. */
   scale: number;
 }
 
@@ -19,13 +19,13 @@ export interface ScatterPointsOptions {
   density?: number;
   /** Deterministic variation seed. Default 1. */
   seed?: number | string;
-  /** Points sampled around the disc boundary for the erosion test. Default 12 — higher is stricter but slower. */
+  /** Points sampled around the disc boundary for the erosion test. Default 12; higher is stricter but slower. */
   samples?: number;
   /** +/- rotation jitter applied to each point, in degrees. Default 0. */
   rotationJitterDeg?: number;
   /** +/- scale jitter applied to each point (as a fraction of `radius`). Default 0. The erosion test uses each point's actual scaled radius, so a bigger icon still never pokes outside the polygon. */
   scaleJitter?: number;
-  /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15 — a light irregularity, not a full organic scatter. 0 = exact grid. */
+  /** +/- position jitter within each grid cell, as a fraction of the cell. Default 0.15 gives a light irregularity, not a full organic scatter. 0 = exact grid. */
   positionJitter?: number;
   /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
   stagger?: boolean;
@@ -59,15 +59,14 @@ function discFitsInside(x: number, y: number, radius: number, rings: Ring[], sam
 }
 
 /**
- * Scatters points inside a (possibly holed) polygon such that a disc of
- * `radius` centered at each point stays entirely within it — so an icon of
- * that radius placed at any returned point is never cut by the polygon
- * boundary, unlike a repeating `fill-pattern` texture (which always clips
- * hard at the edge). Deterministic for a given seed.
+ * Scatters points inside a (possibly holed) polygon whose center and sampled
+ * clearance circle remain inside it. This approximates polygon erosion
+ * cheaply; boundaries can still pass between samples. Deterministic for a
+ * given seed.
  *
  * `rings` should include the exterior ring first, followed by any hole
  * rings; coordinates are unit-agnostic (pass pixels for on-screen icon
- * placement — see {@link scatterIconPoints} — or any planar unit
+ * placement (see {@link scatterIconPoints}) or any planar unit
  * consistent with `radius`).
  */
 export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[] {
@@ -75,6 +74,24 @@ export function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOpti
     radius, density = 1, seed = 1, samples = 12,
     rotationJitterDeg = 0, scaleJitter = 0, positionJitter = 0.15, stagger = true,
   } = options;
+  if (!Number.isFinite(radius) || radius < 0) {
+    throw new RangeError("radius must be a finite number greater than or equal to 0");
+  }
+  if (!Number.isFinite(density) || density <= 0) {
+    throw new RangeError("density must be a finite number greater than 0");
+  }
+  if (!Number.isInteger(samples) || samples < 3) {
+    throw new RangeError("samples must be an integer greater than or equal to 3");
+  }
+  if (!Number.isFinite(rotationJitterDeg) || rotationJitterDeg < 0) {
+    throw new RangeError("rotationJitterDeg must be a finite number greater than or equal to 0");
+  }
+  if (!Number.isFinite(scaleJitter) || scaleJitter < 0 || scaleJitter >= 1) {
+    throw new RangeError("scaleJitter must be a finite number greater than or equal to 0 and less than 1");
+  }
+  if (!Number.isFinite(positionJitter) || positionJitter < 0) {
+    throw new RangeError("positionJitter must be a finite number greater than or equal to 0");
+  }
   const exterior = rings[0] ?? [];
   if (exterior.length === 0) return [];
 

@@ -1,0 +1,824 @@
+"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// src/entries/maplibre.ts
+var maplibre_exports = {};
+__export(maplibre_exports, {
+  DASH_PRESETS: () => DASH_PRESETS,
+  LEGACY_PATTERN_METADATA_KEY: () => LEGACY_PATTERN_METADATA_KEY,
+  PATTERN_METADATA_KEY: () => PATTERN_METADATA_KEY,
+  addSvgIcon: () => addSvgIcon,
+  buildIconStyleFragment: () => buildIconStyleFragment,
+  buildLineStyleFragment: () => buildLineStyleFragment,
+  buildStyleFragment: () => buildStyleFragment,
+  createSvgPatternDefinition: () => createSvgPatternDefinition,
+  createSvgScatterTile: () => createSvgScatterTile,
+  installIconStyles: () => installIconStyles,
+  installPatternFills: () => installPatternFills,
+  installSvgPatternFill: () => installSvgPatternFill,
+  observePatternFills: () => observePatternFills,
+  parsePatternDefinition: () => parsePatternDefinition,
+  parsePatternMetadata: () => parsePatternMetadata,
+  patternDefinitionId: () => patternDefinitionId,
+  serializePatternDefinition: () => serializePatternDefinition,
+  syncPatternTexture: () => syncPatternTexture
+});
+module.exports = __toCommonJS(maplibre_exports);
+
+// src/maplibre/types.ts
+var DASH_PRESETS = {
+  solid: [],
+  dotted: [1, 2],
+  dashdot: [4, 2, 1, 2]
+};
+
+// src/maplibre/patternDefinition.ts
+var PATTERN_METADATA_KEY = "maplibre-pattern-fills:v1";
+var LEGACY_PATTERN_METADATA_KEY = "enhanced:pattern";
+var geometricTypes = /* @__PURE__ */ new Set([
+  "stipple",
+  "hachures",
+  "cross",
+  "grid",
+  "dots"
+]);
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function finiteNumber(record, key) {
+  const value = record[key];
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new TypeError(`${key} must be a finite number`);
+  }
+  return value;
+}
+function positiveNumber(record, key) {
+  const value = finiteNumber(record, key);
+  if (value <= 0) throw new RangeError(`${key} must be greater than 0`);
+  return value;
+}
+function nonNegativeNumber(record, key) {
+  const value = finiteNumber(record, key);
+  if (value < 0) throw new RangeError(`${key} must be greater than or equal to 0`);
+  return value;
+}
+function nonEmptyString(record, key) {
+  const value = record[key];
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new TypeError(`${key} must be a non-empty string`);
+  }
+  return value;
+}
+function parsePatternDefinition(value) {
+  if (!isRecord(value)) throw new TypeError("pattern definition must be an object");
+  if (value.kind === "geometric") {
+    if (typeof value.pattern !== "string" || !geometricTypes.has(value.pattern)) {
+      throw new TypeError("pattern must be a supported non-solid geometric pattern");
+    }
+    return {
+      kind: "geometric",
+      pattern: value.pattern,
+      size: positiveNumber(value, "size"),
+      color: nonEmptyString(value, "color"),
+      weight: positiveNumber(value, "weight"),
+      angle: finiteNumber(value, "angle")
+    };
+  }
+  if (value.kind === "svg") {
+    const scaleJitter = nonNegativeNumber(value, "scaleJitter");
+    if (scaleJitter >= 1) throw new RangeError("scaleJitter must be less than 1");
+    const seed = value.seed;
+    if ((typeof seed !== "string" || seed.length === 0) && (typeof seed !== "number" || !Number.isFinite(seed))) {
+      throw new TypeError("seed must be a finite number or a non-empty string");
+    }
+    if (typeof value.stagger !== "boolean") throw new TypeError("stagger must be a boolean");
+    return {
+      kind: "svg",
+      svg: nonEmptyString(value, "svg"),
+      tileSize: positiveNumber(value, "tileSize"),
+      stampSize: positiveNumber(value, "stampSize"),
+      density: positiveNumber(value, "density"),
+      seed,
+      rotationJitterDeg: nonNegativeNumber(value, "rotationJitterDeg"),
+      scaleJitter,
+      positionJitter: nonNegativeNumber(value, "positionJitter"),
+      stagger: value.stagger
+    };
+  }
+  throw new TypeError('pattern definition kind must be "geometric" or "svg"');
+}
+function parsePatternMetadata(value) {
+  if (!isRecord(value)) throw new TypeError("pattern metadata must be an object");
+  return {
+    imageId: nonEmptyString(value, "imageId"),
+    definition: parsePatternDefinition(value.definition)
+  };
+}
+function serializePatternDefinition(definition) {
+  return JSON.stringify(parsePatternDefinition(definition));
+}
+function patternDefinitionId(definition, prefix = "mpf") {
+  const serialized = serializePatternDefinition(definition);
+  let hash = 2166136261;
+  for (let index = 0; index < serialized.length; index++) {
+    hash ^= serialized.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${prefix}_${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+function createSvgPatternDefinition(options) {
+  return parsePatternDefinition({
+    kind: "svg",
+    svg: options.svg,
+    tileSize: options.tileSize ?? 192,
+    stampSize: options.stampSize ?? 28,
+    density: options.density ?? 1.4,
+    seed: options.seed ?? 1,
+    rotationJitterDeg: options.rotationJitterDeg ?? 0,
+    scaleJitter: options.scaleJitter ?? 0,
+    positionJitter: options.positionJitter ?? 0.15,
+    stagger: options.stagger ?? true
+  });
+}
+
+// src/engine/miniContext.ts
+function parseColor(v) {
+  const hex = v.match(/^#([0-9a-f]{6})$/i);
+  if (hex) {
+    const n = parseInt(hex[1], 16);
+    return { r: n >> 16 & 255, g: n >> 8 & 255, b: n & 255, a: 1 };
+  }
+  const rgba = v.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/i);
+  if (rgba) {
+    return { r: +rgba[1], g: +rgba[2], b: +rgba[3], a: rgba[4] !== void 0 ? +rgba[4] : 1 };
+  }
+  return { r: 0, g: 0, b: 0, a: 1 };
+}
+var clamp01 = (v) => Math.max(0, Math.min(1, v));
+function createMiniContext(size) {
+  const buf = new Uint8ClampedArray(size * size * 4);
+  let strokeColor = { r: 0, g: 0, b: 0, a: 1 };
+  let fillColor = { r: 0, g: 0, b: 0, a: 1 };
+  let lineWidth = 1;
+  let subpaths = [];
+  let pendingArc = null;
+  function setPixel(x, y, c) {
+    if (x < 0 || y < 0 || x >= size || y >= size || c.a <= 0) return;
+    const i = (y * size + x) * 4;
+    if (c.a >= 1) {
+      buf[i] = c.r;
+      buf[i + 1] = c.g;
+      buf[i + 2] = c.b;
+      buf[i + 3] = 255;
+      return;
+    }
+    const dstA = buf[i + 3] / 255;
+    const outA = c.a + dstA * (1 - c.a);
+    if (outA <= 0) return;
+    buf[i] = (c.r * c.a + buf[i] * dstA * (1 - c.a)) / outA;
+    buf[i + 1] = (c.g * c.a + buf[i + 1] * dstA * (1 - c.a)) / outA;
+    buf[i + 2] = (c.b * c.a + buf[i + 2] * dstA * (1 - c.a)) / outA;
+    buf[i + 3] = outA * 255;
+  }
+  function strokeSegment(x0, y0, x1, y1) {
+    const half = lineWidth / 2;
+    const minX = Math.max(0, Math.floor(Math.min(x0, x1) - half - 1));
+    const maxX = Math.min(size - 1, Math.ceil(Math.max(x0, x1) + half + 1));
+    const minY = Math.max(0, Math.floor(Math.min(y0, y1) - half - 1));
+    const maxY = Math.min(size - 1, Math.ceil(Math.max(y0, y1) + half + 1));
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const lenSq = dx * dx + dy * dy;
+    for (let py = minY; py <= maxY; py++) {
+      for (let px = minX; px <= maxX; px++) {
+        const cx = px + 0.5;
+        const cy = py + 0.5;
+        let t = lenSq === 0 ? 0 : ((cx - x0) * dx + (cy - y0) * dy) / lenSq;
+        t = clamp01(t);
+        const projX = x0 + t * dx;
+        const projY = y0 + t * dy;
+        const dist = Math.hypot(cx - projX, cy - projY);
+        const coverage = clamp01(half + 0.5 - dist);
+        if (coverage > 0) setPixel(px, py, { ...strokeColor, a: strokeColor.a * coverage });
+      }
+    }
+  }
+  function fillCircle(cx, cy, r) {
+    const minX = Math.max(0, Math.floor(cx - r - 1));
+    const maxX = Math.min(size - 1, Math.ceil(cx + r + 1));
+    const minY = Math.max(0, Math.floor(cy - r - 1));
+    const maxY = Math.min(size - 1, Math.ceil(cy + r + 1));
+    for (let py = minY; py <= maxY; py++) {
+      for (let px = minX; px <= maxX; px++) {
+        const dist = Math.hypot(px + 0.5 - cx, py + 0.5 - cy);
+        const coverage = clamp01(r + 0.5 - dist);
+        if (coverage > 0) setPixel(px, py, { ...fillColor, a: fillColor.a * coverage });
+      }
+    }
+  }
+  const ctx = {
+    get strokeStyle() {
+      return `rgba(${strokeColor.r},${strokeColor.g},${strokeColor.b},${strokeColor.a})`;
+    },
+    set strokeStyle(v) {
+      strokeColor = parseColor(v);
+    },
+    get fillStyle() {
+      return `rgba(${fillColor.r},${fillColor.g},${fillColor.b},${fillColor.a})`;
+    },
+    set fillStyle(v) {
+      fillColor = parseColor(v);
+    },
+    get lineWidth() {
+      return lineWidth;
+    },
+    set lineWidth(v) {
+      lineWidth = v;
+    },
+    lineCap: "round",
+    clearRect() {
+      buf.fill(0);
+    },
+    beginPath() {
+      subpaths = [];
+      pendingArc = null;
+    },
+    moveTo(x, y) {
+      subpaths.push([{ x, y }]);
+    },
+    lineTo(x, y) {
+      const current = subpaths[subpaths.length - 1];
+      if (current) current.push({ x, y });
+    },
+    stroke() {
+      for (const sp of subpaths) {
+        for (let i = 1; i < sp.length; i++) strokeSegment(sp[i - 1].x, sp[i - 1].y, sp[i].x, sp[i].y);
+      }
+    },
+    arc(x, y, radius) {
+      pendingArc = { x, y, r: radius };
+    },
+    fill() {
+      if (pendingArc) fillCircle(pendingArc.x, pendingArc.y, pendingArc.r);
+    }
+  };
+  return {
+    ctx,
+    toTileImage: () => ({ width: size, height: size, data: new Uint8Array(buf.buffer) })
+  };
+}
+
+// src/engine/makeTile.ts
+function defaultContextFactory(size) {
+  if (typeof document !== "undefined") {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const canvasCtx = canvas.getContext("2d");
+    if (!canvasCtx) throw new Error("2D canvas context unavailable");
+    return {
+      ctx: canvasCtx,
+      toTileImage: () => {
+        const img = canvasCtx.getImageData(0, 0, size, size);
+        return { width: size, height: size, data: new Uint8Array(img.data.buffer) };
+      }
+    };
+  }
+  return createMiniContext(size);
+}
+function makeTile(pattern, size, color, weight, angle, options = {}) {
+  const { ctx, toTileImage } = (options.contextFactory ?? defaultContextFactory)(size);
+  ctx.clearRect(0, 0, size, size);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = weight;
+  ctx.lineCap = "round";
+  const drawHachures = (deg) => {
+    ctx.beginPath();
+    const step = Math.max(size / 2, 4);
+    if (deg === 0) {
+      for (let y = 0; y <= size; y += step) {
+        ctx.moveTo(0, y + 0.5);
+        ctx.lineTo(size, y + 0.5);
+      }
+    } else if (deg === 90) {
+      for (let x = 0; x <= size; x += step) {
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, size);
+      }
+    } else if (deg === 45) {
+      for (let o = -size; o <= size * 2; o += step) {
+        ctx.moveTo(o, 0);
+        ctx.lineTo(o + size, size);
+      }
+    } else {
+      for (let o = -size; o <= size * 2; o += step) {
+        ctx.moveTo(o + size, 0);
+        ctx.lineTo(o, size);
+      }
+    }
+    ctx.stroke();
+  };
+  switch (pattern) {
+    case "hachures":
+      drawHachures(angle);
+      break;
+    case "cross":
+      drawHachures(angle);
+      drawHachures((angle + 90 + 45) % 180 - 45);
+      break;
+    case "grid": {
+      ctx.beginPath();
+      ctx.moveTo(0.5, 0);
+      ctx.lineTo(0.5, size);
+      ctx.moveTo(0, 0.5);
+      ctx.lineTo(size, 0.5);
+      ctx.stroke();
+      break;
+    }
+    case "stipple": {
+      const r = weight * 0.6;
+      const cells = Math.max(2, Math.round(size / 6));
+      const s = size / cells;
+      for (let i = 0; i < cells; i++) {
+        for (let j = 0; j < cells; j++) {
+          const cx = (i + (j % 2 ? 0.75 : 0.25)) * s;
+          const cy = (j + 0.5) * s;
+          ctx.beginPath();
+          ctx.arc(cx % size, cy % size, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      break;
+    }
+    case "dots": {
+      const r = Math.max(weight * 0.5, 1);
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case "solid":
+      break;
+  }
+  return toTileImage();
+}
+
+// src/maplibre/syncPatternTexture.ts
+var installedPatterns = /* @__PURE__ */ new WeakMap();
+function syncPatternTexture(map, options) {
+  const { imageId, pattern, size, color, weight, angle } = options;
+  if (pattern === "solid") return;
+  let byImage = installedPatterns.get(map);
+  if (!byImage) {
+    byImage = /* @__PURE__ */ new Map();
+    installedPatterns.set(map, byImage);
+  }
+  const signature = JSON.stringify({ pattern, size, color, weight, angle });
+  const previous = byImage.get(imageId);
+  if (map.hasImage(imageId) && previous?.signature === signature) return;
+  const tile = makeTile(pattern, size, color, weight, angle);
+  if (map.hasImage(imageId) && previous?.size === size) {
+    map.updateImage(imageId, tile);
+  } else {
+    if (map.hasImage(imageId)) map.removeImage(imageId);
+    map.addImage(imageId, tile);
+  }
+  byImage.set(imageId, { signature, size });
+  map.triggerRepaint();
+}
+
+// src/maplibre/buildStyleFragment.ts
+function buildStyleFragment(options) {
+  const { source, sourceLayer, sourceUrl, bg, pattern, line } = options;
+  const layers = [];
+  if (bg?.enabled) {
+    layers.push({
+      id: `${source}__bg`,
+      type: "fill",
+      source,
+      "source-layer": sourceLayer,
+      paint: { "fill-color": bg.color, "fill-opacity": bg.opacity }
+    });
+  }
+  if (pattern.pattern === "solid") {
+    layers.push({
+      id: `${source}__pat`,
+      type: "fill",
+      source,
+      "source-layer": sourceLayer,
+      paint: { "fill-color": pattern.color, "fill-opacity": pattern.opacity }
+    });
+  } else {
+    const definition = {
+      kind: "geometric",
+      pattern: pattern.pattern,
+      size: pattern.tile,
+      color: pattern.color,
+      weight: pattern.weight,
+      angle: pattern.angle
+    };
+    const imageId = patternDefinitionId(definition);
+    layers.push({
+      id: `${source}__pat`,
+      type: "fill",
+      source,
+      "source-layer": sourceLayer,
+      paint: { "fill-pattern": imageId, "fill-opacity": pattern.opacity },
+      metadata: {
+        [PATTERN_METADATA_KEY]: { imageId, definition }
+      }
+    });
+  }
+  if (line?.enabled) {
+    layers.push({
+      id: `${source}__line`,
+      type: "line",
+      source,
+      "source-layer": sourceLayer,
+      paint: {
+        "line-color": line.color,
+        "line-width": line.width,
+        ...line.dash.length ? { "line-dasharray": line.dash } : {}
+      }
+    });
+  }
+  return {
+    sources: { [source]: { type: "vector", url: sourceUrl ?? `<url>/${source}` } },
+    layers
+  };
+}
+
+// src/maplibre/buildLineStyleFragment.ts
+function buildLineStyleFragment(options) {
+  const { source, sourceLayer, sourceUrl, line } = options;
+  const layers = [];
+  if (line.enabled) {
+    layers.push({
+      id: `${source}__line`,
+      type: "line",
+      source,
+      "source-layer": sourceLayer,
+      paint: {
+        "line-color": line.color,
+        "line-width": line.width,
+        ...line.dash.length ? { "line-dasharray": line.dash } : {}
+      }
+    });
+  }
+  return {
+    sources: { [source]: { type: "vector", url: sourceUrl ?? `<url>/${source}` } },
+    layers
+  };
+}
+
+// src/maplibre/iconStyleFragment.ts
+function buildIconStyleFragment(options) {
+  const { source, sourceLayer, sourceUrl, icon, rotationDeg } = options;
+  const layers = [
+    {
+      id: `${source}__icon`,
+      type: "symbol",
+      source,
+      "source-layer": sourceLayer,
+      layout: {
+        "icon-image": icon.imageId,
+        "icon-allow-overlap": true,
+        ...rotationDeg ? { "icon-rotate": rotationDeg } : {}
+      },
+      metadata: {
+        "enhanced:icon": { svg: icon.svg, size: icon.size, imageId: icon.imageId }
+      }
+    }
+  ];
+  return {
+    sources: { [source]: { type: "vector", url: sourceUrl ?? `<url>/${source}` } },
+    layers
+  };
+}
+
+// src/engine/seededRandom.ts
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a |= 0;
+    a = a + 1831565813 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function hashStringToSeed(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = h << 13 | h >>> 19;
+  }
+  return (h ^ h >>> 16) >>> 0;
+}
+
+// src/engine/svgScatterLayout.ts
+function positiveFinite(name, value) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`${name} must be a finite number greater than 0`);
+  }
+}
+function nonNegativeFinite(name, value) {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${name} must be a finite number greater than or equal to 0`);
+  }
+}
+function modulo(value, divisor) {
+  return (value % divisor + divisor) % divisor;
+}
+function createSvgScatterLayout(options) {
+  const {
+    tileSize,
+    stampSize,
+    density,
+    seed,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger
+  } = options;
+  positiveFinite("tileSize", tileSize);
+  positiveFinite("stampSize", stampSize);
+  positiveFinite("density", density);
+  nonNegativeFinite("rotationJitterDeg", rotationJitterDeg);
+  nonNegativeFinite("scaleJitter", scaleJitter);
+  nonNegativeFinite("positionJitter", positionJitter);
+  if (scaleJitter >= 1) {
+    throw new RangeError("scaleJitter must be less than 1 so every stamp has a positive scale");
+  }
+  const seedNum = typeof seed === "string" ? hashStringToSeed(seed) : seed;
+  if (!Number.isFinite(seedNum)) throw new RangeError("seed must be a finite number or a string");
+  const rand = mulberry32(seedNum);
+  const cell = 100 / Math.sqrt(density);
+  const cols = Math.max(1, Math.ceil(tileSize / cell));
+  let rows = Math.max(1, Math.ceil(tileSize / cell));
+  if (stagger && rows % 2 !== 0) rows += 1;
+  const placements = [];
+  let stampIndex = 0;
+  for (let row = 0; row < rows; row++) {
+    const rowOffset = stagger && row % 2 === 1 ? cell / 2 : 0;
+    for (let col = 0; col < cols; col++, stampIndex++) {
+      const jitterX = (rand() - 0.5) * cell * positionJitter;
+      const jitterY = (rand() - 0.5) * cell * positionJitter;
+      const x = modulo(col * cell + cell / 2 + rowOffset + jitterX, tileSize);
+      const y = modulo(row * cell + cell / 2 + jitterY, tileSize);
+      const rotationRad = (rand() * 2 - 1) * rotationJitterDeg * (Math.PI / 180);
+      const scale = 1 + (rand() * 2 - 1) * scaleJitter;
+      const extent = stampSize * scale * Math.SQRT2 / 2;
+      const minShiftX = Math.ceil((-extent - x) / tileSize);
+      const maxShiftX = Math.floor((tileSize + extent - x) / tileSize);
+      const minShiftY = Math.ceil((-extent - y) / tileSize);
+      const maxShiftY = Math.floor((tileSize + extent - y) / tileSize);
+      for (let shiftY = minShiftY; shiftY <= maxShiftY; shiftY++) {
+        for (let shiftX = minShiftX; shiftX <= maxShiftX; shiftX++) {
+          placements.push({
+            stampIndex,
+            x: x + shiftX * tileSize,
+            y: y + shiftY * tileSize,
+            rotationRad,
+            scale
+          });
+        }
+      }
+    }
+  }
+  return placements;
+}
+
+// src/maplibre/loadSvgImage.ts
+async function loadSvgImage(svg) {
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return img;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+// src/maplibre/svgPattern.ts
+async function createSvgScatterTile(options) {
+  const definition = createSvgPatternDefinition(options);
+  const {
+    svg,
+    tileSize,
+    stampSize,
+    density,
+    seed,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger
+  } = definition;
+  const image = await loadSvgImage(svg);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = tileSize;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas context unavailable");
+  ctx.clearRect(0, 0, tileSize, tileSize);
+  const placements = createSvgScatterLayout({
+    tileSize,
+    stampSize,
+    density,
+    seed,
+    rotationJitterDeg,
+    scaleJitter,
+    positionJitter,
+    stagger
+  });
+  for (const placement of placements) {
+    ctx.save();
+    ctx.translate(placement.x, placement.y);
+    ctx.rotate(placement.rotationRad);
+    ctx.scale(placement.scale, placement.scale);
+    ctx.drawImage(image, -stampSize / 2, -stampSize / 2, stampSize, stampSize);
+    ctx.restore();
+  }
+  const imageData = ctx.getImageData(0, 0, tileSize, tileSize);
+  return { width: tileSize, height: tileSize, data: new Uint8Array(imageData.data.buffer) };
+}
+var installedSvgPatterns = /* @__PURE__ */ new WeakMap();
+var svgPatternGenerations = /* @__PURE__ */ new WeakMap();
+async function installSvgPatternFill(map, options) {
+  const definition = createSvgPatternDefinition(options);
+  const signature = serializePatternDefinition(definition);
+  let installedById = installedSvgPatterns.get(map);
+  if (!installedById) {
+    installedById = /* @__PURE__ */ new Map();
+    installedSvgPatterns.set(map, installedById);
+  }
+  if (map.hasImage(options.imageId) && installedById.get(options.imageId)?.signature === signature) {
+    return;
+  }
+  let generationsById = svgPatternGenerations.get(map);
+  if (!generationsById) {
+    generationsById = /* @__PURE__ */ new Map();
+    svgPatternGenerations.set(map, generationsById);
+  }
+  const generation = (generationsById.get(options.imageId) ?? 0) + 1;
+  generationsById.set(options.imageId, generation);
+  const tile = await createSvgScatterTile(options);
+  if (generationsById.get(options.imageId) !== generation) return;
+  const previous = installedById.get(options.imageId);
+  if (map.hasImage(options.imageId) && previous?.width === tile.width && previous.height === tile.height) {
+    map.updateImage(options.imageId, tile);
+  } else {
+    if (map.hasImage(options.imageId)) map.removeImage(options.imageId);
+    map.addImage(options.imageId, tile);
+  }
+  installedById.set(options.imageId, {
+    signature,
+    width: tile.width,
+    height: tile.height
+  });
+  map.triggerRepaint();
+}
+
+// src/maplibre/installPatternFills.ts
+function fromLegacyMetadata(value) {
+  if (!value || typeof value !== "object") return void 0;
+  const legacy = value;
+  if (legacy.type === "solid" || typeof legacy.type !== "string" || typeof legacy.tile !== "number" || typeof legacy.color !== "string" || typeof legacy.weight !== "number" || typeof legacy.angle !== "number" || typeof legacy.imageId !== "string") {
+    return void 0;
+  }
+  return {
+    imageId: legacy.imageId,
+    definition: {
+      kind: "geometric",
+      pattern: legacy.type,
+      size: legacy.tile,
+      color: legacy.color,
+      weight: legacy.weight,
+      angle: legacy.angle
+    }
+  };
+}
+async function installPatternFills(map, style) {
+  const installed = /* @__PURE__ */ new Map();
+  const pending = [];
+  for (const layer of style.layers) {
+    const metadata = layer.metadata;
+    if (!metadata) continue;
+    const rawV1 = metadata[PATTERN_METADATA_KEY];
+    const registration = rawV1 ? parsePatternMetadata(rawV1) : fromLegacyMetadata(metadata[LEGACY_PATTERN_METADATA_KEY]);
+    if (!registration) continue;
+    const signature = serializePatternDefinition(registration.definition);
+    const previous = installed.get(registration.imageId);
+    if (previous && previous !== signature) {
+      throw new Error(`Conflicting pattern definitions use image id "${registration.imageId}"`);
+    }
+    if (previous) continue;
+    installed.set(registration.imageId, signature);
+    const p = registration.definition;
+    if (p.kind === "geometric") {
+      syncPatternTexture(map, {
+        imageId: registration.imageId,
+        pattern: p.pattern,
+        size: p.size,
+        color: p.color,
+        weight: p.weight,
+        angle: p.angle
+      });
+    } else {
+      pending.push(installSvgPatternFill(map, { imageId: registration.imageId, ...p }));
+    }
+  }
+  await Promise.all(pending);
+}
+
+// src/maplibre/observePatternFills.ts
+function observePatternFills(map, options = {}) {
+  const getStyle = options.getStyle ?? (() => map.getStyle());
+  const onError = options.onError ?? ((error) => {
+    console.error("maplibre-pattern-fills: failed to restore pattern images", error);
+  });
+  let disposed = false;
+  const refresh = async () => {
+    if (disposed) return;
+    await installPatternFills(map, getStyle());
+  };
+  const onStyleLoad = () => {
+    void refresh().catch(onError);
+  };
+  map.on("style.load", onStyleLoad);
+  return {
+    refresh,
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      map.off("style.load", onStyleLoad);
+    }
+  };
+}
+
+// src/maplibre/svgIcon.ts
+async function addSvgIcon(map, options) {
+  const { id, svg, size = 32, pixelRatio = 2 } = options;
+  const image = await loadSvgImage(svg);
+  const px = Math.round(size * pixelRatio);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = px;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas context unavailable");
+  ctx.clearRect(0, 0, px, px);
+  ctx.drawImage(image, 0, 0, px, px);
+  const imageData = ctx.getImageData(0, 0, px, px);
+  const tile = { width: px, height: px, data: new Uint8Array(imageData.data.buffer) };
+  if (map.hasImage(id)) map.removeImage(id);
+  map.addImage(id, tile, { pixelRatio });
+  return { id, width: px, height: px };
+}
+
+// src/maplibre/installIconStyles.ts
+async function installIconStyles(map, style) {
+  for (const layer of style.layers) {
+    const meta = layer.metadata?.["enhanced:icon"];
+    if (!meta) continue;
+    await addSvgIcon(map, { id: meta.imageId, svg: meta.svg, size: meta.size });
+  }
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  DASH_PRESETS,
+  LEGACY_PATTERN_METADATA_KEY,
+  PATTERN_METADATA_KEY,
+  addSvgIcon,
+  buildIconStyleFragment,
+  buildLineStyleFragment,
+  buildStyleFragment,
+  createSvgPatternDefinition,
+  createSvgScatterTile,
+  installIconStyles,
+  installPatternFills,
+  installSvgPatternFill,
+  observePatternFills,
+  parsePatternDefinition,
+  parsePatternMetadata,
+  patternDefinitionId,
+  serializePatternDefinition,
+  syncPatternTexture
+});
+//# sourceMappingURL=maplibre.cjs.map

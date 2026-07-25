@@ -5,3 +5,5 @@ export { createMiniContext } from "./miniContext";
 export { mulberry32, hashStringToSeed } from "./seededRandom";
 export { scatterPointsInPolygon } from "./scatterPoints";
 export type { Ring, ScatteredPoint, ScatterPointsOptions } from "./scatterPoints";
+export { createSvgScatterLayout } from "./svgScatterLayout";
+export type { SvgScatterLayoutOptions, SvgStampPlacement } from "./svgScatterLayout";

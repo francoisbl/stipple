@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/francoisbl/maplibre-pattern-fills/blob/main/schema/pattern-metadata-v1.schema.json",
+  "title": "MapLibre Pattern Fills metadata v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["imageId", "definition"],
+  "properties": {
+    "imageId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "definition": {
+      "oneOf": [
+        { "$ref": "#/$defs/geometric" },
+        { "$ref": "#/$defs/svg" }
+      ]
+    }
+  },
+  "$defs": {
+    "geometric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "pattern", "size", "color", "weight", "angle"],
+      "properties": {
+        "kind": { "const": "geometric" },
+        "pattern": {
+          "enum": ["stipple", "hachures", "cross", "grid", "dots"]
+        },
+        "size": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "color": {
+          "type": "string",
+          "minLength": 1
+        },
+        "weight": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "angle": {
+          "type": "number"
+        }
+      }
+    },
+    "svg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "svg",
+        "tileSize",
+        "stampSize",
+        "density",
+        "seed",
+        "rotationJitterDeg",
+        "scaleJitter",
+        "positionJitter",
+        "stagger"
+      ],
+      "properties": {
+        "kind": { "const": "svg" },
+        "svg": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tileSize": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "stampSize": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "density": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "seed": {
+          "oneOf": [
+            { "type": "number" },
+            { "type": "string", "minLength": 1 }
+          ]
+        },
+        "rotationJitterDeg": {
+          "type": "number",
+          "minimum": 0
+        },
+        "scaleJitter": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "positionJitter": {
+          "type": "number",
+          "minimum": 0
+        },
+        "stagger": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
