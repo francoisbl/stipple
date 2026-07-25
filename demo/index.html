@@ -12,132 +12,433 @@
   <script src="../dist/index.global.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500;1,600&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    /* Studio palette: warm paper and ink, with terracotta and moss accents. */
     :root {
-      --paper: #f4efe4; --panel: #fffcf5; --panel-2: #faf5e9;
-      --line: #ddd3bd; --line-strong: #b9ab8c;
-      --ink: #2a251d; --ink-soft: #7a6f5c;
-      --accent: #c1622f; --accent-ink: #7c3d1c;
-      --moss: #5f7a5c; --ok: #5f7a5c;
+      --canvas: #e9eeec;
+      --panel: #fbfcfb;
+      --surface: #ffffff;
+      --surface-soft: #f3f6f4;
+      --line: #dbe2de;
+      --line-strong: #bac7c0;
+      --ink: #17231f;
+      --ink-soft: #68756f;
+      --accent: #2c6a5b;
+      --accent-soft: #dcebe5;
+      --coral: #f06a4f;
+      --focus: rgba(44, 106, 91, .16);
+      --shadow: 0 16px 36px rgba(23, 35, 31, .08);
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; font-family: "Work Sans", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
-    body {
-      background-image:
-        linear-gradient(var(--line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--line) 1px, transparent 1px);
-      background-size: 26px 26px;
-      background-position: -1px -1px;
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
     }
-    #app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
-    #map { height: 100%; }
-    #panel { background: var(--paper); border-right: 1.5px solid var(--line-strong); overflow-y: auto; padding: 18px 16px; }
+    button, input, select, textarea { font: inherit; }
+    #app {
+      display: grid;
+      grid-template-columns: minmax(390px, 430px) 1fr;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #panel {
+      position: relative;
+      z-index: 2;
+      overflow-y: auto;
+      padding: 26px 26px 32px;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      counter-reset: studio-section;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+    .studio-head {
+      position: relative;
+      padding: 0 0 24px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 4px;
+    }
+    .brand-row { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      position: relative;
+      width: 32px;
+      height: 32px;
+      flex: 0 0 auto;
+      border: 1px solid var(--ink);
+      border-radius: 50%;
+    }
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      background: var(--coral);
+    }
+    .brand-mark::before { width: 40px; height: 2px; left: -5px; top: 14px; }
+    .brand-mark::after { width: 2px; height: 40px; left: 14px; top: -5px; }
     h1 {
-      font-family: "Fraunces", Georgia, serif; font-style: italic; font-weight: 600;
-      font-size: 23px; margin: 0 0 2px; letter-spacing: -0.01em; color: var(--ink);
+      margin: 0;
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -.035em;
+      color: var(--ink);
     }
-    .squiggle { display: block; width: 108px; height: 8px; margin: 2px 0 8px; color: var(--accent); }
-    .sub { color: var(--ink-soft); font-size: 12.5px; margin: 0 0 14px; line-height: 1.45; }
+    .product-kicker {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--accent);
+      font: 500 10px/1 "IBM Plex Mono", monospace;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .sub {
+      max-width: 330px;
+      margin: 14px 0 0 44px;
+      color: var(--ink-soft);
+      font-size: 13px;
+      line-height: 1.55;
+    }
     fieldset {
-      border: 1.5px solid var(--line-strong); border-radius: 10px 10px 10px 3px;
-      padding: 11px 13px 13px; margin: 0 0 14px; background: var(--panel);
-      box-shadow: 0 1px 0 rgba(42,37,29,.05), 0 8px 16px -12px rgba(42,37,29,.35);
+      min-width: 0;
+      margin: 0;
+      padding: 23px 0 25px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      counter-increment: studio-section;
     }
     fieldset.dimmed { opacity: .4; pointer-events: none; }
     fieldset.hidden { display: none; }
     legend {
-      font-family: "IBM Plex Mono", monospace; font-size: 10px; text-transform: uppercase;
-      letter-spacing: .08em; color: var(--ink-soft); background: var(--panel-2);
-      border: 1px solid var(--line); border-radius: 3px; padding: 2px 7px;
-      transform: rotate(-0.6deg); margin-left: -2px;
+      width: 100%;
+      padding: 0;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -.01em;
     }
-    label { display: block; font-family: "Work Sans"; font-size: 12px; color: var(--ink-soft); margin: 9px 0 4px; }
+    legend::before {
+      content: "0" counter(studio-section);
+      display: inline-block;
+      width: 29px;
+      margin-right: 10px;
+      color: var(--coral);
+      font: 500 10px/1 "IBM Plex Mono", monospace;
+      letter-spacing: .06em;
+    }
+    label {
+      display: block;
+      margin: 13px 0 6px;
+      color: var(--ink-soft);
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: .01em;
+    }
     select, input[type=text], input[type=number] {
-      width: 100%; background: var(--panel-2); color: var(--ink); border: 1.5px solid var(--line-strong);
-      border-radius: 6px; padding: 6px 8px; font-family: "Work Sans"; font-size: 13px;
+      width: 100%;
+      height: 40px;
+      padding: 0 11px;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      font-size: 13px;
+      transition: border-color .16s, box-shadow .16s;
     }
     select:focus, input[type=text]:focus, input[type=number]:focus, textarea:focus {
-      outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(193,98,47,.15);
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--focus);
     }
-    input[type=range] { width: 100%; accent-color: var(--accent); }
-    input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
-    input[type=color] { width: 44px; height: 28px; border: 1.5px solid var(--line-strong); border-radius: 6px; background: var(--panel-2); padding: 2px; vertical-align: middle; }
-    input[type=file] { font-family: "Work Sans"; font-size: 11.5px; color: var(--ink-soft); width: 100%; }
+    input[type=range] {
+      width: 100%;
+      height: 18px;
+      margin: 0;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      height: 3px;
+      background: var(--line-strong);
+      border-radius: 99px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      width: 16px;
+      height: 16px;
+      margin-top: -6.5px;
+      appearance: none;
+      background: var(--surface);
+      border: 4px solid var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 1px 5px rgba(23, 35, 31, .18);
+    }
+    input[type=checkbox] {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+    input[type=color] {
+      width: 44px;
+      height: 40px;
+      padding: 4px;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      vertical-align: middle;
+    }
+    input[type=file] { width: 100%; color: var(--ink-soft); font-size: 11.5px; }
     .row { display: flex; gap: 8px; align-items: center; }
     .row > * { flex: 1; }
     .row.tight { gap: 6px; }
-    .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
     .pill {
-      flex: 1 1 30%; text-align: center; padding: 7px 4px; border: 1.5px solid var(--line-strong);
-      border-radius: 999px; font-family: "Work Sans"; font-weight: 500; font-size: 12px;
-      cursor: pointer; background: var(--panel-2); color: var(--ink-soft); transition: transform .12s;
+      position: relative;
+      min-height: 39px;
+      display: grid;
+      place-items: center;
+      padding: 7px 5px;
+      color: var(--ink-soft);
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      font-size: 11.5px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      transition: color .15s, background .15s, border-color .15s, transform .15s;
     }
-    .pill:hover { transform: translateY(-1px); }
-    .pill.active { border-color: var(--accent-ink); background: var(--accent); color: #fff9f2; transform: rotate(-1deg); }
-    .seg { display: flex; gap: 4px; }
+    .pill:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+    .pill.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .pill.active::after {
+      content: "";
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 5px;
+      height: 5px;
+      background: var(--coral);
+      border-radius: 50%;
+    }
+    .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
     .seg button {
-      flex: 1; background: var(--panel-2); color: var(--ink); border: 1.5px solid var(--line-strong);
-      border-radius: 6px; padding: 6px; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; cursor: pointer;
+      min-height: 36px;
+      padding: 6px;
+      color: var(--ink-soft);
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      font: 500 11px/1 "IBM Plex Mono", monospace;
+      cursor: pointer;
+      transition: all .15s;
     }
-    .seg button.active { border-color: var(--ink); background: var(--ink); color: var(--panel); }
-    .seg.geom-type button { font-family: "Work Sans"; font-weight: 600; font-size: 12.5px; padding: 8px; }
-    .switch { display: flex; align-items: center; justify-content: space-between; }
-    .val { color: var(--ink); font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; font-size: 11.5px; }
+    .seg button:hover { border-color: var(--accent); color: var(--accent); }
+    .seg button.active { border-color: var(--ink); background: var(--ink); color: #fff; }
+    .switch {
+      min-height: 43px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 11px;
+      background: var(--surface-soft);
+      border-radius: 9px;
+    }
+    .switch + .switch { margin-top: 7px !important; }
+    .switch label { line-height: 1.35; }
+    .val {
+      float: right;
+      color: var(--ink);
+      font: 500 10.5px/1 "IBM Plex Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
     button.action {
-      width: 100%; padding: 10px; border-radius: 7px 7px 7px 2px; border: 1.5px solid var(--accent-ink);
-      background: var(--accent); color: #fff9f2; font-family: "Work Sans"; font-size: 13px; font-weight: 600;
-      cursor: pointer; margin-top: 6px; box-shadow: 0 2px 0 rgba(124,61,28,.25); transition: transform .12s, box-shadow .12s;
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 12px;
+      margin-top: 7px;
+      color: #fff;
+      background: var(--ink);
+      border: 1px solid var(--ink);
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .15s, background .15s, border-color .15s, box-shadow .15s;
     }
-    button.action:hover { transform: translateY(-1px) rotate(-0.3deg); }
-    button.action:active { transform: translateY(1px); box-shadow: none; }
-    button.action.ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); box-shadow: none; }
-    button.action.ghost:hover { border-color: var(--accent); color: var(--accent-ink); }
-    .preview-canvas { image-rendering: pixelated; border: 1.5px solid var(--line-strong); border-radius: 6px; background: #fff; width: 64px; height: 64px; }
-    .hint { font-family: "Work Sans"; font-size: 11.5px; color: var(--ink-soft); margin-top: 7px; line-height: 1.45; }
+    button.action:hover {
+      transform: translateY(-1px);
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 7px 16px rgba(44, 106, 91, .15);
+    }
+    button.action:active { transform: translateY(0); box-shadow: none; }
+    button.action.ghost { color: var(--ink); background: var(--surface); border-color: var(--line-strong); }
+    button.action.ghost:hover { color: var(--accent); background: var(--surface); border-color: var(--accent); box-shadow: none; }
+    .export-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      padding-top: 18px;
+    }
+    .export-grid button.action { margin-top: 0; }
+    .export-grid .primary { background: var(--accent); border-color: var(--accent); }
+    .preview-canvas {
+      width: 70px;
+      height: 70px;
+      padding: 4px;
+      image-rendering: pixelated;
+      background: #fff;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 4px var(--surface-soft);
+    }
+    .hint { margin-top: 8px; color: var(--ink-soft); font-size: 11.5px; line-height: 1.5; }
     .hint code {
-      font-family: "IBM Plex Mono", monospace; background: var(--panel-2); border: 1px solid var(--line);
-      border-radius: 3px; padding: 1px 4px; font-size: 11px; color: var(--accent-ink);
+      padding: 1px 4px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 4px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10.5px;
     }
     textarea {
-      width: 100%; height: 120px; background: var(--panel-2); color: var(--ink); border: 1.5px solid var(--line-strong);
-      border-radius: 6px; font: 11px/1.5 "IBM Plex Mono", ui-monospace, monospace; padding: 9px;
+      width: 100%;
+      height: 120px;
+      padding: 11px;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      font: 10.5px/1.55 "IBM Plex Mono", ui-monospace, monospace;
     }
     .custom-svg-panel {
-      margin-top: 8px; padding: 8px; border: 1.5px dashed var(--line-strong); border-radius: 6px; background: var(--panel-2);
+      margin-top: 9px;
+      padding: 11px;
+      background: var(--surface-soft);
+      border: 1px dashed var(--line-strong);
+      border-radius: 10px;
     }
     .custom-svg-panel textarea { height: 64px; margin-bottom: 6px; }
     .custom-svg-panel.hidden { display: none; }
-    .toast {
-      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper);
-      font-family: "Work Sans"; font-weight: 500; padding: 9px 16px; border-radius: 999px; font-size: 13px;
-      opacity: 0; transition: opacity .2s; pointer-events: none; box-shadow: 0 6px 20px -6px rgba(0,0,0,.35);
+    .map-shell { position: relative; min-width: 0; height: 100%; overflow: hidden; background: var(--canvas); }
+    .map-shell::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: .16;
+      background-image:
+        linear-gradient(rgba(44, 106, 91, .18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(44, 106, 91, .18) 1px, transparent 1px);
+      background-size: 72px 72px;
     }
-    .toast.show { opacity: 1; }
+    #map { position: absolute; inset: 0; }
+    .map-caption {
+      position: absolute;
+      z-index: 3;
+      left: 22px;
+      bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 12px;
+      color: var(--ink);
+      background: rgba(255,255,255,.9);
+      border: 1px solid rgba(186, 199, 192, .8);
+      border-radius: 9px;
+      box-shadow: 0 8px 24px rgba(23, 35, 31, .09);
+      backdrop-filter: blur(10px);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .map-caption::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      background: var(--coral);
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px rgba(240, 106, 79, .13);
+    }
+    .maplibregl-ctrl-group {
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      box-shadow: 0 7px 18px rgba(23, 35, 31, .1);
+    }
+    .toast {
+      position: fixed;
+      z-index: 10;
+      bottom: 20px;
+      left: 50%;
+      transform: translate(-50%, 8px);
+      padding: 10px 15px;
+      color: #fff;
+      background: var(--ink);
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: 0 10px 28px rgba(23, 35, 31, .2);
+      transition: opacity .18s, transform .18s;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 820px) {
+      #app {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(360px, 54vh) auto;
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+      }
+      #panel {
+        grid-row: 2;
+        overflow: visible;
+        padding: 22px 20px 28px;
+        border-top: 1px solid var(--line);
+        border-right: 0;
+        box-shadow: none;
+      }
+      .map-shell { grid-row: 1; min-height: 360px; }
+      .sub { margin-left: 0; }
+    }
+    @media (max-width: 430px) {
+      .pill-group { grid-template-columns: 1fr 1fr; }
+      .export-grid { grid-template-columns: 1fr; }
+      .map-caption { left: 14px; bottom: 14px; }
+    }
   </style>
 </head>
 <body>
   <div id="app">
     <div id="panel">
-      <h1>maplibre-pattern-fills</h1>
-      <svg class="squiggle" viewBox="0 0 108 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2 5.5C10 1 16 1 24 5.5C32 10 38 10 46 5.5C54 1 60 1 68 5.5C76 10 82 10 90 5.5C96 2 100 2 106 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-      </svg>
-      <p class="sub">Design and export geometric or SVG fill patterns for MapLibre GL JS.</p>
+      <header class="studio-head">
+        <span class="product-kicker">MapLibre pattern studio</span>
+        <div class="brand-row">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <h1>maplibre-pattern-fills</h1>
+        </div>
+        <p class="sub">Design and export geometric or SVG fill patterns for MapLibre GL JS.</p>
+      </header>
 
       <fieldset>
-        <legend>Source (test features)</legend>
-        <label>Feature</label>
+        <legend>Test geometry</legend>
+        <label>Shape</label>
         <div class="row tight">
           <select id="layerSelect"></select>
         </div>
-        <button class="action ghost" id="reloadCatalog">↻ Regenerate test features</button>
+        <button class="action ghost" id="reloadCatalog">Regenerate shapes</button>
         <div class="hint" id="srcHint"></div>
       </fieldset>
 
       <fieldset id="geometricFieldset">
-        <legend>Fill pattern (geometric)</legend>
+        <legend>Geometric pattern</legend>
         <div class="pill-group" id="patternPills">
           <div class="pill" data-p="solid">Solid</div>
           <div class="pill" data-p="stipple">Stipple</div>
@@ -163,8 +464,8 @@
           <div style="flex:1">
             <label>Pattern colour</label>
             <div class="row tight">
-              <input type="color" id="patColor" value="#7c3d1c" style="flex:0 0 auto" />
-              <input type="text" id="patColorHex" value="#7c3d1c" />
+              <input type="color" id="patColor" value="#2c6a5b" style="flex:0 0 auto" />
+              <input type="text" id="patColorHex" value="#2c6a5b" />
             </div>
             <label>Opacity <span class="val" id="patOpacityVal">1.00</span></label>
             <input type="range" id="patOpacity" min="0" max="1" step="0.05" value="1" />
@@ -180,7 +481,7 @@
       </fieldset>
 
       <fieldset id="svgFillFieldset">
-        <legend>SVG fill (organic patterns)</legend>
+        <legend>SVG pattern</legend>
         <div class="switch">
           <label style="margin:0">Use SVG fill instead of geometric pattern</label>
           <input type="checkbox" id="svgFillToggle" />
@@ -244,28 +545,28 @@
       </fieldset>
 
       <fieldset id="bgFieldset">
-        <legend>Tinted background (under the pattern)</legend>
+        <legend>Fill backdrop</legend>
         <div class="switch">
           <label style="margin:0">Enable background</label>
           <input type="checkbox" id="bgToggle" checked />
         </div>
         <div class="row tight" style="margin-top:8px">
-          <input type="color" id="bgColor" value="#e4d9c3" style="flex:0 0 auto" />
-          <input type="text" id="bgColorHex" value="#e4d9c3" />
+          <input type="color" id="bgColor" value="#dce8e3" style="flex:0 0 auto" />
+          <input type="text" id="bgColorHex" value="#dce8e3" />
         </div>
         <label>Background opacity <span class="val" id="bgOpacityVal">0.35</span></label>
         <input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35" />
       </fieldset>
 
       <fieldset>
-        <legend>Preview outline</legend>
+        <legend>Boundary</legend>
         <div class="switch">
           <label style="margin:0">Enable outline</label>
           <input type="checkbox" id="lineToggle" checked />
         </div>
         <div class="row tight" style="margin-top:8px">
-          <input type="color" id="lineColor" value="#7c3d1c" style="flex:0 0 auto" />
-          <input type="text" id="lineColorHex" value="#7c3d1c" />
+          <input type="color" id="lineColor" value="#234c46" style="flex:0 0 auto" />
+          <input type="text" id="lineColorHex" value="#234c46" />
         </div>
         <label>Width <span class="val" id="lineWidthVal">1.50 px</span></label>
         <input type="range" id="lineWidth" min="0.1" max="6" step="0.1" value="1.5" />
@@ -280,14 +581,19 @@
         <p class="hint">Native <code>line-dasharray</code> expression. It uses no canvas and remains a declarative style property.</p>
       </fieldset>
 
-      <button class="action" id="exportBtn">⬇ Export style.json</button>
-      <button class="action" id="exportJsBtn">⬇ Export integration snippet</button>
-      <button class="action ghost" id="copyConfigBtn">⧉ Copy config (preset)</button>
-      <button class="action ghost" id="importConfigBtn">⤓ Load a config…</button>
+      <div class="export-grid">
+        <button class="action primary" id="exportBtn">Export style</button>
+        <button class="action" id="exportJsBtn">Copy integration</button>
+        <button class="action ghost" id="copyConfigBtn">Copy preset</button>
+        <button class="action ghost" id="importConfigBtn">Load preset</button>
+      </div>
       <p class="hint">Exports contain the polygon fill, its optional background, and its preview outline.</p>
       <textarea id="ioArea" placeholder="style.json / preset config output appears here. Paste a config and click “Load”."></textarea>
     </div>
-    <div id="map"></div>
+    <div class="map-shell">
+      <div id="map"></div>
+      <div class="map-caption">Live pattern canvas</div>
+    </div>
   </div>
   <div class="toast" id="toast"></div>
 
@@ -438,12 +744,12 @@
     layer: null,             // { source }, id of the selected GeoJSON test source
     pattern: "stipple",      // solid | stipple | hachures | cross | grid | dots
     angle: 45,
-    patColor: "#7c3d1c",
+    patColor: "#2c6a5b",
     patOpacity: 1,
     weight: 2,
     tile: 16,
-    bg: { on: true, color: "#e4d9c3", opacity: 0.35 },
-    outline: { on: true, color: "#7c3d1c", width: 1.5, dash: [] },
+    bg: { on: true, color: "#dce8e3", opacity: 0.35 },
+    outline: { on: true, color: "#234c46", width: 1.5, dash: [] },
     svgFill: { on: false, noCut: false, sample: "grass-tuft", customSvg: "", density: 1.4, stampSize: 28, stagger: true, positionJitter: 0.15, rotationJitterDeg: 0, scaleJitter: 0, seed: "1" },
   };
 
@@ -459,7 +765,7 @@
       version: 8,
       glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
       sources: {},
-      layers: [{ id: "bg", type: "background", paint: { "background-color": "#efe7d6" } }],
+      layers: [{ id: "bg", type: "background", paint: { "background-color": "#e9eeec" } }],
     },
     center: [4.62, 50.62], zoom: 12,
   });
@@ -706,11 +1012,6 @@
     state.layer = null;
     selectLayer("feature_1");
 
-    const allCoords = Object.values(FEATURES).flatMap((fc) => {
-      return fc.features[0].geometry.coordinates[0];
-    });
-    const b = allCoords.reduce((a, [x, y]) => [Math.min(a[0], x), Math.min(a[1], y), Math.max(a[2], x), Math.max(a[3], y)], [180, 90, -180, -90]);
-    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 60, duration: 0 });
   }
 
   function selectLayer(id) {
@@ -720,6 +1021,16 @@
     $("layerSelect").value = id;
     $("srcHint").textContent = `Test GeoJSON source: ${id} (${FEATURES[id].features[0].geometry.type})`;
     rebuildLayers();
+    const coords = FEATURES[id].features[0].geometry.coordinates[0];
+    const bounds = coords.reduce(
+      (acc, [x, y]) => [Math.min(acc[0], x), Math.min(acc[1], y), Math.max(acc[2], x), Math.max(acc[3], y)],
+      [180, 90, -180, -90],
+    );
+    map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {
+      padding: 90,
+      maxZoom: 14,
+      duration: 350,
+    });
   }
 
   // UI wiring
