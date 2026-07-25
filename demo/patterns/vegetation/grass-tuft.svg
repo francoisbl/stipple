@@ -1,9 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <g fill="none" stroke="#2c6a5b" stroke-width="4" stroke-linecap="round">
-    <path d="M32 57C29 40 30 24 32 8"/>
-    <path d="M31 57C24 43 17 34 8 29"/>
-    <path d="M33 57C40 42 47 33 57 27"/>
-    <path d="M28 57C24 48 22 42 21 35"/>
-    <path d="M36 57C40 49 42 42 43 35"/>
+    <path d="M32 57C30 40 31 23 32 8"/>
+    <path d="M31 57C24 43 17 35 8 30"/>
+    <path d="M33 57C40 43 47 35 56 30"/>
   </g>
 </svg>

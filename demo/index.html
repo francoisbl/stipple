@@ -1122,51 +1122,47 @@
                   <input type="checkbox" id="svgFillToggle" />
                 </div>
                 <div data-svg-options>
-                  <label>Sample <span class="val" id="svgSampleKind">Illustrative symbol</span></label>
+                  <label>Sample</label>
                   <select id="svgFillSample">
-                    <optgroup label="Cartographic: agriculture">
-                      <option value="orchard">Orchard canopy</option>
-                      <option value="vineyard">Vineyard rows</option>
-                      <option value="crop-rows">Planted rows</option>
-                      <option value="pasture">Meadow marks</option>
-                    </optgroup>
-                    <optgroup label="Cartographic: water and wetlands">
-                      <option value="marsh">Wetland</option>
-                      <option value="reeds">Reed bed</option>
-                      <option value="wave-lines">Water lines</option>
-                    </optgroup>
-                    <optgroup label="Cartographic: terrain">
-                      <option value="sand">Sand</option>
-                      <option value="gravel">Gravel</option>
-                      <option value="rocks">Boulders</option>
-                      <option value="scree">Scree</option>
-                    </optgroup>
-                    <optgroup label="Cartographic: land use">
-                      <option value="cemetery">Cemetery</option>
-                    </optgroup>
-                    <optgroup label="Illustrative: vegetation">
+                    <optgroup label="Vegetation">
                       <option value="grass-tuft">Grass tuft</option>
-                      <option value="grapes">Grapes</option>
                       <option value="fern">Fern</option>
                       <option value="wildflower">Wildflower</option>
-                      <option value="small-bush">Shrub</option>
+                      <option value="small-bush">Small bush</option>
                     </optgroup>
-                    <optgroup label="Illustrative: trees">
-                      <option value="round-canopy">Deciduous tree</option>
+                    <optgroup label="Trees">
+                      <option value="round-canopy">Round canopy</option>
                       <option value="conifer">Conifer</option>
                       <option value="palm">Palm</option>
                     </optgroup>
-                    <optgroup label="Illustrative: water">
-                      <option value="ripple">Water ripple</option>
-                      <option value="droplet">Water drop</option>
+                    <optgroup label="Agriculture">
+                      <option value="orchard">Orchard</option>
+                      <option value="vineyard">Vineyard</option>
+                      <option value="grapes">Grapes</option>
+                      <option value="crop-rows">Crop rows</option>
+                      <option value="pasture">Pasture</option>
                     </optgroup>
-                    <optgroup label="Illustrative: places">
+                    <optgroup label="Water">
+                      <option value="reeds">Reeds</option>
+                      <option value="ripple">Ripple</option>
+                      <option value="wave-lines">Wave lines</option>
+                      <option value="droplet">Droplet</option>
+                      <option value="marsh">Marsh</option>
+                    </optgroup>
+                    <optgroup label="Terrain">
+                      <option value="sand">Sand</option>
+                      <option value="gravel">Gravel</option>
+                      <option value="rocks">Rocks</option>
+                      <option value="scree">Scree</option>
+                    </optgroup>
+                    <optgroup label="Land use">
+                      <option value="cemetery">Cemetery</option>
                       <option value="camping">Camping</option>
                     </optgroup>
-                    <optgroup label="Abstract shapes">
+                    <optgroup label="Shapes">
                       <option value="triangles">Triangles</option>
                       <option value="hexagon">Hexagon</option>
-                      <option value="confetti">Mixed shapes</option>
+                      <option value="confetti">Confetti</option>
                     </optgroup>
                     <optgroup label="Custom">
                       <option value="custom">Custom SVG…</option>
@@ -1336,11 +1332,9 @@
     // Vegetation
     "grass-tuft": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <g fill="none" stroke="#2c6a5b" stroke-width="4" stroke-linecap="round">
-        <path d="M32 57 C29 40 30 24 32 8" />
-        <path d="M31 57 C24 43 17 34 8 29" />
-        <path d="M33 57 C40 42 47 33 57 27" />
-        <path d="M28 57 C24 48 22 42 21 35" />
-        <path d="M36 57 C40 49 42 42 43 35" />
+        <path d="M32 57 C30 40 31 23 32 8" />
+        <path d="M31 57 C24 43 17 35 8 30" />
+        <path d="M33 57 C40 43 47 35 56 30" />
       </g>
     </svg>`,
     "fern": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
@@ -1373,8 +1367,10 @@
     </svg>`,
     // Trees
     "round-canopy": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-      <path d="M32 7 C40 4 47 10 48 18 C57 21 59 31 52 37 C56 45 48 54 39 51 C34 58 23 56 21 48 C12 49 7 40 12 33 C5 27 10 17 18 17 C20 10 26 7 32 7 Z" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linejoin="round" />
-      <path d="M32 53 V29 M32 38 L22 28 M32 34 L43 24" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" />
+      <rect x="29" y="40" width="6" height="20" fill="#2c6a5b" />
+      <circle cx="32" cy="26" r="18" fill="#2c6a5b" />
+      <circle cx="20" cy="34" r="12" fill="#2c6a5b" />
+      <circle cx="44" cy="34" r="12" fill="#2c6a5b" />
     </svg>`,
     "conifer": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="29" y="48" width="6" height="12" fill="#6b4a30" />
@@ -1449,11 +1445,11 @@
     </svg>`,
     "grapes": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <g fill="#2c6a5b">
-        <circle cx="27" cy="28" r="6" /><circle cx="39" cy="28" r="6" />
-        <circle cx="21" cy="39" r="6" /><circle cx="33" cy="39" r="6" /><circle cx="45" cy="39" r="6" />
-        <circle cx="27" cy="50" r="6" /><circle cx="39" cy="50" r="6" /><circle cx="33" cy="59" r="5" />
+        <circle cx="26" cy="31" r="7" /><circle cx="40" cy="31" r="7" />
+        <circle cx="20" cy="44" r="7" /><circle cx="33" cy="44" r="7" /><circle cx="46" cy="44" r="7" />
+        <circle cx="33" cy="57" r="7" />
       </g>
-      <path d="M33 22 C31 14 34 8 42 5 M34 18 C45 9 54 12 58 19 C49 23 41 22 34 18 Z" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M33 24 C31 15 34 9 42 5 M34 19 C44 11 52 13 56 19 C48 23 41 22 34 19 Z" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
     </svg>`,
     // Wetlands and terrain
     "marsh": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
@@ -2087,7 +2083,6 @@
     state.svgFill.sample = sample;
     $("svgFillToggle").checked = true;
     $("svgFillSample").value = sample;
-    updateSvgSampleKind();
     setGeometricFieldsetEnabled(false);
     updateFillChoiceUI();
     updateSvgControlAvailability();
@@ -2146,16 +2141,6 @@
     document.querySelectorAll("#motifPills .pill").forEach((element) => {
       element.classList.toggle("active", state.svgFill.on && element.dataset.svgSample === state.svgFill.sample);
     });
-  }
-  function updateSvgSampleKind() {
-    const group = $("svgFillSample").selectedOptions[0]?.parentElement?.label || "Custom";
-    $("svgSampleKind").textContent = group.startsWith("Cartographic")
-      ? "Cartographic texture"
-      : group.startsWith("Illustrative")
-        ? "Illustrative symbol"
-        : group.startsWith("Abstract")
-          ? "Abstract pattern"
-          : "Custom SVG";
   }
   function updatePatternControlAvailability() {
     const angleEnabled = state.pattern === "hachures" || state.pattern === "cross";
@@ -2244,7 +2229,6 @@
   });
   $("svgFillSample").addEventListener("change", (e) => {
     state.svgFill.sample = e.target.value;
-    updateSvgSampleKind();
     updateFillChoiceUI();
     updateSvgControlAvailability();
     if (state.svgFill.on) rebuildLayers();
@@ -2627,7 +2611,6 @@ if (map.isStyleLoaded()) {
     $("svgFillToggle").checked = state.svgFill.on;
     $("svgNoCutToggle").checked = state.svgFill.noCut;
     $("svgFillSample").value = state.svgFill.sample;
-    updateSvgSampleKind();
     $("svgFillCustomPanel").classList.toggle("hidden", state.svgFill.sample !== "custom");
     $("svgFillCustomText").value = state.svgFill.customSvg;
     $("svgDensity").value = state.svgFill.density; $("svgDensityVal").textContent = state.svgFill.density.toFixed(2);
