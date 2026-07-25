@@ -22,8 +22,11 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
 - Regular, offset, and natural SVG distribution modes. Natural distribution
   uses deterministic best-candidate spacing and supports a minimum gap.
 - Eleven cartographic SVG motifs for agriculture, wetlands, terrain, and land
-  use, bringing the demo library to 25 recolourable samples.
+  use, plus an illustrative grape motif, bringing the demo library to 26
+  recolourable samples.
 - Screen-fixed and map-scaled modes for experimental whole-symbol scatter.
+- A visually separated sample library for cartographic textures, illustrative
+  symbols, and abstract patterns.
 
 ### Changed
 
@@ -42,6 +45,9 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
 - SVG rendering prevents stale asynchronous work from replacing newer images.
 - Whole-icon scattering is explicitly experimental and uses the icon canvas's
   circumscribed clearance radius.
+- Ambiguous grass, vineyard, orchard, crop, shrub, gravel, boulder, scree,
+  reed, ripple, and deciduous-tree motifs have been redrawn for legibility at
+  the playground's default stamp size.
 
 ### Fixed
 
