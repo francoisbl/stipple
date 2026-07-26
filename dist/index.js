@@ -505,6 +505,49 @@ function createSvgScatterLayout(options) {
   return placements;
 }
 
+// src/engine/adaptivePatternScale.ts
+function positive(value, name) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${name} must be greater than 0`);
+  }
+  return value;
+}
+function adaptivePatternScale(options) {
+  const polygonSize = Math.max(0, Number(options.polygonSize) || 0);
+  const stampSize = positive(options.stampSize, "stampSize");
+  const density = positive(options.density, "density");
+  const minSpacing = Math.max(0, Number(options.minSpacing) || 0);
+  const minimumStampSize = positive(
+    options.minimumStampSize ?? 6,
+    "minimumStampSize"
+  );
+  const targetSymbolsAcross = positive(
+    options.targetSymbolsAcross ?? 5,
+    "targetSymbolsAcross"
+  );
+  const maxDensity = positive(options.maxDensity ?? 16, "maxDensity");
+  const minimumScale = Math.min(1, minimumStampSize / stampSize);
+  const targetScale = Math.min(
+    1,
+    polygonSize / (stampSize * targetSymbolsAcross)
+  );
+  const scale = Math.max(minimumScale, targetScale);
+  const fittedMinimumStamp = stampSize * minimumScale;
+  const fadeStart = fittedMinimumStamp * 1.5;
+  const fadeEnd = fittedMinimumStamp * 5;
+  const opacity = Math.max(
+    0,
+    Math.min(1, (polygonSize - fadeStart) / (fadeEnd - fadeStart))
+  );
+  return {
+    scale,
+    stampSize: stampSize * scale,
+    density: Math.min(maxDensity, density / (scale * scale)),
+    minSpacing: minSpacing * scale,
+    opacity
+  };
+}
+
 // src/maplibre/patternDefinition.ts
 var PATTERN_METADATA_KEY = "maplibre-pattern-fills:v1";
 var LEGACY_PATTERN_METADATA_KEY = "enhanced:pattern";
@@ -1064,6 +1107,7 @@ async function installSvgIconScatter(map, options) {
 export {
   LEGACY_PATTERN_METADATA_KEY,
   PATTERN_METADATA_KEY,
+  adaptivePatternScale,
   buildStyleFragment,
   createMiniContext,
   createSvgPatternDefinition,

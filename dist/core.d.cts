@@ -85,4 +85,22 @@ interface ScatterPointsOptions {
  */
 declare function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[];
 
-export { type MakeTileOptions, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, SvgDistributionMode, TileContext, TileImage, createMiniContext, hashStringToSeed, makeTile, mulberry32, scatterPointsInPolygon };
+interface AdaptivePatternScaleOptions {
+    polygonSize: number;
+    stampSize: number;
+    density: number;
+    minSpacing?: number;
+    minimumStampSize?: number;
+    targetSymbolsAcross?: number;
+    maxDensity?: number;
+}
+interface AdaptivePatternScaleResult {
+    scale: number;
+    stampSize: number;
+    density: number;
+    minSpacing: number;
+    opacity: number;
+}
+declare function adaptivePatternScale(options: AdaptivePatternScaleOptions): AdaptivePatternScaleResult;
+
+export { type AdaptivePatternScaleOptions, type AdaptivePatternScaleResult, type MakeTileOptions, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, SvgDistributionMode, TileContext, TileImage, adaptivePatternScale, createMiniContext, hashStringToSeed, makeTile, mulberry32, scatterPointsInPolygon };

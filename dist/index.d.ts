@@ -144,6 +144,24 @@ interface ScatterPointsOptions {
  */
 declare function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[];
 
+interface AdaptivePatternScaleOptions {
+    polygonSize: number;
+    stampSize: number;
+    density: number;
+    minSpacing?: number;
+    minimumStampSize?: number;
+    targetSymbolsAcross?: number;
+    maxDensity?: number;
+}
+interface AdaptivePatternScaleResult {
+    scale: number;
+    stampSize: number;
+    density: number;
+    minSpacing: number;
+    opacity: number;
+}
+declare function adaptivePatternScale(options: AdaptivePatternScaleOptions): AdaptivePatternScaleResult;
+
 interface PatternFillConfig {
     pattern: PatternType;
     tile: TileSize;
@@ -445,4 +463,4 @@ interface InstallSvgIconScatterOptions {
  */
 declare function installSvgIconScatter(map: Map, options: InstallSvgIconScatterOptions): Promise<void>;
 
-export { type BackgroundFillConfig, type BuildStyleFragmentOptions, type GeometricPatternDefinition, type GeometricPatternType, type HachureAngle, type IconScaleMode, type InstallSvgIconScatterOptions, LEGACY_PATTERN_METADATA_KEY, type MakeTileOptions, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type PatternType, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgDistributionMode, type SvgPatternDefinition, type SvgPatternOptions, type SvgScatterLayoutOptions, type SvgStampPlacement, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, buildStyleFragment, createMiniContext, createSvgPatternDefinition, createSvgScatterLayout, createSvgScatterTile, hashStringToSeed, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, scatterIconPoints, scatterPointsInPolygon, serializePatternDefinition, syncPatternTexture };
+export { type AdaptivePatternScaleOptions, type AdaptivePatternScaleResult, type BackgroundFillConfig, type BuildStyleFragmentOptions, type GeometricPatternDefinition, type GeometricPatternType, type HachureAngle, type IconScaleMode, type InstallSvgIconScatterOptions, LEGACY_PATTERN_METADATA_KEY, type MakeTileOptions, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type PatternType, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgDistributionMode, type SvgPatternDefinition, type SvgPatternOptions, type SvgScatterLayoutOptions, type SvgStampPlacement, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, adaptivePatternScale, buildStyleFragment, createMiniContext, createSvgPatternDefinition, createSvgScatterLayout, createSvgScatterTile, hashStringToSeed, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, scatterIconPoints, scatterPointsInPolygon, serializePatternDefinition, syncPatternTexture };
