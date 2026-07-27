@@ -19,6 +19,7 @@ export interface PatternScaleResult {
   spacing: number;
   density: number;
   opacity: number;
+  floored: boolean;
   capped: boolean;
 }
 
@@ -42,8 +43,8 @@ function clamp(value: number, minimum: number, maximum: number): number {
  *
  * Screen mode keeps visual size and spacing in pixels. Map mode treats the
  * configured values as the appearance at referenceZoom, then doubles them for
- * every zoom level in. Motifs fade once their optical size is too small to
- * read and stop growing at maxVisualSize.
+ * every zoom level in. Map-scaled motifs stop shrinking at their minimum
+ * readable size and stop growing at maxVisualSize.
  */
 export function scalePatternForZoom(
   options: PatternScaleOptions,
@@ -69,14 +70,12 @@ export function scalePatternForZoom(
     ? 2 ** (zoom - referenceZoom)
     : 1;
   const rawVisualSize = visualSize * rawScale;
+  const minimumVisualSize = Math.min(visualSize, minReadableSize);
+  const minimumScale = minimumVisualSize / visualSize;
   const maximumScale = maxVisualSize / visualSize;
-  const scale = Math.min(rawScale, maximumScale);
+  const scale = clamp(rawScale, minimumScale, maximumScale);
   const renderedVisualSize = visualSize * scale;
   const renderedSpacing = spacing * scale;
-  const fadeStart = minReadableSize * 0.5;
-  const opacity = options.mode === "map"
-    ? clamp((rawVisualSize - fadeStart) / (minReadableSize - fadeStart), 0, 1)
-    : 1;
 
   return {
     scale,
@@ -85,7 +84,8 @@ export function scalePatternForZoom(
     stampSize: renderedVisualSize / opticalScale,
     spacing: renderedSpacing,
     density: 10_000 / (renderedSpacing * renderedSpacing),
-    opacity,
+    opacity: 1,
+    floored: rawScale < minimumScale,
     capped: rawScale > maximumScale,
   };
 }

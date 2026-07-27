@@ -163,6 +163,7 @@ interface PatternScaleResult {
     spacing: number;
     density: number;
     opacity: number;
+    floored: boolean;
     capped: boolean;
 }
 /**
@@ -170,31 +171,10 @@ interface PatternScaleResult {
  *
  * Screen mode keeps visual size and spacing in pixels. Map mode treats the
  * configured values as the appearance at referenceZoom, then doubles them for
- * every zoom level in. Motifs fade once their optical size is too small to
- * read and stop growing at maxVisualSize.
+ * every zoom level in. Map-scaled motifs stop shrinking at their minimum
+ * readable size and stop growing at maxVisualSize.
  */
 declare function scalePatternForZoom(options: PatternScaleOptions): PatternScaleResult;
-
-type SmallScaleFallback = "automatic" | "solid" | "stipple" | "hide";
-interface PatternVisibilityOptions {
-    mode: "screen" | "map";
-    motifOpacity: number;
-    featureArea?: number;
-    featureMinimumSpan?: number;
-    visualSize: number;
-    spacing: number;
-}
-interface PatternVisibilityResult {
-    motif: number;
-    fallback: number;
-    estimatedMotifs: number | null;
-}
-/**
- * Crossfades a sparse motif into a simpler fill when the motif is no longer
- * readable or when a screen-sized feature is unlikely to contain a full mark.
- */
-declare function resolvePatternVisibility(options: PatternVisibilityOptions): PatternVisibilityResult;
-declare function fallbackOpacity(fallback: SmallScaleFallback, visibility: number): number;
 
 interface ImportedPolygonFeature {
     type: "Feature";
@@ -522,4 +502,4 @@ interface InstallSvgIconScatterOptions {
  */
 declare function installSvgIconScatter(map: Map, options: InstallSvgIconScatterOptions): Promise<void>;
 
-export { type BackgroundFillConfig, type BuildStyleFragmentOptions, type GeoJsonPolygonImport, type GeometricPatternDefinition, type GeometricPatternType, type HachureAngle, type IconScaleMode, type ImportedPolygonFeature, type InstallSvgIconScatterOptions, LEGACY_PATTERN_METADATA_KEY, type MakeTileOptions, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type PatternScaleMode, type PatternScaleOptions, type PatternScaleResult, type PatternType, type PatternVariant, type PatternVisibilityOptions, type PatternVisibilityResult, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type SmallScaleFallback, type StyleLike, type SvgDistributionMode, type SvgPatternDefinition, type SvgPatternOptions, type SvgScatterLayoutOptions, type SvgStampPlacement, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, buildStyleFragment, createMiniContext, createSvgPatternDefinition, createSvgScatterLayout, createSvgScatterTile, fallbackOpacity, hashStringToSeed, importGeoJsonPolygons, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, resolvePatternVisibility, scalePatternForZoom, scatterIconPoints, scatterPointsInPolygon, serializePatternDefinition, syncPatternTexture };
+export { type BackgroundFillConfig, type BuildStyleFragmentOptions, type GeoJsonPolygonImport, type GeometricPatternDefinition, type GeometricPatternType, type HachureAngle, type IconScaleMode, type ImportedPolygonFeature, type InstallSvgIconScatterOptions, LEGACY_PATTERN_METADATA_KEY, type MakeTileOptions, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type PatternScaleMode, type PatternScaleOptions, type PatternScaleResult, type PatternType, type PatternVariant, type PointFeature, type PointFeatureCollection, type PolygonGeometry, type Ring, type ScatterIconPointsOptions, type ScatterPointsOptions, type ScatteredPoint, type StyleLike, type SvgDistributionMode, type SvgPatternDefinition, type SvgPatternOptions, type SvgScatterLayoutOptions, type SvgStampPlacement, type SyncPatternTextureOptions, type TileContext, type TileImage, type TileSize, buildStyleFragment, createMiniContext, createSvgPatternDefinition, createSvgScatterLayout, createSvgScatterTile, hashStringToSeed, importGeoJsonPolygons, installPatternFills, installSvgIconScatter, installSvgPatternFill, makeTile, mulberry32, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, scalePatternForZoom, scatterIconPoints, scatterPointsInPolygon, serializePatternDefinition, syncPatternTexture };
