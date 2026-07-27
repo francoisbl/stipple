@@ -119,10 +119,31 @@ function parsePatternDefinition(value) {
 }
 function parsePatternMetadata(value) {
   if (!isRecord(value)) throw new TypeError("pattern metadata must be an object");
-  return {
+  const metadata = {
     imageId: nonEmptyString(value, "imageId"),
     definition: parsePatternDefinition(value.definition)
   };
+  if (value.variants !== void 0) {
+    if (!Array.isArray(value.variants) || value.variants.length === 0) {
+      throw new TypeError("variants must be a non-empty array");
+    }
+    metadata.variants = value.variants.map((variant, index) => {
+      if (!isRecord(variant)) {
+        throw new TypeError(`variants[${index}] must be an object`);
+      }
+      return {
+        zoom: finiteNumber(variant, "zoom"),
+        imageId: nonEmptyString(variant, "imageId"),
+        definition: parsePatternDefinition(variant.definition)
+      };
+    });
+    for (let index = 1; index < metadata.variants.length; index++) {
+      if (metadata.variants[index].zoom <= metadata.variants[index - 1].zoom) {
+        throw new RangeError("variant zoom levels must be strictly increasing");
+      }
+    }
+  }
+  return metadata;
 }
 function serializePatternDefinition(definition) {
   return JSON.stringify(parsePatternDefinition(definition));
@@ -765,25 +786,31 @@ async function installPatternFills(map, style) {
     const rawV1 = metadata[PATTERN_METADATA_KEY];
     const registration = rawV1 ? parsePatternMetadata(rawV1) : fromLegacyMetadata(metadata[LEGACY_PATTERN_METADATA_KEY]);
     if (!registration) continue;
-    const signature = serializePatternDefinition(registration.definition);
-    const previous = installed.get(registration.imageId);
-    if (previous && previous !== signature) {
-      throw new Error(`Conflicting pattern definitions use image id "${registration.imageId}"`);
-    }
-    if (previous) continue;
-    installed.set(registration.imageId, signature);
-    const p = registration.definition;
-    if (p.kind === "geometric") {
-      syncPatternTexture(map, {
-        imageId: registration.imageId,
-        pattern: p.pattern,
-        size: p.size,
-        color: p.color,
-        weight: p.weight,
-        angle: p.angle
-      });
-    } else {
-      pending.push(installSvgPatternFill(map, { imageId: registration.imageId, ...p }));
+    const definitions = [
+      { imageId: registration.imageId, definition: registration.definition },
+      ...registration.variants ?? []
+    ];
+    for (const item of definitions) {
+      const signature = serializePatternDefinition(item.definition);
+      const previous = installed.get(item.imageId);
+      if (previous && previous !== signature) {
+        throw new Error(`Conflicting pattern definitions use image id "${item.imageId}"`);
+      }
+      if (previous) continue;
+      installed.set(item.imageId, signature);
+      const p = item.definition;
+      if (p.kind === "geometric") {
+        syncPatternTexture(map, {
+          imageId: item.imageId,
+          pattern: p.pattern,
+          size: p.size,
+          color: p.color,
+          weight: p.weight,
+          angle: p.angle
+        });
+      } else {
+        pending.push(installSvgPatternFill(map, { imageId: item.imageId, ...p }));
+      }
     }
   }
   await Promise.all(pending);

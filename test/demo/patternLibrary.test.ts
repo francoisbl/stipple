@@ -18,7 +18,9 @@ function compact(svg: string): string {
 describe("demo pattern library", () => {
   it("keeps the files, inline samples, and selector in sync", () => {
     const objectSource = demo.match(/const SVG_PATTERN_SAMPLES = \{([\s\S]*?)\n  \};/)?.[1];
+    const metricsSource = demo.match(/const SVG_PATTERN_METRICS = \{([\s\S]*?)\n  \};/)?.[1];
     expect(objectSource).toBeDefined();
+    expect(metricsSource).toBeDefined();
 
     const inline = new Map<string, string>();
     for (const match of objectSource!.matchAll(/^\s+"([^"]+)": `([\s\S]*?)`,/gm)) {
@@ -34,9 +36,14 @@ describe("demo pattern library", () => {
         .map((match) => match[1])
         .filter((value) => value !== "custom"),
     );
+    const metrics = new Set(
+      [...metricsSource!.matchAll(/^\s+"([^"]+)": \{/gm)]
+        .map((match) => match[1]),
+    );
 
     expect([...inline.keys()].sort()).toEqual([...files.keys()].sort());
     expect([...selected].sort()).toEqual([...files.keys()].sort());
+    expect([...metrics].sort()).toEqual([...files.keys()].sort());
     for (const [name, svg] of files) {
       expect(compact(inline.get(name)!)).toBe(compact(svg));
     }

@@ -55,6 +55,25 @@ describe("pattern definitions", () => {
     expect(() => parsePatternDefinition({ ...geometric, size: 0 })).toThrow(/size/);
     expect(() => parsePatternDefinition({ ...geometric, pattern: "unknown" })).toThrow(/pattern/);
     expect(() => parsePatternMetadata({ imageId: "", definition: geometric })).toThrow(/imageId/);
+    expect(() => parsePatternMetadata({
+      imageId: "base",
+      definition: geometric,
+      variants: [
+        { zoom: 12, imageId: "z12", definition: geometric },
+        { zoom: 11, imageId: "z11", definition: geometric },
+      ],
+    })).toThrow(/increasing/);
+  });
+
+  it("parses ordered zoom variants", () => {
+    expect(parsePatternMetadata({
+      imageId: "base",
+      definition: geometric,
+      variants: [
+        { zoom: 10, imageId: "z10", definition: geometric },
+        { zoom: 11, imageId: "z11", definition: { ...geometric, size: 20 } },
+      ],
+    }).variants).toHaveLength(2);
   });
 
   it("exports the versioned metadata key", () => {
