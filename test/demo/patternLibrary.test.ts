@@ -48,4 +48,8 @@ describe("demo pattern library", () => {
       expect(compact(inline.get(name)!)).toBe(compact(svg));
     }
   });
+
+  it("disables MapLibre pattern cross-fading in the workshop", () => {
+    expect(demo).toMatch(/new maplibregl\.Map\(\{[\s\S]*?fadeDuration:\s*0,/);
+  });
 });
