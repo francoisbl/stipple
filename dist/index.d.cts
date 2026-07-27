@@ -485,6 +485,8 @@ interface InstallSvgIconScatterOptions {
     opacity?: number;
     /** Keep a fixed screen size, or scale with the map from the installation zoom. Default screen. */
     scaleMode?: IconScaleMode;
+    /** Keep the complete icon inside the polygon. Default true. */
+    edgeClearance?: boolean;
 }
 /**
  * @experimental

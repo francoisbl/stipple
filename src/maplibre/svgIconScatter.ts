@@ -38,6 +38,8 @@ export interface InstallSvgIconScatterOptions {
   opacity?: number;
   /** Keep a fixed screen size, or scale with the map from the installation zoom. Default screen. */
   scaleMode?: IconScaleMode;
+  /** Keep the complete icon inside the polygon. Default true. */
+  edgeClearance?: boolean;
 }
 
 /**
@@ -72,6 +74,7 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
     minSpacing,
     opacity = 1,
     scaleMode = "screen",
+    edgeClearance = true,
   } = options;
   if (scaleMode !== "screen" && scaleMode !== "map") {
     throw new TypeError("scaleMode must be screen or map");
@@ -87,7 +90,7 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
   const points = scatterIconPoints({
     map,
     polygon,
-    iconRadiusPx: size / Math.SQRT2,
+    iconRadiusPx: edgeClearance ? size / Math.SQRT2 : 0,
     density,
     seed,
     rotationJitterDeg,
@@ -107,19 +110,15 @@ export async function installSvgIconScatter(map: MaplibreMap, options: InstallSv
 
   const iconSize = (scaleMode === "map"
     ? [
-        "*",
+        "interpolate",
+        ["exponential", 2],
+        ["zoom"],
+        map.getZoom() - 8,
+        ["*", ["get", "scale"], 1 / 256],
+        map.getZoom(),
         ["get", "scale"],
-        [
-          "interpolate",
-          ["exponential", 2],
-          ["zoom"],
-          map.getZoom() - 8,
-          1 / 256,
-          map.getZoom(),
-          1,
-          map.getZoom() + 8,
-          256,
-        ],
+        map.getZoom() + 8,
+        ["*", ["get", "scale"], 256],
       ]
     : ["get", "scale"]) as NonNullable<SymbolLayerSpecification["layout"]>["icon-size"];
 

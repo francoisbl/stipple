@@ -1791,12 +1791,9 @@
 
   function effectiveSvgTexture(style, id, zoom = map.getZoom()) {
     const metrics = svgMetrics(style.svgFill);
-    const layoutZoom = style.svgFill.scaleMode === "map" && !style.svgFill.noCut
-      ? Math.floor(zoom)
-      : zoom;
     return scalePatternForZoom({
       mode: style.svgFill.scaleMode,
-      zoom: layoutZoom,
+      zoom,
       referenceZoom: style.svgFill.referenceZoom,
       visualSize: style.svgFill.visualSize,
       spacing: style.svgFill.spacing,
@@ -1805,29 +1802,9 @@
     });
   }
 
-  const svgTextureGenerations = new Map();
-
   async function syncSvgTextureForFeature(id, style) {
-    const generation = (svgTextureGenerations.get(id) || 0) + 1;
-    svgTextureGenerations.set(id, generation);
     const svg = resolveSvgFillSample(style.svgFill, style.patColor);
     if (!svg) return toast("Paste a custom SVG first");
-    if (style.svgFill.scaleMode === "map") {
-      const variants = createSvgZoomVariants(style).map((variant) => ({
-        ...variant,
-        imageId: `${id}__svg_z${variant.zoom}`,
-      }));
-      await Promise.all(variants.map(({ imageId, definition }) =>
-        installSvgPatternFill(map, { imageId, ...definition })
-      ));
-      if (svgTextureGenerations.get(id) !== generation) return;
-      const layerId = `${id}__pat`;
-      if (map.getLayer(layerId)) {
-        map.setPaintProperty(layerId, "fill-pattern", zoomPatternExpression(variants));
-        map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
-      }
-      return;
-    }
     const effective = effectiveSvgTexture(style, id);
     await installSvgPatternFill(map, {
       imageId: svgImageId(id), svg,
@@ -1840,7 +1817,6 @@
       scaleJitter: style.svgFill.scaleJitter,
       seed: style.svgFill.seed,
     });
-    if (svgTextureGenerations.get(id) !== generation) return;
     const layerId = `${id}__pat`;
     if (map.getLayer(layerId)) {
       map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
@@ -1878,7 +1854,8 @@
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
       scaleJitter: state.svgFill.scaleJitter,
       opacity: state.patOpacity,
-      scaleMode: "screen",
+      scaleMode: state.svgFill.scaleMode,
+      edgeClearance: state.svgFill.noCut,
     });
     rememberActiveStyle();
   }
@@ -1891,7 +1868,11 @@
   }
 
   function syncSvgFill() {
-    if (state.svgFill.noCut) syncSvgIconScatter(); else syncSvgTexture();
+    if (state.svgFill.noCut || state.svgFill.scaleMode === "map") {
+      syncSvgIconScatter();
+    } else {
+      syncSvgTexture();
+    }
   }
 
   // Style layers for the selected polygon.
@@ -1902,21 +1883,13 @@
       map.addLayer({ id: bg, type: "fill", source: id, paint: { "fill-color": state.bg.color, "fill-opacity": state.bg.opacity } });
     }
 
-    if (state.svgFill.on && state.svgFill.noCut) {
-      // No fill-pattern layer at all. Whole icons are placed only where they
-      // pass an exact circular-clearance test inside the polygon.
+    if (state.svgFill.on && (state.svgFill.noCut || state.svgFill.scaleMode === "map")) {
+      // Ground-scaled motifs use symbols so their size and position follow
+      // the map continuously. The same renderer handles edge clearance.
       syncSvgIconScatter();
     } else if (state.svgFill.on) {
       syncSvgTexture();
-      const fillPattern = state.svgFill.scaleMode === "map"
-        ? zoomPatternExpression(
-            createSvgZoomVariants(currentStyle()).map((variant) => ({
-              ...variant,
-              imageId: `${id}__svg_z${variant.zoom}`,
-            })),
-          )
-        : svgImageId(id);
-      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": fillPattern, "fill-opacity": state.patOpacity } });
+      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": svgImageId(id), "fill-opacity": state.patOpacity } });
     } else if (state.pattern === "solid") {
       map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity } });
     } else {
@@ -2126,10 +2099,6 @@
 
   function removeFeatureCompletely(id) {
     removeStyleLayers(id);
-    svgTextureGenerations.delete(id);
-    map.listImages()
-      .filter((imageId) => imageId.startsWith(`${id}__svg_z`))
-      .forEach((imageId) => map.removeImage(imageId));
     if (map.getSource(id)) map.removeSource(id);
   }
 
@@ -3064,9 +3033,9 @@ if (map.isStyleLoaded()) {
 
   map.on("zoomend", () => {
     if (!state.svgFill.on) return;
-    if (state.svgFill.noCut) {
+    if (state.svgFill.noCut && state.svgFill.scaleMode === "screen") {
       syncSvgIconScatter();
-    } else if (!state.svgFill.noCut) {
+    } else {
       repaint();
     }
     updateSvgScaleReadout();
