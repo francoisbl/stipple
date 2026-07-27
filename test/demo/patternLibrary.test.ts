@@ -56,7 +56,8 @@ describe("demo pattern library", () => {
   it("uses continuously scaled symbols for ground-scale SVG fills", () => {
     expect(demo).toMatch(/state\.svgFill\.noCut \|\| state\.svgFill\.scaleMode === "map"/);
     expect(demo).toMatch(/scaleMode:\s*state\.svgFill\.scaleMode/);
-    expect(demo).toMatch(/edgeClearance:\s*state\.svgFill\.noCut/);
+    expect(demo).toMatch(/edgeClearance:\s*state\.svgFill\.noCut \|\| state\.svgFill\.scaleMode === "map"/);
+    expect(demo).toMatch(/svgNoCutToggle"\)\.disabled = !state\.svgFill\.on \|\| mapScale/);
     expect(demo).not.toMatch(/map\.on\("zoomend"[\s\S]*?scaleMode === "map"[\s\S]*?syncSvgIconScatter\(\)/);
   });
 });
