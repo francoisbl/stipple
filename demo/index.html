@@ -1805,9 +1805,29 @@
     });
   }
 
+  const svgTextureGenerations = new Map();
+
   async function syncSvgTextureForFeature(id, style) {
+    const generation = (svgTextureGenerations.get(id) || 0) + 1;
+    svgTextureGenerations.set(id, generation);
     const svg = resolveSvgFillSample(style.svgFill, style.patColor);
     if (!svg) return toast("Paste a custom SVG first");
+    if (style.svgFill.scaleMode === "map") {
+      const variants = createSvgZoomVariants(style).map((variant) => ({
+        ...variant,
+        imageId: `${id}__svg_z${variant.zoom}`,
+      }));
+      await Promise.all(variants.map(({ imageId, definition }) =>
+        installSvgPatternFill(map, { imageId, ...definition })
+      ));
+      if (svgTextureGenerations.get(id) !== generation) return;
+      const layerId = `${id}__pat`;
+      if (map.getLayer(layerId)) {
+        map.setPaintProperty(layerId, "fill-pattern", zoomPatternExpression(variants));
+        map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
+      }
+      return;
+    }
     const effective = effectiveSvgTexture(style, id);
     await installSvgPatternFill(map, {
       imageId: svgImageId(id), svg,
@@ -1820,6 +1840,7 @@
       scaleJitter: style.svgFill.scaleJitter,
       seed: style.svgFill.seed,
     });
+    if (svgTextureGenerations.get(id) !== generation) return;
     const layerId = `${id}__pat`;
     if (map.getLayer(layerId)) {
       map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
@@ -1887,7 +1908,15 @@
       syncSvgIconScatter();
     } else if (state.svgFill.on) {
       syncSvgTexture();
-      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": svgImageId(id), "fill-opacity": state.patOpacity } });
+      const fillPattern = state.svgFill.scaleMode === "map"
+        ? zoomPatternExpression(
+            createSvgZoomVariants(currentStyle()).map((variant) => ({
+              ...variant,
+              imageId: `${id}__svg_z${variant.zoom}`,
+            })),
+          )
+        : svgImageId(id);
+      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": fillPattern, "fill-opacity": state.patOpacity } });
     } else if (state.pattern === "solid") {
       map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity } });
     } else {
@@ -2097,6 +2126,10 @@
 
   function removeFeatureCompletely(id) {
     removeStyleLayers(id);
+    svgTextureGenerations.delete(id);
+    map.listImages()
+      .filter((imageId) => imageId.startsWith(`${id}__svg_z`))
+      .forEach((imageId) => map.removeImage(imageId));
     if (map.getSource(id)) map.removeSource(id);
   }
 
@@ -3033,8 +3066,6 @@ if (map.isStyleLoaded()) {
     if (!state.svgFill.on) return;
     if (state.svgFill.noCut) {
       syncSvgIconScatter();
-    } else if (!state.svgFill.noCut && state.svgFill.scaleMode === "map") {
-      syncSvgTexture();
     } else if (!state.svgFill.noCut) {
       repaint();
     }
