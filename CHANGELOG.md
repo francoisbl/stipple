@@ -26,8 +26,9 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
   recolourable samples.
 - Screen-fixed and map-scaled modes for experimental whole-symbol scatter.
 - A sample library organized into concrete thematic families.
-- `adaptivePatternScale` for reducing SVG stamps, compensating density, and
-  fading patterns when a projected polygon becomes too small to read.
+- `scalePatternForZoom` for explicit screen and reference-zoom map scaling,
+  optical SVG normalization, and legibility fades.
+- Ordered zoom variants in v1 pattern metadata and static pattern bundles.
 
 ### Changed
 
@@ -49,8 +50,10 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
 - Ambiguous grass, vineyard, orchard, crop, shrub, gravel, boulder, scree,
   reed, and ripple motifs have been redrawn or simplified for legibility at
   the playground's default stamp size.
-- The playground uses adaptive map scaling for SVG fills by default. Fixed
-  screen scaling remains available as an explicit option.
+- SVG size no longer depends on polygon dimensions. Screen scaling is the
+  default; ground scaling uses a visible reference zoom.
+- The playground exposes visual size and spacing instead of the internal
+  raster stamp size and density values.
 
 ### Fixed
 

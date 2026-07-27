@@ -72,26 +72,32 @@ export async function installPatternFills(map: MaplibreMap, style: StyleLike): P
       : fromLegacyMetadata(metadata[LEGACY_PATTERN_METADATA_KEY]);
     if (!registration) continue;
 
-    const signature = serializePatternDefinition(registration.definition);
-    const previous = installed.get(registration.imageId);
-    if (previous && previous !== signature) {
-      throw new Error(`Conflicting pattern definitions use image id "${registration.imageId}"`);
-    }
-    if (previous) continue;
-    installed.set(registration.imageId, signature);
+    const definitions = [
+      { imageId: registration.imageId, definition: registration.definition },
+      ...(registration.variants ?? []),
+    ];
+    for (const item of definitions) {
+      const signature = serializePatternDefinition(item.definition);
+      const previous = installed.get(item.imageId);
+      if (previous && previous !== signature) {
+        throw new Error(`Conflicting pattern definitions use image id "${item.imageId}"`);
+      }
+      if (previous) continue;
+      installed.set(item.imageId, signature);
 
-    const p = registration.definition;
-    if (p.kind === "geometric") {
-      syncPatternTexture(map, {
-        imageId: registration.imageId,
-        pattern: p.pattern,
-        size: p.size,
-        color: p.color,
-        weight: p.weight,
-        angle: p.angle,
-      });
-    } else {
-      pending.push(installSvgPatternFill(map, { imageId: registration.imageId, ...p }));
+      const p = item.definition;
+      if (p.kind === "geometric") {
+        syncPatternTexture(map, {
+          imageId: item.imageId,
+          pattern: p.pattern,
+          size: p.size,
+          color: p.color,
+          weight: p.weight,
+          angle: p.angle,
+        });
+      } else {
+        pending.push(installSvgPatternFill(map, { imageId: item.imageId, ...p }));
+      }
     }
   }
   await Promise.all(pending);

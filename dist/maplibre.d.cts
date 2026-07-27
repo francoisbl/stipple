@@ -48,9 +48,15 @@ interface SvgPatternDefinition {
     minSpacing: number;
 }
 type PatternDefinition = GeometricPatternDefinition | SvgPatternDefinition;
+interface PatternVariant {
+    zoom: number;
+    imageId: string;
+    definition: PatternDefinition;
+}
 interface PatternMetadataV1 {
     imageId: string;
     definition: PatternDefinition;
+    variants?: PatternVariant[];
 }
 /** Validates untrusted JSON metadata and returns a normalized definition. */
 declare function parsePatternDefinition(value: unknown): PatternDefinition;
@@ -204,4 +210,4 @@ declare function createSvgScatterTile(options: SvgPatternOptions): Promise<TileI
  */
 declare function installSvgPatternFill(map: Map, options: SvgPatternOptions): Promise<void>;
 
-export { type BackgroundFillConfig, type BuildStyleFragmentOptions, type GeometricPatternDefinition, type GeometricPatternType, LEGACY_PATTERN_METADATA_KEY, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type StyleLike, type SvgPatternDefinition, type SvgPatternOptions, type SyncPatternTextureOptions, buildStyleFragment, createSvgPatternDefinition, createSvgScatterTile, installPatternFills, installSvgPatternFill, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, serializePatternDefinition, syncPatternTexture };
+export { type BackgroundFillConfig, type BuildStyleFragmentOptions, type GeometricPatternDefinition, type GeometricPatternType, LEGACY_PATTERN_METADATA_KEY, type ObservePatternFillsOptions, type OutlineConfig, PATTERN_METADATA_KEY, type PatternDefinition, type PatternFillConfig, type PatternFillObserver, type PatternMetadataV1, type PatternVariant, type StyleLike, type SvgPatternDefinition, type SvgPatternOptions, type SyncPatternTextureOptions, buildStyleFragment, createSvgPatternDefinition, createSvgScatterTile, installPatternFills, installSvgPatternFill, observePatternFills, parsePatternDefinition, parsePatternMetadata, patternDefinitionId, serializePatternDefinition, syncPatternTexture };

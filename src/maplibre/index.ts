@@ -14,6 +14,7 @@ export type {
   GeometricPatternType,
   PatternDefinition,
   PatternMetadataV1,
+  PatternVariant,
   SvgPatternDefinition,
 } from "./patternDefinition";
 

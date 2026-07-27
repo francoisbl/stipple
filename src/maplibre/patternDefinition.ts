@@ -32,9 +32,16 @@ export interface SvgPatternDefinition {
 
 export type PatternDefinition = GeometricPatternDefinition | SvgPatternDefinition;
 
+export interface PatternVariant {
+  zoom: number;
+  imageId: string;
+  definition: PatternDefinition;
+}
+
 export interface PatternMetadataV1 {
   imageId: string;
   definition: PatternDefinition;
+  variants?: PatternVariant[];
 }
 
 const geometricTypes = new Set<GeometricPatternType>([
@@ -139,10 +146,31 @@ export function parsePatternDefinition(value: unknown): PatternDefinition {
 /** Parses a complete v1 metadata payload from a style layer. */
 export function parsePatternMetadata(value: unknown): PatternMetadataV1 {
   if (!isRecord(value)) throw new TypeError("pattern metadata must be an object");
-  return {
+  const metadata: PatternMetadataV1 = {
     imageId: nonEmptyString(value, "imageId"),
     definition: parsePatternDefinition(value.definition),
   };
+  if (value.variants !== undefined) {
+    if (!Array.isArray(value.variants) || value.variants.length === 0) {
+      throw new TypeError("variants must be a non-empty array");
+    }
+    metadata.variants = value.variants.map((variant, index) => {
+      if (!isRecord(variant)) {
+        throw new TypeError(`variants[${index}] must be an object`);
+      }
+      return {
+        zoom: finiteNumber(variant, "zoom"),
+        imageId: nonEmptyString(variant, "imageId"),
+        definition: parsePatternDefinition(variant.definition),
+      };
+    });
+    for (let index = 1; index < metadata.variants.length; index++) {
+      if (metadata.variants[index].zoom <= metadata.variants[index - 1].zoom) {
+        throw new RangeError("variant zoom levels must be strictly increasing");
+      }
+    }
+  }
+  return metadata;
 }
 
 /** Stable JSON representation used for image IDs and cache keys. */

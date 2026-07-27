@@ -85,22 +85,35 @@ interface ScatterPointsOptions {
  */
 declare function scatterPointsInPolygon(rings: Ring[], options: ScatterPointsOptions): ScatteredPoint[];
 
-interface AdaptivePatternScaleOptions {
-    polygonSize: number;
-    stampSize: number;
-    density: number;
-    minSpacing?: number;
-    minimumStampSize?: number;
-    targetSymbolsAcross?: number;
-    maxDensity?: number;
+type PatternScaleMode = "screen" | "map";
+interface PatternScaleOptions {
+    mode: PatternScaleMode;
+    zoom: number;
+    referenceZoom: number;
+    visualSize: number;
+    spacing: number;
+    opticalScale?: number;
+    minReadableSize?: number;
+    maxVisualSize?: number;
 }
-interface AdaptivePatternScaleResult {
+interface PatternScaleResult {
     scale: number;
+    rawVisualSize: number;
+    visualSize: number;
     stampSize: number;
+    spacing: number;
     density: number;
-    minSpacing: number;
     opacity: number;
+    capped: boolean;
 }
-declare function adaptivePatternScale(options: AdaptivePatternScaleOptions): AdaptivePatternScaleResult;
+/**
+ * Resolves a pattern at a given zoom without using feature dimensions.
+ *
+ * Screen mode keeps visual size and spacing in pixels. Map mode treats the
+ * configured values as the appearance at referenceZoom, then doubles them for
+ * every zoom level in. Motifs fade once their optical size is too small to
+ * read and stop growing at maxVisualSize.
+ */
+declare function scalePatternForZoom(options: PatternScaleOptions): PatternScaleResult;
 
-export { type AdaptivePatternScaleOptions, type AdaptivePatternScaleResult, type MakeTileOptions, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, SvgDistributionMode, TileContext, TileImage, adaptivePatternScale, createMiniContext, hashStringToSeed, makeTile, mulberry32, scatterPointsInPolygon };
+export { type MakeTileOptions, type PatternScaleMode, type PatternScaleOptions, type PatternScaleResult, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, SvgDistributionMode, TileContext, TileImage, createMiniContext, hashStringToSeed, makeTile, mulberry32, scalePatternForZoom, scatterPointsInPolygon };

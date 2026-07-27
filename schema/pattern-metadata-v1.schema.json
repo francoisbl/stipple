@@ -15,6 +15,25 @@
         { "$ref": "#/$defs/geometric" },
         { "$ref": "#/$defs/svg" }
       ]
+    },
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["zoom", "imageId", "definition"],
+        "properties": {
+          "zoom": { "type": "number" },
+          "imageId": { "type": "string", "minLength": 1 },
+          "definition": {
+            "oneOf": [
+              { "$ref": "#/$defs/geometric" },
+              { "$ref": "#/$defs/svg" }
+            ]
+          }
+        }
+      }
     }
   },
   "$defs": {

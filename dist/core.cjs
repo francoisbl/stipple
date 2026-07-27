@@ -20,12 +20,12 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/entries/core.ts
 var core_exports = {};
 __export(core_exports, {
-  adaptivePatternScale: () => adaptivePatternScale,
   createMiniContext: () => createMiniContext,
   createSvgScatterLayout: () => createSvgScatterLayout,
   hashStringToSeed: () => hashStringToSeed,
   makeTile: () => makeTile,
   mulberry32: () => mulberry32,
+  scalePatternForZoom: () => scalePatternForZoom,
   scatterPointsInPolygon: () => scatterPointsInPolygon
 });
 module.exports = __toCommonJS(core_exports);
@@ -537,56 +537,63 @@ function createSvgScatterLayout(options) {
   return placements;
 }
 
-// src/engine/adaptivePatternScale.ts
-function positive(value, name) {
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new Error(`${name} must be greater than 0`);
-  }
+// src/engine/patternScale.ts
+function finite(value, name) {
+  if (!Number.isFinite(value)) throw new TypeError(`${name} must be finite`);
   return value;
 }
-function adaptivePatternScale(options) {
-  const polygonSize = Math.max(0, Number(options.polygonSize) || 0);
-  const stampSize = positive(options.stampSize, "stampSize");
-  const density = positive(options.density, "density");
-  const minSpacing = Math.max(0, Number(options.minSpacing) || 0);
-  const minimumStampSize = positive(
-    options.minimumStampSize ?? 6,
-    "minimumStampSize"
+function positive(value, name) {
+  finite(value, name);
+  if (value <= 0) throw new RangeError(`${name} must be greater than 0`);
+  return value;
+}
+function clamp(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+function scalePatternForZoom(options) {
+  const zoom = finite(options.zoom, "zoom");
+  const referenceZoom = finite(options.referenceZoom, "referenceZoom");
+  const visualSize = positive(options.visualSize, "visualSize");
+  const spacing = positive(options.spacing, "spacing");
+  const opticalScale = positive(options.opticalScale ?? 1, "opticalScale");
+  const minReadableSize = positive(
+    options.minReadableSize ?? 10,
+    "minReadableSize"
   );
-  const targetSymbolsAcross = positive(
-    options.targetSymbolsAcross ?? 5,
-    "targetSymbolsAcross"
+  const maxVisualSize = positive(
+    options.maxVisualSize ?? 72,
+    "maxVisualSize"
   );
-  const maxDensity = positive(options.maxDensity ?? 16, "maxDensity");
-  const minimumScale = Math.min(1, minimumStampSize / stampSize);
-  const targetScale = Math.min(
-    1,
-    polygonSize / (stampSize * targetSymbolsAcross)
-  );
-  const scale = Math.max(minimumScale, targetScale);
-  const fittedMinimumStamp = stampSize * minimumScale;
-  const fadeStart = fittedMinimumStamp * 1.5;
-  const fadeEnd = fittedMinimumStamp * 5;
-  const opacity = Math.max(
-    0,
-    Math.min(1, (polygonSize - fadeStart) / (fadeEnd - fadeStart))
-  );
+  if (maxVisualSize < minReadableSize) {
+    throw new RangeError("maxVisualSize must be greater than or equal to minReadableSize");
+  }
+  const rawScale = options.mode === "map" ? 2 ** (zoom - referenceZoom) : 1;
+  const rawVisualSize = visualSize * rawScale;
+  const maximumScale = maxVisualSize / visualSize;
+  const scale = Math.min(rawScale, maximumScale);
+  const renderedVisualSize = visualSize * scale;
+  const renderedSpacing = spacing * scale;
+  const fadeStart = minReadableSize * 0.5;
+  const opacity = options.mode === "map" ? clamp((rawVisualSize - fadeStart) / (minReadableSize - fadeStart), 0, 1) : 1;
   return {
     scale,
-    stampSize: stampSize * scale,
-    density: Math.min(maxDensity, density / (scale * scale)),
-    minSpacing: minSpacing * scale,
-    opacity
+    rawVisualSize,
+    visualSize: renderedVisualSize,
+    stampSize: renderedVisualSize / opticalScale,
+    spacing: renderedSpacing,
+    density: 1e4 / (renderedSpacing * renderedSpacing),
+    opacity,
+    capped: rawScale > maximumScale
   };
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  adaptivePatternScale,
   createMiniContext,
   createSvgScatterLayout,
   hashStringToSeed,
   makeTile,
   mulberry32,
+  scalePatternForZoom,
   scatterPointsInPolygon
 });
 //# sourceMappingURL=core.cjs.map

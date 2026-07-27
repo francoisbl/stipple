@@ -101,12 +101,17 @@ without changing their layout size. `syncPatternTexture` and
 `installSvgPatternFill` also accept an explicit `pixelRatio` when an
 application needs to control the raster cost.
 
-For SVG motifs that should become smaller with their polygon, the pure
-`adaptivePatternScale` helper calculates a readable stamp size, compensating
-density, spacing, and an opacity fade for very small polygons. Pass it the
-polygon's projected width or height after each `zoomend`, then reinstall the
-SVG pattern with the returned values. Fixed screen-sized patterns remain
-available when an application needs them.
+The pure `scalePatternForZoom` helper keeps pattern scale independent from
+feature dimensions. Screen mode holds visual size and spacing in pixels. Map
+mode treats them as reference values at a chosen zoom, then doubles both for
+every zoom level in. Optical scale normalizes SVG artwork with different
+amounts of internal whitespace, while per-motif legibility limits provide a
+controlled fade at small scales.
+
+Map-scaled style exports contain ordered image variants in the existing v1
+metadata. `installPatternFills` installs every required image, and the layer
+selects the appropriate one with a zoom expression. A static JSON and PNG
+bundle can use the same structure without a runtime dependency.
 
 For applications that replace styles repeatedly, create one observer and
 dispose it with the map or owning component:
@@ -162,8 +167,8 @@ For Cloudflare Pages, use `npm run build:site` as the build command and
 ## Package layout
 
 - `src/engine`: the pure pattern rasterizer (`makeTile`), scatter-point
-  geometry (`scatterPointsInPolygon`), and adaptive pattern scaling
-  (`adaptivePatternScale`). No DOM or MapLibre dependency: uses the real
+  geometry (`scatterPointsInPolygon`), and zoom-based pattern scaling
+  (`scalePatternForZoom`). No DOM or MapLibre dependency: uses the real
   Canvas 2D API in the browser and a small pure-JS software rasterizer in Node,
   so it runs identically in both.
 - `src/maplibre`: the MapLibre integration: `syncPatternTexture`,

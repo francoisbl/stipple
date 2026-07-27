@@ -23,7 +23,6 @@ var MaplibrePatternFills = (() => {
   __export(src_exports, {
     LEGACY_PATTERN_METADATA_KEY: () => LEGACY_PATTERN_METADATA_KEY,
     PATTERN_METADATA_KEY: () => PATTERN_METADATA_KEY,
-    adaptivePatternScale: () => adaptivePatternScale,
     buildStyleFragment: () => buildStyleFragment,
     createMiniContext: () => createMiniContext,
     createSvgPatternDefinition: () => createSvgPatternDefinition,
@@ -39,6 +38,7 @@ var MaplibrePatternFills = (() => {
     parsePatternDefinition: () => parsePatternDefinition,
     parsePatternMetadata: () => parsePatternMetadata,
     patternDefinitionId: () => patternDefinitionId,
+    scalePatternForZoom: () => scalePatternForZoom,
     scatterIconPoints: () => scatterIconPoints,
     scatterPointsInPolygon: () => scatterPointsInPolygon,
     serializePatternDefinition: () => serializePatternDefinition,
@@ -552,46 +552,53 @@ var MaplibrePatternFills = (() => {
     return placements;
   }
 
-  // src/engine/adaptivePatternScale.ts
-  function positive(value, name) {
-    if (!Number.isFinite(value) || value <= 0) {
-      throw new Error(`${name} must be greater than 0`);
-    }
+  // src/engine/patternScale.ts
+  function finite(value, name) {
+    if (!Number.isFinite(value)) throw new TypeError(`${name} must be finite`);
     return value;
   }
-  function adaptivePatternScale(options) {
-    const polygonSize = Math.max(0, Number(options.polygonSize) || 0);
-    const stampSize = positive(options.stampSize, "stampSize");
-    const density = positive(options.density, "density");
-    const minSpacing = Math.max(0, Number(options.minSpacing) || 0);
-    const minimumStampSize = positive(
-      options.minimumStampSize ?? 6,
-      "minimumStampSize"
+  function positive(value, name) {
+    finite(value, name);
+    if (value <= 0) throw new RangeError(`${name} must be greater than 0`);
+    return value;
+  }
+  function clamp(value, minimum, maximum) {
+    return Math.max(minimum, Math.min(maximum, value));
+  }
+  function scalePatternForZoom(options) {
+    const zoom = finite(options.zoom, "zoom");
+    const referenceZoom = finite(options.referenceZoom, "referenceZoom");
+    const visualSize = positive(options.visualSize, "visualSize");
+    const spacing = positive(options.spacing, "spacing");
+    const opticalScale = positive(options.opticalScale ?? 1, "opticalScale");
+    const minReadableSize = positive(
+      options.minReadableSize ?? 10,
+      "minReadableSize"
     );
-    const targetSymbolsAcross = positive(
-      options.targetSymbolsAcross ?? 5,
-      "targetSymbolsAcross"
+    const maxVisualSize = positive(
+      options.maxVisualSize ?? 72,
+      "maxVisualSize"
     );
-    const maxDensity = positive(options.maxDensity ?? 16, "maxDensity");
-    const minimumScale = Math.min(1, minimumStampSize / stampSize);
-    const targetScale = Math.min(
-      1,
-      polygonSize / (stampSize * targetSymbolsAcross)
-    );
-    const scale = Math.max(minimumScale, targetScale);
-    const fittedMinimumStamp = stampSize * minimumScale;
-    const fadeStart = fittedMinimumStamp * 1.5;
-    const fadeEnd = fittedMinimumStamp * 5;
-    const opacity = Math.max(
-      0,
-      Math.min(1, (polygonSize - fadeStart) / (fadeEnd - fadeStart))
-    );
+    if (maxVisualSize < minReadableSize) {
+      throw new RangeError("maxVisualSize must be greater than or equal to minReadableSize");
+    }
+    const rawScale = options.mode === "map" ? 2 ** (zoom - referenceZoom) : 1;
+    const rawVisualSize = visualSize * rawScale;
+    const maximumScale = maxVisualSize / visualSize;
+    const scale = Math.min(rawScale, maximumScale);
+    const renderedVisualSize = visualSize * scale;
+    const renderedSpacing = spacing * scale;
+    const fadeStart = minReadableSize * 0.5;
+    const opacity = options.mode === "map" ? clamp((rawVisualSize - fadeStart) / (minReadableSize - fadeStart), 0, 1) : 1;
     return {
       scale,
-      stampSize: stampSize * scale,
-      density: Math.min(maxDensity, density / (scale * scale)),
-      minSpacing: minSpacing * scale,
-      opacity
+      rawVisualSize,
+      visualSize: renderedVisualSize,
+      stampSize: renderedVisualSize / opticalScale,
+      spacing: renderedSpacing,
+      density: 1e4 / (renderedSpacing * renderedSpacing),
+      opacity,
+      capped: rawScale > maximumScale
     };
   }
 
@@ -678,10 +685,31 @@ var MaplibrePatternFills = (() => {
   }
   function parsePatternMetadata(value) {
     if (!isRecord(value)) throw new TypeError("pattern metadata must be an object");
-    return {
+    const metadata = {
       imageId: nonEmptyString(value, "imageId"),
       definition: parsePatternDefinition(value.definition)
     };
+    if (value.variants !== void 0) {
+      if (!Array.isArray(value.variants) || value.variants.length === 0) {
+        throw new TypeError("variants must be a non-empty array");
+      }
+      metadata.variants = value.variants.map((variant, index) => {
+        if (!isRecord(variant)) {
+          throw new TypeError(`variants[${index}] must be an object`);
+        }
+        return {
+          zoom: finiteNumber(variant, "zoom"),
+          imageId: nonEmptyString(variant, "imageId"),
+          definition: parsePatternDefinition(variant.definition)
+        };
+      });
+      for (let index = 1; index < metadata.variants.length; index++) {
+        if (metadata.variants[index].zoom <= metadata.variants[index - 1].zoom) {
+          throw new RangeError("variant zoom levels must be strictly increasing");
+        }
+      }
+    }
+    return metadata;
   }
   function serializePatternDefinition(definition) {
     return JSON.stringify(parsePatternDefinition(definition));
@@ -954,25 +982,31 @@ var MaplibrePatternFills = (() => {
       const rawV1 = metadata[PATTERN_METADATA_KEY];
       const registration = rawV1 ? parsePatternMetadata(rawV1) : fromLegacyMetadata(metadata[LEGACY_PATTERN_METADATA_KEY]);
       if (!registration) continue;
-      const signature = serializePatternDefinition(registration.definition);
-      const previous = installed.get(registration.imageId);
-      if (previous && previous !== signature) {
-        throw new Error(`Conflicting pattern definitions use image id "${registration.imageId}"`);
-      }
-      if (previous) continue;
-      installed.set(registration.imageId, signature);
-      const p = registration.definition;
-      if (p.kind === "geometric") {
-        syncPatternTexture(map, {
-          imageId: registration.imageId,
-          pattern: p.pattern,
-          size: p.size,
-          color: p.color,
-          weight: p.weight,
-          angle: p.angle
-        });
-      } else {
-        pending.push(installSvgPatternFill(map, { imageId: registration.imageId, ...p }));
+      const definitions = [
+        { imageId: registration.imageId, definition: registration.definition },
+        ...registration.variants ?? []
+      ];
+      for (const item of definitions) {
+        const signature = serializePatternDefinition(item.definition);
+        const previous = installed.get(item.imageId);
+        if (previous && previous !== signature) {
+          throw new Error(`Conflicting pattern definitions use image id "${item.imageId}"`);
+        }
+        if (previous) continue;
+        installed.set(item.imageId, signature);
+        const p = item.definition;
+        if (p.kind === "geometric") {
+          syncPatternTexture(map, {
+            imageId: item.imageId,
+            pattern: p.pattern,
+            size: p.size,
+            color: p.color,
+            weight: p.weight,
+            angle: p.angle
+          });
+        } else {
+          pending.push(installSvgPatternFill(map, { imageId: item.imageId, ...p }));
+        }
       }
     }
     await Promise.all(pending);

@@ -84,4 +84,23 @@ describe("installPatternFills", () => {
       ],
     })).rejects.toThrow(/Conflicting/);
   });
+
+  it("installs every zoom variant", async () => {
+    const { map } = createMapMock();
+    await installPatternFills(map, {
+      layers: [{
+        metadata: {
+          [PATTERN_METADATA_KEY]: {
+            imageId: "z10",
+            definition,
+            variants: [
+              { zoom: 10, imageId: "z10", definition },
+              { zoom: 11, imageId: "z11", definition: { ...definition, size: 20 } },
+            ],
+          },
+        },
+      }],
+    });
+    expect(map.addImage).toHaveBeenCalledTimes(2);
+  });
 });
