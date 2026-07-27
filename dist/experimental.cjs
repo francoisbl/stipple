@@ -284,7 +284,8 @@ async function installSvgIconScatter(map, options) {
     distribution,
     minSpacing,
     opacity = 1,
-    scaleMode = "screen"
+    scaleMode = "screen",
+    edgeClearance = true
   } = options;
   if (scaleMode !== "screen" && scaleMode !== "map") {
     throw new TypeError("scaleMode must be screen or map");
@@ -293,7 +294,7 @@ async function installSvgIconScatter(map, options) {
   const points = scatterIconPoints({
     map,
     polygon,
-    iconRadiusPx: size / Math.SQRT2,
+    iconRadiusPx: edgeClearance ? size / Math.SQRT2 : 0,
     density,
     seed,
     rotationJitterDeg,
@@ -310,19 +311,15 @@ async function installSvgIconScatter(map, options) {
     map.addSource(sourceId, { type: "geojson", data: points });
   }
   const iconSize = scaleMode === "map" ? [
-    "*",
+    "interpolate",
+    ["exponential", 2],
+    ["zoom"],
+    map.getZoom() - 8,
+    ["*", ["get", "scale"], 1 / 256],
+    map.getZoom(),
     ["get", "scale"],
-    [
-      "interpolate",
-      ["exponential", 2],
-      ["zoom"],
-      map.getZoom() - 8,
-      1 / 256,
-      map.getZoom(),
-      1,
-      map.getZoom() + 8,
-      256
-    ]
+    map.getZoom() + 8,
+    ["*", ["get", "scale"], 256]
   ] : ["get", "scale"];
   if (!map.getLayer(layerId)) {
     map.addLayer({

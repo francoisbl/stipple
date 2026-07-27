@@ -53,8 +53,10 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/new maplibregl\.Map\(\{[\s\S]*?fadeDuration:\s*0,/);
   });
 
-  it("uses prebuilt zoom variants for ground-scale SVG fills", () => {
-    expect(demo).toMatch(/fill-pattern",\s*zoomPatternExpression\(variants\)/);
-    expect(demo).not.toMatch(/map\.on\("zoomend"[\s\S]*?scaleMode === "map"[\s\S]*?syncSvgTexture\(\)/);
+  it("uses continuously scaled symbols for ground-scale SVG fills", () => {
+    expect(demo).toMatch(/state\.svgFill\.noCut \|\| state\.svgFill\.scaleMode === "map"/);
+    expect(demo).toMatch(/scaleMode:\s*state\.svgFill\.scaleMode/);
+    expect(demo).toMatch(/edgeClearance:\s*state\.svgFill\.noCut/);
+    expect(demo).not.toMatch(/map\.on\("zoomend"[\s\S]*?scaleMode === "map"[\s\S]*?syncSvgIconScatter\(\)/);
   });
 });
