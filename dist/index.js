@@ -537,12 +537,12 @@ function scalePatternForZoom(options) {
   }
   const rawScale = options.mode === "map" ? 2 ** (zoom - referenceZoom) : 1;
   const rawVisualSize = visualSize * rawScale;
+  const minimumVisualSize = Math.min(visualSize, minReadableSize);
+  const minimumScale = minimumVisualSize / visualSize;
   const maximumScale = maxVisualSize / visualSize;
-  const scale = Math.min(rawScale, maximumScale);
+  const scale = clamp(rawScale, minimumScale, maximumScale);
   const renderedVisualSize = visualSize * scale;
   const renderedSpacing = spacing * scale;
-  const fadeStart = minReadableSize * 0.5;
-  const opacity = options.mode === "map" ? clamp((rawVisualSize - fadeStart) / (minReadableSize - fadeStart), 0, 1) : 1;
   return {
     scale,
     rawVisualSize,
@@ -550,48 +550,10 @@ function scalePatternForZoom(options) {
     stampSize: renderedVisualSize / opticalScale,
     spacing: renderedSpacing,
     density: 1e4 / (renderedSpacing * renderedSpacing),
-    opacity,
+    opacity: 1,
+    floored: rawScale < minimumScale,
     capped: rawScale > maximumScale
   };
-}
-
-// src/engine/patternFallback.ts
-function clamp2(value) {
-  return Math.max(0, Math.min(1, value));
-}
-function smoothstep(start, end, value) {
-  const position2 = clamp2((value - start) / (end - start));
-  return position2 * position2 * (3 - 2 * position2);
-}
-function resolvePatternVisibility(options) {
-  const motifOpacity = clamp2(options.motifOpacity);
-  if (options.mode === "map") {
-    return {
-      motif: motifOpacity,
-      fallback: 1 - motifOpacity,
-      estimatedMotifs: null
-    };
-  }
-  const area = Math.max(0, options.featureArea ?? Number.POSITIVE_INFINITY);
-  const minimumSpan = Math.max(
-    0,
-    options.featureMinimumSpan ?? Number.POSITIVE_INFINITY
-  );
-  const spacing = Math.max(1, options.spacing);
-  const visualSize = Math.max(1, options.visualSize);
-  const areaCapacity = area / (spacing * spacing);
-  const spanCapacity = minimumSpan / visualSize;
-  const estimatedMotifs = Math.min(areaCapacity, spanCapacity);
-  const motif = smoothstep(0.35, 2, estimatedMotifs);
-  return {
-    motif,
-    fallback: 1 - motif,
-    estimatedMotifs
-  };
-}
-function fallbackOpacity(fallback, visibility) {
-  const strength = fallback === "automatic" ? 0.28 : fallback === "solid" ? 0.55 : fallback === "stipple" ? 0.65 : 0;
-  return clamp2(visibility) * strength;
 }
 
 // src/engine/geojsonImport.ts
@@ -1330,7 +1292,6 @@ export {
   createSvgPatternDefinition,
   createSvgScatterLayout,
   createSvgScatterTile,
-  fallbackOpacity,
   hashStringToSeed,
   importGeoJsonPolygons,
   installPatternFills,
@@ -1342,7 +1303,6 @@ export {
   parsePatternDefinition,
   parsePatternMetadata,
   patternDefinitionId,
-  resolvePatternVisibility,
   scalePatternForZoom,
   scatterIconPoints,
   scatterPointsInPolygon,

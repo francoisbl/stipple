@@ -104,6 +104,7 @@ interface PatternScaleResult {
     spacing: number;
     density: number;
     opacity: number;
+    floored: boolean;
     capped: boolean;
 }
 /**
@@ -111,31 +112,10 @@ interface PatternScaleResult {
  *
  * Screen mode keeps visual size and spacing in pixels. Map mode treats the
  * configured values as the appearance at referenceZoom, then doubles them for
- * every zoom level in. Motifs fade once their optical size is too small to
- * read and stop growing at maxVisualSize.
+ * every zoom level in. Map-scaled motifs stop shrinking at their minimum
+ * readable size and stop growing at maxVisualSize.
  */
 declare function scalePatternForZoom(options: PatternScaleOptions): PatternScaleResult;
-
-type SmallScaleFallback = "automatic" | "solid" | "stipple" | "hide";
-interface PatternVisibilityOptions {
-    mode: "screen" | "map";
-    motifOpacity: number;
-    featureArea?: number;
-    featureMinimumSpan?: number;
-    visualSize: number;
-    spacing: number;
-}
-interface PatternVisibilityResult {
-    motif: number;
-    fallback: number;
-    estimatedMotifs: number | null;
-}
-/**
- * Crossfades a sparse motif into a simpler fill when the motif is no longer
- * readable or when a screen-sized feature is unlikely to contain a full mark.
- */
-declare function resolvePatternVisibility(options: PatternVisibilityOptions): PatternVisibilityResult;
-declare function fallbackOpacity(fallback: SmallScaleFallback, visibility: number): number;
 
 interface ImportedPolygonFeature {
     type: "Feature";
@@ -156,4 +136,4 @@ interface GeoJsonPolygonImport {
  */
 declare function importGeoJsonPolygons(input: unknown, maximumFeatures?: number): GeoJsonPolygonImport;
 
-export { type GeoJsonPolygonImport, type ImportedPolygonFeature, type MakeTileOptions, type PatternScaleMode, type PatternScaleOptions, type PatternScaleResult, PatternType, type PatternVisibilityOptions, type PatternVisibilityResult, type Ring, type ScatterPointsOptions, type ScatteredPoint, type SmallScaleFallback, SvgDistributionMode, TileContext, TileImage, createMiniContext, fallbackOpacity, hashStringToSeed, importGeoJsonPolygons, makeTile, mulberry32, resolvePatternVisibility, scalePatternForZoom, scatterPointsInPolygon };
+export { type GeoJsonPolygonImport, type ImportedPolygonFeature, type MakeTileOptions, type PatternScaleMode, type PatternScaleOptions, type PatternScaleResult, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, SvgDistributionMode, TileContext, TileImage, createMiniContext, hashStringToSeed, importGeoJsonPolygons, makeTile, mulberry32, scalePatternForZoom, scatterPointsInPolygon };

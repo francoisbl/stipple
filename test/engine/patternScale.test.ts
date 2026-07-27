@@ -59,15 +59,27 @@ describe("scalePatternForZoom", () => {
     expect(compact.visualSize).toBe(full.visualSize);
   });
 
-  it("fades unreadable map motifs and caps excessive growth", () => {
-    const faint = scalePatternForZoom({ ...base, mode: "map", zoom: 10.5 });
-    const hidden = scalePatternForZoom({ ...base, mode: "map", zoom: 10 });
+  it("keeps map motifs readable and caps excessive growth", () => {
+    const minimum = scalePatternForZoom({ ...base, mode: "map", zoom: 10 });
     const capped = scalePatternForZoom({ ...base, mode: "map", zoom: 16 });
-    expect(faint.opacity).toBeGreaterThan(0);
-    expect(faint.opacity).toBeLessThan(1);
-    expect(hidden.opacity).toBe(0);
+    expect(minimum.visualSize).toBe(12);
+    expect(minimum.spacing).toBe(36);
+    expect(minimum.opacity).toBe(1);
+    expect(minimum.floored).toBe(true);
     expect(capped.visualSize).toBe(72);
     expect(capped.capped).toBe(true);
+  });
+
+  it("never enlarges a user size that is below the readability guide", () => {
+    const minimum = scalePatternForZoom({
+      ...base,
+      mode: "map",
+      zoom: 4,
+      visualSize: 9,
+    });
+    expect(minimum.visualSize).toBe(9);
+    expect(minimum.spacing).toBe(72);
+    expect(minimum.floored).toBe(true);
   });
 
   it("rejects invalid scale values", () => {

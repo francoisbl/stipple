@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateStyleMin } from "@maplibre/maplibre-gl-style-spec";
 
 describe("zoom variant style", () => {
-  it("uses valid MapLibre expressions for pattern and opacity variants", () => {
+  it("uses a valid MapLibre expression for persistent pattern variants", () => {
     const errors = validateStyleMin({
       version: 8,
       sources: {
@@ -28,31 +28,7 @@ describe("zoom variant style", () => {
             12,
             "pattern-z12",
           ],
-          "fill-opacity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            9.5,
-            0,
-            10.5,
-            1,
-          ],
-        },
-      }, {
-        id: "fallback",
-        type: "fill",
-        source: "polygons",
-        paint: {
-          "fill-color": "#2c6a5b",
-          "fill-opacity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            9.5,
-            0.28,
-            10.5,
-            0,
-          ],
+          "fill-opacity": 1,
         },
       }],
     });
