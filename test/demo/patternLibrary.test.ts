@@ -52,4 +52,9 @@ describe("demo pattern library", () => {
   it("disables MapLibre pattern cross-fading in the workshop", () => {
     expect(demo).toMatch(/new maplibregl\.Map\(\{[\s\S]*?fadeDuration:\s*0,/);
   });
+
+  it("uses prebuilt zoom variants for ground-scale SVG fills", () => {
+    expect(demo).toMatch(/fill-pattern",\s*zoomPatternExpression\(variants\)/);
+    expect(demo).not.toMatch(/map\.on\("zoomend"[\s\S]*?scaleMode === "map"[\s\S]*?syncSvgTexture\(\)/);
+  });
 });
