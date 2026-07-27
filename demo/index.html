@@ -453,9 +453,15 @@
       color: var(--ink-soft);
       font: 400 9px/1 "IBM Plex Mono", monospace;
     }
-    .source-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+    .source-line { display: grid; gap: 7px; }
     .source-line select { height: 36px; }
-    .source-line button,
+    .source-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-top: 7px;
+    }
+    .source-actions button,
     .basemap-button {
       min-height: 36px;
       padding: 0 11px;
@@ -467,8 +473,22 @@
       font-weight: 600;
       cursor: pointer;
     }
-    .source-line button:hover,
+    .source-actions button:hover,
     .basemap-button:hover { color: var(--accent); border-color: var(--accent); }
+    .source-actions .import-button {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .source-actions .import-button:hover {
+      color: #fff;
+      background: #245a4f;
+    }
+    .drop-note {
+      margin-top: 7px;
+      color: var(--ink-soft);
+      font: 400 9px/1.45 "IBM Plex Mono", monospace;
+    }
     .feature-chips { display: flex; gap: 5px; margin-top: 9px; }
     .feature-chip {
       flex: 1;
@@ -594,6 +614,7 @@
     .svg-column { min-width: 0; }
     .svg-column + .svg-column { padding-left: 20px; border-left: 1px solid var(--line); }
     .scale-mode-seg { grid-template-columns: repeat(2, 1fr); }
+    .fallback-seg { grid-template-columns: repeat(4, 1fr); }
     .scale-reference-action { width: 100%; margin-top: 6px; }
     .scale-readout {
       margin: 9px 0 0;
@@ -883,8 +904,12 @@
     }
     .source-palette { border-left: 0; }
     .source-line { grid-template-columns: 1fr; }
-    .source-line button { width: 100%; }
-    .feature-chips { flex-wrap: wrap; }
+    .source-actions button { width: 100%; }
+    .feature-chips {
+      flex-wrap: wrap;
+      max-height: 90px;
+      overflow-y: auto;
+    }
     .feature-chip { flex: 0 0 calc(33.333% - 4px); }
     .basemap-options { display: grid; grid-template-columns: 1fr 1fr; }
     .basemap-button { min-width: 0; }
@@ -896,6 +921,22 @@
       min-height: 0;
       height: auto;
     }
+    .geojson-drop-overlay {
+      position: absolute;
+      z-index: 8;
+      inset: 18px;
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      background: rgba(242, 246, 243, .92);
+      border: 1px dashed var(--accent);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .14s;
+      font: 600 12px/1.4 "IBM Plex Mono", monospace;
+      letter-spacing: .03em;
+    }
+    .map-shell.is-dragging .geojson-drop-overlay { opacity: 1; }
     #panel.control-dock {
       position: relative;
       inset: auto;
@@ -1022,9 +1063,14 @@
           </div>
           <div class="source-line">
             <select id="layerSelect" aria-label="Selected polygon"></select>
-            <button type="button" id="reloadCatalog">Add polygon</button>
           </div>
+          <div class="source-actions">
+            <button type="button" class="import-button" id="importGeoJson">Open GeoJSON</button>
+            <button type="button" id="reloadCatalog">Add sample</button>
+          </div>
+          <input type="file" id="geoJsonFile" accept=".geojson,.json,application/geo+json,application/json" hidden />
           <div class="feature-chips" id="featureChips"></div>
+          <div class="drop-note">Drop a GeoJSON file on the map to replace the sample.</div>
           <div class="hint" id="srcHint"></div>
         </aside>
 
@@ -1041,6 +1087,7 @@
 
       <div class="map-shell">
         <div id="map"></div>
+        <div class="geojson-drop-overlay" id="geoJsonDropOverlay">Drop GeoJSON to open</div>
       </div>
 
       <section id="panel" class="control-dock" aria-label="Polygon style editor">
@@ -1243,6 +1290,13 @@
                     <input type="range" id="svgReferenceZoom" min="0" max="22" step="1" value="12" disabled />
                     <button type="button" class="action ghost scale-reference-action" id="svgUseCurrentZoom" disabled>Use current zoom</button>
                   </div>
+                  <label>Small-scale fill</label>
+                  <div class="seg fallback-seg" id="svgFallbackSeg">
+                    <button type="button" data-fallback="automatic" class="active">Auto</button>
+                    <button type="button" data-fallback="solid">Solid</button>
+                    <button type="button" data-fallback="stipple">Dots</button>
+                    <button type="button" data-fallback="hide">Hide</button>
+                  </div>
                 </div>
                 <p class="hint" id="noCutHint">Exact edge clearance keeps the complete symbol inside.</p>
                 <p class="scale-readout" id="svgScaleReadout">At z12: 24 px motif · 72 px spacing</p>
@@ -1326,7 +1380,8 @@
     makeTile, syncPatternTexture, buildStyleFragment,
     installSvgPatternFill, installSvgIconScatter,
     createSvgPatternDefinition, createSvgScatterTile,
-    scalePatternForZoom, patternDefinitionId, PATTERN_METADATA_KEY,
+    scalePatternForZoom, resolvePatternVisibility, fallbackOpacity,
+    importGeoJsonPolygons, patternDefinitionId, PATTERN_METADATA_KEY,
   } = window.MaplibrePatternFills;
   const DASH_PRESETS = {
     solid: [],
@@ -1586,6 +1641,7 @@
       scaleJitter: 0,
       scaleMode: "screen",
       referenceZoom: 12,
+      smallScaleFallback: "automatic",
       seed: "1",
     },
   };
@@ -1620,6 +1676,7 @@
     svgFill.minSpacing ??= 4;
     svgFill.scaleMode ??= "screen";
     svgFill.referenceZoom ??= 12;
+    svgFill.smallScaleFallback ??= "automatic";
     const legacyMetric = SVG_PATTERN_METRICS[svgFill.sample] || { opticalScale: 1 };
     svgFill.visualSize ??= (svgFill.stampSize ?? 24) * legacyMetric.opticalScale;
     svgFill.spacing ??= 100 / Math.sqrt(svgFill.density ?? 1.93);
@@ -1770,6 +1827,68 @@
     return scaled;
   }
 
+  function projectedFeatureMetrics(id) {
+    const ring = FEATURES[id]?.features[0]?.geometry?.coordinates?.[0];
+    if (!ring?.length) {
+      return { area: Number.POSITIVE_INFINITY, minimumSpan: Number.POSITIVE_INFINITY };
+    }
+    const points = ring.map(([lng, lat]) => map.project([lng, lat]));
+    let twiceArea = 0;
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    points.forEach((point, index) => {
+      const next = points[(index + 1) % points.length];
+      twiceArea += point.x * next.y - next.x * point.y;
+      minX = Math.min(minX, point.x);
+      minY = Math.min(minY, point.y);
+      maxX = Math.max(maxX, point.x);
+      maxY = Math.max(maxY, point.y);
+    });
+    return {
+      area: Math.abs(twiceArea) / 2,
+      minimumSpan: Math.min(maxX - minX, maxY - minY),
+    };
+  }
+
+  function svgVisibility(style, id, effective = effectiveSvgTexture(style, id)) {
+    const metrics = projectedFeatureMetrics(id);
+    return resolvePatternVisibility({
+      mode: style.svgFill.scaleMode,
+      motifOpacity: effective.opacity,
+      featureArea: metrics.area,
+      featureMinimumSpan: metrics.minimumSpan,
+      visualSize: effective.visualSize,
+      spacing: effective.spacing,
+    });
+  }
+
+  const svgFallbackImageId = (id) => `${id}__svg_fallback_img`;
+
+  function syncSvgFallbackTexture(id, style) {
+    if (style.svgFill.smallScaleFallback !== "stipple") return;
+    syncPatternTexture(map, {
+      imageId: svgFallbackImageId(id),
+      pattern: "stipple",
+      size: 12,
+      color: style.patColor,
+      weight: 1.15,
+      angle: 0,
+    });
+  }
+
+  function fallbackPaint(style, id, effective) {
+    const visibility = svgVisibility(style, id, effective);
+    return {
+      visibility,
+      opacity: style.patOpacity * fallbackOpacity(
+        style.svgFill.smallScaleFallback,
+        visibility.fallback,
+      ),
+    };
+  }
+
   async function syncSvgTextureForFeature(id, style) {
     const svg = resolveSvgFillSample(style.svgFill, style.patColor);
     if (!svg) return toast("Paste a custom SVG first");
@@ -1787,12 +1906,14 @@
     });
     const layerId = `${id}__pat`;
     if (map.getLayer(layerId)) {
+      const visibility = svgVisibility(style, id, effective);
       map.setPaintProperty(
         layerId,
         "fill-opacity",
-        style.patOpacity * effective.opacity,
+        style.patOpacity * visibility.motif,
       );
     }
+    repaintSvgFallback(id, style, effective);
   }
 
   async function syncSvgTexture() {
@@ -1815,6 +1936,7 @@
     const { source, layer, icon } = svgIconScatterIds();
     const polygon = FEATURES[state.layer.source].features[0].geometry;
     const effective = effectiveSvgTexture(currentStyle(), state.layer.source);
+    const visibility = svgVisibility(currentStyle(), state.layer.source, effective);
     await installSvgIconScatter(map, {
       sourceId: source, layerId: layer, iconId: icon, polygon, svg,
       size: effective.stampSize,
@@ -1825,7 +1947,7 @@
       positionJitter: state.svgFill.positionJitter,
       rotationJitterDeg: state.svgFill.rotationJitterDeg,
       scaleJitter: state.svgFill.scaleJitter,
-      opacity: state.patOpacity * effective.opacity,
+      opacity: state.patOpacity * visibility.motif,
       scaleMode: state.svgFill.scaleMode,
     });
     if (state.svgFill.scaleMode === "map" && map.getLayer(layer)) {
@@ -1867,6 +1989,7 @@
         state.patOpacity,
       ]);
     }
+    repaintSvgFallback(state.layer.source, currentStyle(), effective);
     rememberActiveStyle();
   }
 
@@ -1881,12 +2004,50 @@
     if (state.svgFill.noCut) syncSvgIconScatter(); else syncSvgTexture();
   }
 
+  function addSvgFallbackLayer(id, style, beforeId) {
+    if (style.svgFill.smallScaleFallback === "hide") return;
+    const effective = effectiveSvgTexture(style, id);
+    const fallback = fallbackPaint(style, id, effective);
+    const layer = {
+      id: `${id}__fallback`,
+      type: "fill",
+      source: id,
+      paint: style.svgFill.smallScaleFallback === "stipple"
+        ? {
+            "fill-pattern": svgFallbackImageId(id),
+            "fill-opacity": fallback.opacity,
+          }
+        : {
+            "fill-color": style.patColor,
+            "fill-opacity": fallback.opacity,
+          },
+    };
+    if (style.svgFill.smallScaleFallback === "stipple") {
+      syncSvgFallbackTexture(id, style);
+    }
+    map.addLayer(layer, beforeId);
+  }
+
+  function repaintSvgFallback(id, style, effective = effectiveSvgTexture(style, id)) {
+    const layerId = `${id}__fallback`;
+    if (!map.getLayer(layerId)) return;
+    const fallback = fallbackPaint(style, id, effective);
+    map.setPaintProperty(layerId, "fill-opacity", fallback.opacity);
+    if (style.svgFill.smallScaleFallback !== "stipple") {
+      map.setPaintProperty(layerId, "fill-color", style.patColor);
+    }
+  }
+
   // Style layers for the selected polygon.
   function rebuildPolygonLayers(id) {
     const bg = `${id}__bg`, pat = `${id}__pat`, line = `${id}__line`;
 
     if (state.bg.on) {
       map.addLayer({ id: bg, type: "fill", source: id, paint: { "fill-color": state.bg.color, "fill-opacity": state.bg.opacity } });
+    }
+
+    if (state.svgFill.on) {
+      addSvgFallbackLayer(id, currentStyle());
     }
 
     if (state.svgFill.on && state.svgFill.noCut) {
@@ -1896,7 +2057,8 @@
     } else if (state.svgFill.on) {
       syncSvgTexture();
       const effective = effectiveSvgTexture(currentStyle(), id);
-      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": svgImageId(id), "fill-opacity": state.patOpacity * effective.opacity } });
+      const visibility = svgVisibility(currentStyle(), id, effective);
+      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": svgImageId(id), "fill-opacity": state.patOpacity * visibility.motif } });
     } else if (state.pattern === "solid") {
       map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity } });
     } else {
@@ -1926,9 +2088,16 @@
   function repaint() {
     if (!state.layer) return;
     const { bg, pat, line } = ids();
+    const style = currentStyle();
+    const effective = state.svgFill.on
+      ? effectiveSvgTexture(style, state.layer.source)
+      : null;
+    const visibility = effective
+      ? svgVisibility(style, state.layer.source, effective)
+      : null;
     if (map.getLayer(pat)) {
       const opacity = state.svgFill.on && !state.svgFill.noCut
-        ? state.patOpacity * effectiveSvgTexture(currentStyle(), state.layer.source).opacity
+        ? state.patOpacity * visibility.motif
         : state.patOpacity;
       map.setPaintProperty(pat, "fill-opacity", opacity);
       if (!state.svgFill.on && state.pattern === "solid") map.setPaintProperty(pat, "fill-color", state.patColor);
@@ -1943,8 +2112,13 @@
     }
     const scatterLayer = `${state.layer.source}__svgscatter_layer`;
     if (map.getLayer(scatterLayer)) {
-      map.setPaintProperty(scatterLayer, "icon-opacity", state.patOpacity);
+      map.setPaintProperty(
+        scatterLayer,
+        "icon-opacity",
+        state.patOpacity * (visibility?.motif ?? 1),
+      );
     }
+    if (effective) repaintSvgFallback(state.layer.source, style, effective);
     rememberActiveStyle();
   }
 
@@ -2013,7 +2187,7 @@
     ];
   }
 
-  function zoomOpacityExpression(style) {
+  function zoomTransition(style) {
     const metrics = svgMetrics(style.svgFill);
     const hiddenZoom =
       style.svgFill.referenceZoom +
@@ -2021,6 +2195,11 @@
     const readableZoom =
       style.svgFill.referenceZoom +
       Math.log2(metrics.minReadableSize / style.svgFill.visualSize);
+    return { hiddenZoom, readableZoom };
+  }
+
+  function zoomOpacityExpression(style) {
+    const { hiddenZoom, readableZoom } = zoomTransition(style);
     return [
       "interpolate",
       ["linear"],
@@ -2030,6 +2209,57 @@
       readableZoom,
       style.patOpacity,
     ];
+  }
+
+  function zoomFallbackOpacityExpression(style, strength) {
+    const { hiddenZoom, readableZoom } = zoomTransition(style);
+    return [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      hiddenZoom,
+      style.patOpacity * strength,
+      readableZoom,
+      0,
+    ];
+  }
+
+  function exportedFallbackLayer(style) {
+    const fallback = style.svgFill.smallScaleFallback;
+    if (fallback === "hide") return null;
+    const strength = fallbackOpacity(fallback, 1);
+    const opacity = style.svgFill.scaleMode === "map"
+      ? zoomFallbackOpacityExpression(style, strength)
+      : style.patOpacity * strength * 0.35;
+    const layer = {
+      id: "<source>__fallback",
+      type: "fill",
+      source: "<source>",
+      "source-layer": "<source-layer>",
+      paint: {
+        "fill-color": style.patColor,
+        "fill-opacity": opacity,
+      },
+    };
+    if (fallback === "stipple") {
+      const definition = {
+        kind: "geometric",
+        pattern: "stipple",
+        size: 12,
+        color: style.patColor,
+        weight: 1.15,
+        angle: 0,
+      };
+      const imageId = patternDefinitionId(definition);
+      layer.paint = {
+        "fill-pattern": imageId,
+        "fill-opacity": opacity,
+      };
+      layer.metadata = {
+        [PATTERN_METADATA_KEY]: { imageId, definition },
+      };
+    }
+    return layer;
   }
 
   // Export a polygon style fragment.
@@ -2049,21 +2279,26 @@
     if (!state.svgFill.on) return fragment;
 
     const patternLayerIndex = fragment.layers.findIndex((layer) => layer.id === "<source>__pat");
+    const fallbackLayer = exportedFallbackLayer(style);
+    if (fallbackLayer && patternLayerIndex >= 0) {
+      fragment.layers.splice(patternLayerIndex, 0, fallbackLayer);
+    }
+    const exportedPatternLayerIndex = fragment.layers.findIndex((layer) => layer.id === "<source>__pat");
     if (state.svgFill.noCut) {
       // No-cut scatter depends on live polygon geometry and remains an
       // experimental runtime operation, so do not export a placeholder fill.
-      if (patternLayerIndex >= 0) fragment.layers.splice(patternLayerIndex, 1);
+      if (exportedPatternLayerIndex >= 0) fragment.layers.splice(exportedPatternLayerIndex, 1);
       return fragment;
     }
 
     if (state.svgFill.scaleMode === "map") {
       const variants = createSvgZoomVariants(style);
       const [base] = variants;
-      fragment.layers[patternLayerIndex].paint["fill-pattern"] =
+      fragment.layers[exportedPatternLayerIndex].paint["fill-pattern"] =
         zoomPatternExpression(variants);
-      fragment.layers[patternLayerIndex].paint["fill-opacity"] =
+      fragment.layers[exportedPatternLayerIndex].paint["fill-opacity"] =
         zoomOpacityExpression(style);
-      fragment.layers[patternLayerIndex].metadata = {
+      fragment.layers[exportedPatternLayerIndex].metadata = {
         [PATTERN_METADATA_KEY]: {
           imageId: base.imageId,
           definition: base.definition,
@@ -2074,8 +2309,8 @@
       const effective = effectiveSvgTexture(style, null);
       const definition = createSvgDefinition(style, effective);
       const imageId = patternDefinitionId(definition);
-      fragment.layers[patternLayerIndex].paint["fill-pattern"] = imageId;
-      fragment.layers[patternLayerIndex].metadata = {
+      fragment.layers[exportedPatternLayerIndex].paint["fill-pattern"] = imageId;
+      fragment.layers[exportedPatternLayerIndex].metadata = {
         [PATTERN_METADATA_KEY]: { imageId, definition },
       };
     }
@@ -2083,8 +2318,10 @@
   }
 
   // Random GeoJSON test features.
-  const MAX_FEATURES = 6;
+  const MAX_FEATURES = 48;
+  const MAX_SAMPLE_FEATURES = 6;
   const FEATURES = {};
+  const FEATURE_META = {};
   const FEATURE_POSITIONS = [
     [0, 0],
     [0.95, 0.2],
@@ -2095,6 +2332,8 @@
   ];
   let featureOrigin = null;
   let featureSerial = 0;
+  let sourceMode = "sample";
+  let sourceFileName = "";
 
   function randomPolygon(cx, cy, rBase) {
     const pts = [], n = 6 + Math.floor(Math.random() * 4);
@@ -2109,9 +2348,10 @@
 
   // Remove generated layers without touching the main GeoJSON source.
   function removePatternLayers(id) {
-    [`${id}__line`, `${id}__pat`, `${id}__bg`, `${id}__svgscatter_layer`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
+    [`${id}__line`, `${id}__pat`, `${id}__fallback`, `${id}__bg`, `${id}__svgscatter_layer`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
     if (map.hasImage(`${id}__pat_img`)) map.removeImage(`${id}__pat_img`);
     if (map.hasImage(`${id}__svg_img`)) map.removeImage(`${id}__svg_img`);
+    if (map.hasImage(`${id}__svg_fallback_img`)) map.removeImage(`${id}__svg_fallback_img`);
     if (map.getSource(`${id}__svgscatter`)) map.removeSource(`${id}__svgscatter`);
   }
 
@@ -2123,6 +2363,18 @@
   function removeFeatureCompletely(id) {
     removeStyleLayers(id);
     if (map.getSource(id)) map.removeSource(id);
+  }
+
+  function clearFeatures() {
+    Object.keys(FEATURES).forEach((id) => {
+      removeFeatureCompletely(id);
+      delete FEATURES[id];
+      delete FEATURE_STYLES[id];
+      delete FEATURE_META[id];
+    });
+    $("layerSelect").innerHTML = "";
+    state.layer = null;
+    featureSerial = 0;
   }
 
   function showSelection(id) {
@@ -2148,13 +2400,19 @@
       button.className = "feature-chip";
       button.dataset.feature = id;
       button.textContent = String(index + 1).padStart(2, "0");
+      button.title = FEATURE_META[id]?.label || `Polygon ${index + 1}`;
       button.addEventListener("click", () => selectLayer(id));
       chips.appendChild(button);
     });
     const count = Object.keys(FEATURES).length;
     $("polygonCount").textContent = `${count} polygon${count === 1 ? "" : "s"}`;
-    $("reloadCatalog").disabled = count >= MAX_FEATURES;
-    $("reloadCatalog").textContent = count >= MAX_FEATURES ? "Maximum reached" : "Add polygon";
+    $("reloadCatalog").disabled =
+      sourceMode === "import" || count >= MAX_SAMPLE_FEATURES;
+    $("reloadCatalog").textContent = sourceMode === "import"
+      ? "GeoJSON open"
+      : count >= MAX_SAMPLE_FEATURES
+        ? "Sample limit"
+        : "Add sample";
   }
 
   function fitAllFeatures() {
@@ -2173,26 +2431,23 @@
     });
   }
 
-  function addFeature() {
+  function addFeatureToMap(feature, label, style, imported = false) {
     const index = Object.keys(FEATURES).length;
     if (index >= MAX_FEATURES) return;
     if (state.layer) rememberActiveStyle();
-    const span = 0.028;
     const sel = $("layerSelect");
     const id = `feature_${++featureSerial}`;
-    const [offsetX, offsetY] = FEATURE_POSITIONS[index];
-    const cx = featureOrigin.lng + offsetX * span * 2;
-    const cy = featureOrigin.lat + offsetY * span * 2;
-    const fc = { type: "FeatureCollection", features: [randomPolygon(cx, cy, span * 0.82)] };
+    const fc = { type: "FeatureCollection", features: [clone(feature)] };
     FEATURES[id] = fc;
+    FEATURE_META[id] = { label, imported };
     map.addSource(id, { type: "geojson", data: fc });
 
     const option = document.createElement("option");
     option.value = id;
-    option.textContent = `Polygon ${featureSerial}`;
+    option.textContent = label;
     sel.appendChild(option);
 
-    FEATURE_STYLES[id] = featureStyleFor(index);
+    FEATURE_STYLES[id] = clone(style);
     state.layer = { source: id };
     loadStyle(FEATURE_STYLES[id]);
     rebuildPolygonLayers(id);
@@ -2208,22 +2463,71 @@
       source: id,
       paint: { "line-color": "#87928d", "line-width": 1.2, "line-opacity": 0.9 },
     });
+    return id;
+  }
+
+  function addFeature() {
+    const index = Object.keys(FEATURES).length;
+    if (index >= MAX_SAMPLE_FEATURES) return;
+    const span = 0.028;
+    const [offsetX, offsetY] = FEATURE_POSITIONS[index];
+    const cx = featureOrigin.lng + offsetX * span * 2;
+    const cy = featureOrigin.lat + offsetY * span * 2;
+    const feature = randomPolygon(cx, cy, span * 0.82);
+    const id = addFeatureToMap(
+      feature,
+      `Sample ${index + 1}`,
+      featureStyleFor(index),
+    );
+    sourceMode = "sample";
+    sourceFileName = "";
     renderFeatureChips();
     selectLayer(id);
     fitAllFeatures();
   }
 
   function generateFeatures() {
-    Object.keys(FEATURES).forEach((id) => {
-      removeFeatureCompletely(id);
-      delete FEATURES[id];
-      delete FEATURE_STYLES[id];
-    });
-    $("layerSelect").innerHTML = "";
-    state.layer = null;
-    featureSerial = 0;
+    clearFeatures();
     featureOrigin = map.getCenter();
+    sourceMode = "sample";
+    sourceFileName = "";
     addFeature();
+  }
+
+  function importedFeatureLabel(feature, index) {
+    const properties = feature.properties || {};
+    const value = [
+      properties.name,
+      properties.nom,
+      properties.title,
+      properties.label,
+      properties.ref,
+      properties.code,
+      feature.id,
+    ].find((candidate) => (
+      typeof candidate === "string" && candidate.trim() ||
+      typeof candidate === "number"
+    ));
+    return value === undefined ? `Polygon ${index + 1}` : String(value).trim();
+  }
+
+  function replaceWithImportedFeatures(features, fileName) {
+    clearFeatures();
+    sourceMode = "import";
+    sourceFileName = fileName;
+    const labels = new Map();
+    let firstId = null;
+    features.forEach((feature, index) => {
+      const baseLabel = importedFeatureLabel(feature, index);
+      const occurrence = (labels.get(baseLabel) || 0) + 1;
+      labels.set(baseLabel, occurrence);
+      const label = occurrence === 1 ? baseLabel : `${baseLabel} (${occurrence})`;
+      const id = addFeatureToMap(feature, label, DEFAULT_STYLE, true);
+      firstId ||= id;
+    });
+    renderFeatureChips();
+    selectLayer(firstId);
+    fitAllFeatures();
   }
 
   function selectLayer(id) {
@@ -2232,12 +2536,14 @@
     state.layer = { source: id };
     loadStyle(FEATURE_STYLES[id] || DEFAULT_STYLE);
     $("layerSelect").value = id;
-    const number = Number(id.split("_")[1]);
+    const label = FEATURE_META[id]?.label || `Polygon ${id.split("_")[1]}`;
     const count = Object.keys(FEATURES).length;
-    $("activePolygonLabel").textContent = `Polygon ${number}`;
-    $("srcHint").textContent = count === 1
-      ? "Adjust its style or add another polygon."
-      : `Polygon ${number} selected. Click another shape to edit it.`;
+    $("activePolygonLabel").textContent = label;
+    $("srcHint").textContent = sourceMode === "import"
+      ? `${sourceFileName} · ${label}${count > 1 ? " selected" : ""}`
+      : count === 1
+        ? "Adjust its style, open a GeoJSON or add another sample."
+        : `${label} selected. Click another shape to edit it.`;
     document.querySelectorAll(".feature-chip").forEach((button) => {
       button.classList.toggle("active", button.dataset.feature === id);
     });
@@ -2433,16 +2739,24 @@
     $("svgReferenceZoomControl").classList.toggle("is-disabled", !mapScale);
     $("svgReferenceZoom").disabled = !mapScale;
     $("svgUseCurrentZoom").disabled = !mapScale;
+    document.querySelectorAll("#svgFallbackSeg button").forEach((button) => {
+      button.classList.toggle(
+        "active",
+        button.dataset.fallback === state.svgFill.smallScaleFallback,
+      );
+      button.disabled = !state.svgFill.on;
+    });
     updateSvgScaleReadout();
   }
   function updateSvgScaleReadout() {
     if (!state.layer) return;
     const zoom = map.getZoom();
     const effective = effectiveSvgTexture(currentStyle(), state.layer.source, zoom);
+    const visibility = svgVisibility(currentStyle(), state.layer.source, effective);
     const suffix = effective.capped
       ? " · maximum display size"
-      : effective.opacity === 0
-        ? " · hidden below legibility limit"
+      : visibility.motif < 0.05
+        ? " · simplified at this scale"
         : "";
     $("svgScaleReadout").textContent =
       `At z${zoom.toFixed(1)}: ${effective.visualSize.toFixed(1)} px motif · ${effective.spacing.toFixed(1)} px spacing${suffix}`;
@@ -2450,10 +2764,13 @@
   function updateSvgQualityHint() {
     if (!state.layer) return;
     const effective = effectiveSvgTexture(currentStyle(), state.layer.source);
+    const visibility = svgVisibility(currentStyle(), state.layer.source, effective);
     const largestStamp = effective.visualSize * (1 + state.svgFill.scaleJitter);
     let message = "High-density rendering is automatic.";
-    if (effective.opacity === 0) {
-      message = "This motif is hidden below its legibility limit.";
+    if (visibility.motif < 0.05 && state.svgFill.smallScaleFallback !== "hide") {
+      message = "The polygon is shown with its small-scale fill.";
+    } else if (visibility.motif < 0.05) {
+      message = "The motif is hidden at this scale.";
     } else if (effective.opacity < 1) {
       message = "The motif is fading as it approaches its legibility limit.";
     } else if (effective.capped) {
@@ -2538,6 +2855,14 @@
     updateSvgQualityHint();
     if (state.svgFill.on) rebuildLayers();
   });
+  $("svgFallbackSeg").addEventListener("click", (event) => {
+    const fallback = event.target.dataset.fallback;
+    if (!fallback) return;
+    state.svgFill.smallScaleFallback = fallback;
+    updateSvgScaleModeControls();
+    updateSvgQualityHint();
+    if (state.svgFill.on) rebuildLayers();
+  });
   $("svgReferenceZoom").addEventListener("input", (event) => {
     state.svgFill.referenceZoom = +event.target.value;
     $("svgReferenceZoomVal").textContent = `z${state.svgFill.referenceZoom.toFixed(0)}`;
@@ -2549,6 +2874,12 @@
     state.svgFill.referenceZoom = Math.floor(map.getZoom());
     $("svgReferenceZoom").value = state.svgFill.referenceZoom;
     $("svgReferenceZoomVal").textContent = `z${state.svgFill.referenceZoom.toFixed(0)}`;
+    document.querySelectorAll("#svgFallbackSeg button").forEach((button) => {
+      button.classList.toggle(
+        "active",
+        button.dataset.fallback === state.svgFill.smallScaleFallback,
+      );
+    });
     updateSvgScaleReadout();
     updateSvgQualityHint();
     if (state.svgFill.on && state.svgFill.scaleMode === "map") syncSvgFill();
@@ -2612,6 +2943,66 @@
   // Source
   $("reloadCatalog").addEventListener("click", addFeature);
   $("layerSelect").addEventListener("change", (e) => selectLayer(e.target.value));
+  const MAX_GEOJSON_BYTES = 10 * 1024 * 1024;
+
+  async function loadGeoJsonFile(file) {
+    if (!file) return;
+    if (file.size > MAX_GEOJSON_BYTES) {
+      throw new RangeError("GeoJSON files are limited to 10 MB");
+    }
+    let contents;
+    try {
+      contents = JSON.parse(await file.text());
+    } catch {
+      throw new TypeError("This file is not valid JSON");
+    }
+    const imported = importGeoJsonPolygons(contents, MAX_FEATURES);
+    replaceWithImportedFeatures(imported.features, file.name);
+    const ignored = imported.ignoredFeatures
+      ? `, ${imported.ignoredFeatures} non-polygon feature${imported.ignoredFeatures === 1 ? "" : "s"} ignored`
+      : "";
+    toast(
+      `${imported.features.length} polygon${imported.features.length === 1 ? "" : "s"} opened${ignored}`,
+    );
+  }
+
+  async function openGeoJsonFile(file) {
+    try {
+      await loadGeoJsonFile(file);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "GeoJSON could not be opened");
+    }
+  }
+
+  $("importGeoJson").addEventListener("click", () => $("geoJsonFile").click());
+  $("geoJsonFile").addEventListener("change", async (event) => {
+    const [file] = event.target.files || [];
+    await openGeoJsonFile(file);
+    event.target.value = "";
+  });
+
+  const mapShell = document.querySelector(".map-shell");
+  let geoJsonDragDepth = 0;
+  mapShell.addEventListener("dragenter", (event) => {
+    event.preventDefault();
+    geoJsonDragDepth++;
+    mapShell.classList.add("is-dragging");
+  });
+  mapShell.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  });
+  mapShell.addEventListener("dragleave", () => {
+    geoJsonDragDepth = Math.max(0, geoJsonDragDepth - 1);
+    if (geoJsonDragDepth === 0) mapShell.classList.remove("is-dragging");
+  });
+  mapShell.addEventListener("drop", async (event) => {
+    event.preventDefault();
+    geoJsonDragDepth = 0;
+    mapShell.classList.remove("is-dragging");
+    const [file] = event.dataTransfer?.files || [];
+    await openGeoJsonFile(file);
+  });
 
   // Export / config
   function tileImageToPng(tile) {
@@ -2945,7 +3336,7 @@ if (map.isStyleLoaded()) {
 
   function polygonLayerIds() {
     return Object.keys(FEATURES)
-      .flatMap((id) => [`${id}__idle_line`, `${id}__idle`, `${id}__line`, `${id}__pat`, `${id}__bg`])
+      .flatMap((id) => [`${id}__idle_line`, `${id}__idle`, `${id}__line`, `${id}__pat`, `${id}__fallback`, `${id}__bg`])
       .filter((id) => map.getLayer(id));
   }
 

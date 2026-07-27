@@ -38,6 +38,22 @@ describe("zoom variant style", () => {
             1,
           ],
         },
+      }, {
+        id: "fallback",
+        type: "fill",
+        source: "polygons",
+        paint: {
+          "fill-color": "#2c6a5b",
+          "fill-opacity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            9.5,
+            0.28,
+            10.5,
+            0,
+          ],
+        },
       }],
     });
     expect(errors).toEqual([]);
