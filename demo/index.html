@@ -1855,7 +1855,7 @@
       scaleJitter: state.svgFill.scaleJitter,
       opacity: state.patOpacity,
       scaleMode: state.svgFill.scaleMode,
-      edgeClearance: state.svgFill.noCut,
+      edgeClearance: state.svgFill.noCut || state.svgFill.scaleMode === "map",
     });
     rememberActiveStyle();
   }
@@ -2476,6 +2476,15 @@
     $("svgReferenceZoomControl").classList.toggle("is-disabled", !mapScale);
     $("svgReferenceZoom").disabled = !mapScale;
     $("svgUseCurrentZoom").disabled = !mapScale;
+    $("svgNoCutToggle").checked = mapScale || state.svgFill.noCut;
+    $("svgNoCutToggle").disabled = !state.svgFill.on || mapScale;
+    $("svgNoCutToggle").closest(".switch").classList.toggle(
+      "is-disabled",
+      !state.svgFill.on || mapScale,
+    );
+    $("noCutHint").textContent = mapScale
+      ? "Ground scale keeps complete symbols inside the polygon."
+      : "Exact edge clearance keeps the complete symbol inside.";
     updateSvgScaleReadout();
   }
   function updateSvgScaleReadout() {
