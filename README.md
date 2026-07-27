@@ -148,10 +148,12 @@ map.addLayer({
 ## Demo / playground
 
 [`demo/index.html`](./demo/index.html) is a single, buildless HTML file with a
-control panel for composing polygon fill patterns on test features. The
-background and outline controls provide visual context and are included in
-style fragment exports. Bring your own SVG by pasting markup or uploading a
-`.svg` file. The playground loads the library from
+control panel for composing polygon fill patterns. Open or drop a GeoJSON file
+to work on its polygons, or use the generated sample. Polygon and MultiPolygon
+geometries are supported, with each polygon part available for individual
+styling. The background and outline controls provide visual context and are
+included in style fragment exports. Bring your own SVG by pasting markup or
+uploading a `.svg` file. The playground loads the library from
 `dist/index.global.js`, so run `npm run build` once, then open the file
 directly:
 

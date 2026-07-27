@@ -116,4 +116,44 @@ interface PatternScaleResult {
  */
 declare function scalePatternForZoom(options: PatternScaleOptions): PatternScaleResult;
 
-export { type MakeTileOptions, type PatternScaleMode, type PatternScaleOptions, type PatternScaleResult, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, SvgDistributionMode, TileContext, TileImage, createMiniContext, hashStringToSeed, makeTile, mulberry32, scalePatternForZoom, scatterPointsInPolygon };
+type SmallScaleFallback = "automatic" | "solid" | "stipple" | "hide";
+interface PatternVisibilityOptions {
+    mode: "screen" | "map";
+    motifOpacity: number;
+    featureArea?: number;
+    featureMinimumSpan?: number;
+    visualSize: number;
+    spacing: number;
+}
+interface PatternVisibilityResult {
+    motif: number;
+    fallback: number;
+    estimatedMotifs: number | null;
+}
+/**
+ * Crossfades a sparse motif into a simpler fill when the motif is no longer
+ * readable or when a screen-sized feature is unlikely to contain a full mark.
+ */
+declare function resolvePatternVisibility(options: PatternVisibilityOptions): PatternVisibilityResult;
+declare function fallbackOpacity(fallback: SmallScaleFallback, visibility: number): number;
+
+interface ImportedPolygonFeature {
+    type: "Feature";
+    id?: string | number;
+    properties: Record<string, unknown>;
+    geometry: {
+        type: "Polygon";
+        coordinates: number[][][];
+    };
+}
+interface GeoJsonPolygonImport {
+    features: ImportedPolygonFeature[];
+    ignoredFeatures: number;
+}
+/**
+ * Extracts editable Polygon features from GeoJSON. MultiPolygons are split
+ * into one feature per polygon so every part can receive its own fill.
+ */
+declare function importGeoJsonPolygons(input: unknown, maximumFeatures?: number): GeoJsonPolygonImport;
+
+export { type GeoJsonPolygonImport, type ImportedPolygonFeature, type MakeTileOptions, type PatternScaleMode, type PatternScaleOptions, type PatternScaleResult, PatternType, type PatternVisibilityOptions, type PatternVisibilityResult, type Ring, type ScatterPointsOptions, type ScatteredPoint, type SmallScaleFallback, SvgDistributionMode, TileContext, TileImage, createMiniContext, fallbackOpacity, hashStringToSeed, importGeoJsonPolygons, makeTile, mulberry32, resolvePatternVisibility, scalePatternForZoom, scatterPointsInPolygon };
