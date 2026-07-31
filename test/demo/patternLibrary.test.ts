@@ -61,4 +61,21 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/map\.on\("moveend"/);
     expect(demo).not.toMatch(/map\.on\("zoomend"[\s\S]*?scaleMode === "map"[\s\S]*?syncSvgIconScatter\(\)/);
   });
+
+  it("opens common vector formats without loading every reader at startup", () => {
+    expect(demo).toMatch(/id="vectorFile"[^>]*accept="[^"]*\.gpkg[^"]*\.shp[^"]*\.parquet[^"]*"[^>]*multiple/);
+    expect(demo).toContain("shpjs@6.2.0");
+    expect(demo).toContain("hyparquet@1.27.1");
+    expect(demo).toContain("gdal3.js@2.8.1");
+    expect(demo).toMatch(/await import\(SHPJS_URL\)/);
+    expect(demo).toMatch(/parquetReadObjects/);
+    expect(demo).toMatch(/Gdal\.ogr2ogr/);
+  });
+
+  it("places the style editor left of the map and the data panel on the right", () => {
+    expect(demo).toMatch(/\.workspace \{[\s\S]*?grid-template-columns: 430px minmax\(0, 1fr\) 230px;/);
+    expect(demo).toMatch(/\.layer-panel \{[\s\S]*?grid-column: 3;[\s\S]*?grid-row: 1;/);
+    expect(demo).toMatch(/#panel\.control-dock \{[\s\S]*?grid-column: 1;[\s\S]*?grid-row: 1;/);
+    expect(demo).toMatch(/\.map-shell \{[\s\S]*?grid-column: 2;[\s\S]*?grid-row: 1;/);
+  });
 });
