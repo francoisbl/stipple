@@ -59,10 +59,21 @@ function scatterIconPoints(options) {
 }
 
 // src/maplibre/svgIcon.ts
+var installedSvgIcons = /* @__PURE__ */ new WeakMap();
 async function addSvgIcon(map, options) {
   const { id, svg, size = 32, pixelRatio = 2 } = options;
-  const image = await loadSvgImage(svg);
   const px = Math.round(size * pixelRatio);
+  const signature = `${size}@${pixelRatio}:${svg}`;
+  let installedById = installedSvgIcons.get(map);
+  if (!installedById) {
+    installedById = /* @__PURE__ */ new Map();
+    installedSvgIcons.set(map, installedById);
+  }
+  const previous = installedById.get(id);
+  if (map.hasImage(id) && previous?.signature === signature) {
+    return { id, width: previous.width, height: previous.height };
+  }
+  const image = await loadSvgImage(svg);
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = px;
   const ctx = canvas.getContext("2d");
@@ -71,8 +82,18 @@ async function addSvgIcon(map, options) {
   ctx.drawImage(image, 0, 0, px, px);
   const imageData = ctx.getImageData(0, 0, px, px);
   const tile = { width: px, height: px, data: new Uint8Array(imageData.data.buffer) };
-  if (map.hasImage(id)) map.removeImage(id);
-  map.addImage(id, tile, { pixelRatio });
+  if (map.hasImage(id) && previous?.width === px && previous.height === px && previous.pixelRatio === pixelRatio) {
+    map.updateImage(id, tile);
+  } else {
+    if (map.hasImage(id)) map.removeImage(id);
+    map.addImage(id, tile, { pixelRatio });
+  }
+  installedById.set(id, {
+    signature,
+    width: px,
+    height: px,
+    pixelRatio
+  });
   return { id, width: px, height: px };
 }
 
