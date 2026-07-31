@@ -53,13 +53,14 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/new maplibregl\.Map\(\{[\s\S]*?fadeDuration:\s*0,/);
   });
 
-  it("uses symbol layers for stable SVG sizing", () => {
-    expect(demo).toMatch(/function syncSvgFill\(\) \{[\s\S]*?setTimeout\(\(\) => syncSvgIconScatter\(\), 40\)/);
+  it("clips SVG motifs at polygon boundaries by default", () => {
+    expect(demo).toMatch(/state\.svgFill\.on && state\.svgFill\.noCut[\s\S]*?syncSvgIconScatterForFeature/);
+    expect(demo).toMatch(/else if \(state\.svgFill\.on\)[\s\S]*?"fill-pattern": svgImageId\(id\)/);
+    expect(demo).toMatch(/if \(state\.svgFill\.noCut\) syncSvgIconScatter\(\);[\s\S]*?else syncSvgTexture\(\);/);
     expect(demo).toMatch(/scaleMode:\s*style\.svgFill\.scaleMode/);
     expect(demo).toMatch(/edgeClearance:\s*true/);
-    expect(demo).toMatch(/state\.svgFill\.scaleMode === "screen"[\s\S]*?syncSvgIconScatter\(\)/);
+    expect(demo).toContain("Symbols continue to the edge and are clipped by the boundary.");
     expect(demo).toMatch(/map\.on\("moveend"/);
-    expect(demo).not.toMatch(/map\.on\("zoomend"[\s\S]*?scaleMode === "map"[\s\S]*?syncSvgIconScatter\(\)/);
   });
 
   it("opens common vector formats without loading every reader at startup", () => {
