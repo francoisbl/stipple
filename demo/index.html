@@ -1274,10 +1274,6 @@
                 <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="0" />
                 <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.00</span></label>
                 <input type="range" id="svgScaleJitter" min="0" max="0.5" step="0.05" value="0" />
-                <div class="switch" style="margin-top:9px">
-                  <label style="margin:0">Keep symbols inside</label>
-                  <input type="checkbox" id="svgNoCutToggle" />
-                </div>
                 <div id="svgScaleModeControl">
                   <label>Scale unit</label>
                   <div class="seg scale-mode-seg" id="svgScaleModeSeg">
@@ -1290,7 +1286,7 @@
                     <button type="button" class="action ghost scale-reference-action" id="svgUseCurrentZoom" disabled>Use current zoom</button>
                   </div>
                 </div>
-                <p class="hint" id="noCutHint">Exact edge clearance keeps the complete symbol inside.</p>
+                <p class="hint" id="symbolPlacementHint">Symbols stay inside the polygon.</p>
                 <p class="scale-readout" id="svgScaleReadout">At z12: 24 px motif · 72 px spacing</p>
                 <p class="hint" id="svgQualityHint">High-density rendering is automatic.</p>
               </div>
@@ -1830,33 +1826,37 @@
   }
 
   // Experimental mode using exact boundary clearance for whole SVG stamps.
-  const svgIconScatterIds = () => ({
-    source: `${state.layer.source}__svgscatter`,
-    layer: `${state.layer.source}__svgscatter_layer`,
-    icon: `${state.layer.source}__svg_icon_${state.svgFill.sample}`,
+  const svgIconScatterIds = (id = state.layer.source, svgFill = state.svgFill) => ({
+    source: `${id}__svgscatter`,
+    layer: `${id}__svgscatter_layer`,
+    icon: `${id}__svg_icon_${svgFill.sample}`,
   });
 
-  async function syncSvgIconScatter() {
-    if (!state.layer) return;
-    const svg = resolveSvgFillSample();
+  async function syncSvgIconScatterForFeature(id, style) {
+    const svg = resolveSvgFillSample(style.svgFill, style.patColor);
     if (!svg) return toast("Paste a custom SVG first");
-    const { source, layer, icon } = svgIconScatterIds();
-    const polygon = FEATURES[state.layer.source].features[0].geometry;
-    const effective = effectiveSvgTexture(currentStyle(), state.layer.source);
+    const { source, layer, icon } = svgIconScatterIds(id, style.svgFill);
+    const polygon = FEATURES[id].features[0].geometry;
+    const effective = effectiveSvgTexture(style, id);
     await installSvgIconScatter(map, {
       sourceId: source, layerId: layer, iconId: icon, polygon, svg,
       size: effective.stampSize,
       density: effective.density,
-      seed: state.svgFill.seed,
-      distribution: state.svgFill.distribution,
-      minSpacing: state.svgFill.minSpacing * effective.scale,
-      positionJitter: state.svgFill.positionJitter,
-      rotationJitterDeg: state.svgFill.rotationJitterDeg,
-      scaleJitter: state.svgFill.scaleJitter,
-      opacity: state.patOpacity,
-      scaleMode: state.svgFill.scaleMode,
-      edgeClearance: state.svgFill.noCut || state.svgFill.scaleMode === "map",
+      seed: style.svgFill.seed,
+      distribution: style.svgFill.distribution,
+      minSpacing: style.svgFill.minSpacing * effective.scale,
+      positionJitter: style.svgFill.positionJitter,
+      rotationJitterDeg: style.svgFill.rotationJitterDeg,
+      scaleJitter: style.svgFill.scaleJitter,
+      opacity: style.patOpacity,
+      scaleMode: style.svgFill.scaleMode,
+      edgeClearance: true,
     });
+  }
+
+  async function syncSvgIconScatter() {
+    if (!state.layer) return;
+    await syncSvgIconScatterForFeature(state.layer.source, currentStyle());
     rememberActiveStyle();
   }
 
@@ -1868,11 +1868,7 @@
   }
 
   function syncSvgFill() {
-    if (state.svgFill.noCut || state.svgFill.scaleMode === "map") {
-      syncSvgIconScatter();
-    } else {
-      syncSvgTexture();
-    }
+    syncSvgIconScatter();
   }
 
   // Style layers for the selected polygon.
@@ -1883,13 +1879,10 @@
       map.addLayer({ id: bg, type: "fill", source: id, paint: { "fill-color": state.bg.color, "fill-opacity": state.bg.opacity } });
     }
 
-    if (state.svgFill.on && (state.svgFill.noCut || state.svgFill.scaleMode === "map")) {
-      // Ground-scaled motifs use symbols so their size and position follow
-      // the map continuously. The same renderer handles edge clearance.
-      syncSvgIconScatter();
-    } else if (state.svgFill.on) {
-      syncSvgTexture();
-      map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": svgImageId(id), "fill-opacity": state.patOpacity } });
+    if (state.svgFill.on) {
+      // Symbol layers keep screen-sized motifs stable throughout fractional
+      // zooms. Repeating fill textures scale between integer zoom levels.
+      syncSvgIconScatterForFeature(id, currentStyle());
     } else if (state.pattern === "solid") {
       map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity } });
     } else {
@@ -2476,15 +2469,9 @@
     $("svgReferenceZoomControl").classList.toggle("is-disabled", !mapScale);
     $("svgReferenceZoom").disabled = !mapScale;
     $("svgUseCurrentZoom").disabled = !mapScale;
-    $("svgNoCutToggle").checked = mapScale || state.svgFill.noCut;
-    $("svgNoCutToggle").disabled = !state.svgFill.on || mapScale;
-    $("svgNoCutToggle").closest(".switch").classList.toggle(
-      "is-disabled",
-      !state.svgFill.on || mapScale,
-    );
-    $("noCutHint").textContent = mapScale
-      ? "Ground scale keeps complete symbols inside the polygon."
-      : "Exact edge clearance keeps the complete symbol inside.";
+    $("symbolPlacementHint").textContent = mapScale
+      ? "Symbols scale with the map and stay inside the polygon."
+      : "Symbols keep their screen size and stay inside the polygon.";
     updateSvgScaleReadout();
   }
   function updateSvgScaleReadout() {
@@ -2537,13 +2524,6 @@
     updateSvgScaleReadout();
     updateSvgQualityHint();
     rebuildLayers();
-  });
-  $("svgNoCutToggle").addEventListener("change", (e) => {
-    state.svgFill.noCut = e.target.checked;
-    updateSvgScaleModeControls();
-    updateSvgScaleReadout();
-    updateSvgQualityHint();
-    if (state.svgFill.on) rebuildLayers();
   });
   $("svgFillSample").addEventListener("change", (e) => {
     state.svgFill.sample = e.target.value;
@@ -3008,7 +2988,6 @@ if (map.isStyleLoaded()) {
     $("lineToggle").checked = state.outline.on;
     $("dashInput").value = (state.outline.dash || []).join(" ");
     $("svgFillToggle").checked = state.svgFill.on;
-    $("svgNoCutToggle").checked = state.svgFill.noCut;
     $("svgFillSample").value = state.svgFill.sample;
     $("svgFillCustomPanel").classList.toggle("hidden", state.svgFill.sample !== "custom");
     $("svgFillCustomText").value = state.svgFill.customSvg;
@@ -3042,7 +3021,7 @@ if (map.isStyleLoaded()) {
 
   map.on("zoomend", () => {
     if (!state.svgFill.on) return;
-    if (state.svgFill.noCut && state.svgFill.scaleMode === "screen") {
+    if (state.svgFill.scaleMode === "screen") {
       syncSvgIconScatter();
     } else {
       repaint();

@@ -53,11 +53,11 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/new maplibregl\.Map\(\{[\s\S]*?fadeDuration:\s*0,/);
   });
 
-  it("uses continuously scaled symbols for ground-scale SVG fills", () => {
-    expect(demo).toMatch(/state\.svgFill\.noCut \|\| state\.svgFill\.scaleMode === "map"/);
-    expect(demo).toMatch(/scaleMode:\s*state\.svgFill\.scaleMode/);
-    expect(demo).toMatch(/edgeClearance:\s*state\.svgFill\.noCut \|\| state\.svgFill\.scaleMode === "map"/);
-    expect(demo).toMatch(/svgNoCutToggle"\)\.disabled = !state\.svgFill\.on \|\| mapScale/);
+  it("uses symbol layers for stable SVG sizing", () => {
+    expect(demo).toMatch(/function syncSvgFill\(\) \{\s+syncSvgIconScatter\(\);/);
+    expect(demo).toMatch(/scaleMode:\s*style\.svgFill\.scaleMode/);
+    expect(demo).toMatch(/edgeClearance:\s*true/);
+    expect(demo).toMatch(/state\.svgFill\.scaleMode === "screen"[\s\S]*?syncSvgIconScatter\(\)/);
     expect(demo).not.toMatch(/map\.on\("zoomend"[\s\S]*?scaleMode === "map"[\s\S]*?syncSvgIconScatter\(\)/);
   });
 });
