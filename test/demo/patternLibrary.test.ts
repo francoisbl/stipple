@@ -19,8 +19,10 @@ describe("demo pattern library", () => {
   it("keeps the files, inline samples, and selector in sync", () => {
     const objectSource = demo.match(/const SVG_PATTERN_SAMPLES = \{([\s\S]*?)\n  \};/)?.[1];
     const metricsSource = demo.match(/const SVG_PATTERN_METRICS = \{([\s\S]*?)\n  \};/)?.[1];
+    const catalogSource = demo.match(/const SVG_PATTERN_CATALOG = \[([\s\S]*?)\n  \];/)?.[1];
     expect(objectSource).toBeDefined();
     expect(metricsSource).toBeDefined();
+    expect(catalogSource).toBeDefined();
 
     const inline = new Map<string, string>();
     for (const match of objectSource!.matchAll(/^\s+"([^"]+)": `([\s\S]*?)`,/gm)) {
@@ -32,7 +34,7 @@ describe("demo pattern library", () => {
       readFileSync(path, "utf8"),
     ]));
     const selected = new Set(
-      [...demo.matchAll(/<option value="([^"]+)">/g)]
+      [...catalogSource!.matchAll(/value: "([^"]+)"/g)]
         .map((match) => match[1])
         .filter((value) => value !== "custom"),
     );

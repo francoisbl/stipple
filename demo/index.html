@@ -207,6 +207,85 @@
       background: var(--coral);
       border-radius: 50%;
     }
+    .motif-browser { margin-top: 7px; }
+    .motif-family-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0 9px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--line);
+    }
+    .motif-family-button {
+      min-width: 0;
+      padding: 3px 0 5px;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      font: 600 9.5px/1.2 "IBM Plex Mono", monospace;
+      cursor: pointer;
+    }
+    .motif-family-button:hover,
+    .motif-family-button.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .motif-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .motif-choice {
+      min-width: 0;
+      min-height: 34px;
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      align-items: center;
+      gap: 5px;
+      padding: 3px 6px;
+      color: var(--ink-soft);
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      font: 600 9.5px/1.15 "IBM Plex Sans", sans-serif;
+      text-align: left;
+      cursor: pointer;
+    }
+    .motif-choice:hover,
+    .motif-choice.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+    .motif-swatch { width: 24px; height: 24px; display: grid; place-items: center; color: var(--accent); }
+    .motif-swatch svg { width: 23px; height: 23px; display: block; }
+    .motif-choice-label { overflow: hidden; text-overflow: ellipsis; }
+    .selected-motif {
+      margin: 0 0 7px;
+      color: var(--ink);
+      font: 700 10.5px/1.3 "IBM Plex Mono", monospace;
+    }
+    .svg-inspector-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .svg-inspector-head .selected-motif { margin: 0; }
+    .svg-inspector-tabs { display: flex; gap: 12px; }
+    .svg-inspector-tab {
+      padding: 3px 0 5px;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      font: 600 10px/1.2 "IBM Plex Sans", sans-serif;
+      cursor: pointer;
+    }
+    .svg-inspector-tab:hover,
+    .svg-inspector-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .svg-section { display: none; }
+    .svg-section.active {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 12px;
+    }
+    .svg-section-column { min-width: 0; }
+    .svg-section-column + .svg-section-column { padding-left: 12px; border-left: 1px solid var(--line); }
     .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
     .seg button {
       min-height: 36px;
@@ -614,6 +693,7 @@
     .svg-column { min-width: 0; }
     .svg-column + .svg-column { padding-left: 20px; border-left: 1px solid var(--line); }
     .scale-mode-seg { grid-template-columns: repeat(2, 1fr); }
+    .boundary-mode-seg { grid-template-columns: repeat(2, 1fr); }
     .scale-reference-action { width: 100%; margin-top: 6px; }
     .scale-readout {
       margin: 9px 0 0;
@@ -1005,16 +1085,7 @@
       grid-template-columns: 1fr;
     }
     .svg-settings { padding-top: 10px; }
-    .svg-layout {
-      grid-template-columns: 1fr 1fr;
-      gap: 10px 12px;
-    }
-    .svg-column {
-      padding: 0 !important;
-      border: 0 !important;
-    }
-    .svg-column:first-child { grid-column: 1 / -1; }
-    .svg-column:last-child { grid-column: auto; }
+    .svg-layout { display: block; }
     .svg-appearance-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1032,6 +1103,7 @@
       .workspace { grid-template-columns: 380px minmax(0, 1fr) 200px; }
       .app-tagline { display: none; }
       .pill-group { grid-template-columns: repeat(3, 1fr); }
+      .motif-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 860px) {
       .workspace { grid-template-columns: minmax(0, 1fr) 180px; }
@@ -1125,13 +1197,9 @@
                   <div class="pill" data-p="dots">Dots</div>
                 </div>
                 <span class="family-label">Motifs</span>
-                <div class="pill-group motif-pills" id="motifPills">
-                  <div class="pill" data-svg-sample="grass-tuft">Grass</div>
-                  <div class="pill" data-svg-sample="vineyard">Vineyard</div>
-                  <div class="pill" data-svg-sample="marsh">Wetland</div>
-                  <div class="pill" data-svg-sample="sand">Sand</div>
-                  <div class="pill" data-svg-sample="scree">Scree</div>
-                  <div class="pill" data-svg-sample="cemetery">Cemetery</div>
+                <div class="motif-browser" id="motifBrowser">
+                  <div class="motif-family-tabs" id="motifFamilyTabs" aria-label="Motif families"></div>
+                  <div class="motif-grid" id="motifGrid" aria-label="Motifs"></div>
                 </div>
               </div>
 
@@ -1177,59 +1245,19 @@
         <div class="tool-panel svg-settings active" data-tool-panel="fill">
           <fieldset id="svgFillFieldset">
             <legend>SVG pattern</legend>
+            <div class="svg-inspector-head">
+              <p class="selected-motif">Editing: <span id="activeMotifLabel">Grass tuft</span></p>
+              <div class="svg-inspector-tabs" id="svgInspectorTabs" aria-label="Motif settings">
+                <button type="button" class="svg-inspector-tab active" data-svg-section-tab="appearance">Appearance</button>
+                <button type="button" class="svg-inspector-tab" data-svg-section-tab="placement">Placement</button>
+                <button type="button" class="svg-inspector-tab" data-svg-section-tab="scale">Scale &amp; edge</button>
+              </div>
+            </div>
             <div class="svg-layout">
-              <div class="svg-column">
-                <div class="switch" hidden>
-                  <label style="margin:0">Use SVG pattern</label>
-                  <input type="checkbox" id="svgFillToggle" />
-                </div>
-                <div data-svg-options>
-                  <label>Sample</label>
-                  <select id="svgFillSample">
-                    <optgroup label="Vegetation">
-                      <option value="grass-tuft">Grass tuft</option>
-                      <option value="fern">Fern</option>
-                      <option value="wildflower">Wildflower</option>
-                      <option value="small-bush">Small bush</option>
-                    </optgroup>
-                    <optgroup label="Trees">
-                      <option value="round-canopy">Round canopy</option>
-                      <option value="conifer">Conifer</option>
-                      <option value="palm">Palm</option>
-                    </optgroup>
-                    <optgroup label="Agriculture">
-                      <option value="orchard">Orchard</option>
-                      <option value="vineyard">Vineyard</option>
-                      <option value="grapes">Grapes</option>
-                      <option value="crop-rows">Crop rows</option>
-                      <option value="pasture">Pasture</option>
-                    </optgroup>
-                    <optgroup label="Water">
-                      <option value="reeds">Reeds</option>
-                      <option value="ripple">Ripple</option>
-                      <option value="wave-lines">Wave lines</option>
-                      <option value="droplet">Droplet</option>
-                      <option value="marsh">Marsh</option>
-                    </optgroup>
-                    <optgroup label="Terrain">
-                      <option value="sand">Sand</option>
-                      <option value="gravel">Gravel</option>
-                      <option value="rocks">Rocks</option>
-                      <option value="scree">Scree</option>
-                    </optgroup>
-                    <optgroup label="Land use">
-                      <option value="cemetery">Cemetery</option>
-                      <option value="camping">Camping</option>
-                    </optgroup>
-                    <optgroup label="Shapes">
-                      <option value="triangles">Triangles</option>
-                      <option value="hexagon">Hexagon</option>
-                      <option value="confetti">Confetti</option>
-                    </optgroup>
-                    <optgroup label="Custom">
-                      <option value="custom">Custom SVG…</option>
-                    </optgroup>
-                  </select>
+              <input type="checkbox" id="svgFillToggle" hidden />
+
+              <section class="svg-section active" data-svg-section="appearance" data-svg-options>
+                <div class="svg-section-column">
                   <div class="custom-svg-panel hidden" id="svgFillCustomPanel">
                     <label style="margin-top:0">Paste SVG markup or upload a file</label>
                     <textarea id="svgFillCustomText" placeholder="<svg>...</svg>"></textarea>
@@ -1250,56 +1278,67 @@
                     </div>
                   </div>
                 </div>
-              </div>
+                <div class="svg-section-column">
+                  <label style="margin-top:0">Visual size <span class="val" id="svgVisualSizeVal">24 px</span></label>
+                  <input type="range" id="svgVisualSize" min="8" max="60" step="1" value="24" />
+                  <label>Spacing <span class="val" id="svgSpacingVal">72 px</span></label>
+                  <input type="range" id="svgSpacing" min="24" max="140" step="1" value="72" />
+                </div>
+              </section>
 
-              <div class="svg-column" data-svg-options>
-                <label style="margin-top:0">Visual size <span class="val" id="svgVisualSizeVal">24 px</span></label>
-                <input type="range" id="svgVisualSize" min="8" max="60" step="1" value="24" />
-                <label>Spacing <span class="val" id="svgSpacingVal">72 px</span></label>
-                <input type="range" id="svgSpacing" min="24" max="140" step="1" value="72" />
-                <label>Distribution</label>
-                <div class="seg" id="svgDistributionSeg">
-                  <button type="button" data-distribution="regular">Regular</button>
-                  <button type="button" data-distribution="offset" class="active">Offset</button>
-                  <button type="button" data-distribution="natural">Natural</button>
+              <section class="svg-section" data-svg-section="placement" data-svg-options>
+                <div class="svg-section-column">
+                  <label style="margin-top:0">Distribution</label>
+                  <div class="seg" id="svgDistributionSeg">
+                    <button type="button" data-distribution="regular">Regular</button>
+                    <button type="button" data-distribution="offset" class="active">Offset</button>
+                    <button type="button" data-distribution="natural">Natural</button>
+                  </div>
+                  <div id="svgMinSpacingControl" class="is-disabled">
+                    <label>Minimum gap <span class="val" id="svgMinSpacingVal">4 px</span></label>
+                    <input type="range" id="svgMinSpacing" min="0" max="24" step="1" value="4" disabled />
+                  </div>
+                  <label>Seed</label>
+                  <input type="text" id="svgSeed" value="1" />
                 </div>
-                <div id="svgMinSpacingControl" class="is-disabled">
-                  <label>Minimum gap <span class="val" id="svgMinSpacingVal">4 px</span></label>
-                  <input type="range" id="svgMinSpacing" min="0" max="24" step="1" value="4" disabled />
+                <div class="svg-section-column">
+                  <div id="svgPositionJitterControl">
+                    <label style="margin-top:0">Position variation <span class="val" id="svgPosJitterVal">±0.15</span></label>
+                    <input type="range" id="svgPosJitter" min="0" max="0.65" step="0.05" value="0.15" />
+                  </div>
+                  <label>Rotation jitter <span class="val" id="svgRotJitterVal">±0°</span></label>
+                  <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="0" />
+                  <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.00</span></label>
+                  <input type="range" id="svgScaleJitter" min="0" max="0.5" step="0.05" value="0" />
                 </div>
-                <label>Seed</label>
-                <input type="text" id="svgSeed" value="1" />
-              </div>
+              </section>
 
-              <div class="svg-column" data-svg-options>
-                <div id="svgPositionJitterControl">
-                  <label style="margin-top:0">Position variation <span class="val" id="svgPosJitterVal">±0.15</span></label>
-                  <input type="range" id="svgPosJitter" min="0" max="0.65" step="0.05" value="0.15" />
-                </div>
-                <label>Rotation jitter <span class="val" id="svgRotJitterVal">±0°</span></label>
-                <input type="range" id="svgRotJitter" min="0" max="90" step="1" value="0" />
-                <label>Scale jitter <span class="val" id="svgScaleJitterVal">±0.00</span></label>
-                <input type="range" id="svgScaleJitter" min="0" max="0.5" step="0.05" value="0" />
-                <div id="svgScaleModeControl">
-                  <label>Scale unit</label>
-                  <div class="seg scale-mode-seg" id="svgScaleModeSeg">
-                    <button type="button" data-scale-mode="screen" class="active">Screen · px</button>
-                    <button type="button" data-scale-mode="map">Ground scale</button>
+              <section class="svg-section" data-svg-section="scale" data-svg-options>
+                <div class="svg-section-column">
+                  <label style="margin-top:0">At the boundary</label>
+                  <div class="seg boundary-mode-seg" id="svgBoundarySeg">
+                    <button type="button" data-boundary-mode="clip" class="active">Clip</button>
+                    <button type="button" data-boundary-mode="whole">Keep whole</button>
                   </div>
-                  <div id="svgReferenceZoomControl" class="is-disabled">
-                    <label>Reference zoom <span class="val" id="svgReferenceZoomVal">z12</span></label>
-                    <input type="range" id="svgReferenceZoom" min="0" max="22" step="1" value="12" disabled />
-                    <button type="button" class="action ghost scale-reference-action" id="svgUseCurrentZoom" disabled>Use current zoom</button>
+                  <p class="hint" id="symbolPlacementHint">Symbols continue to the edge and are clipped by the boundary.</p>
+                  <p class="scale-readout" id="svgScaleReadout">At z12: 24 px motif · 72 px spacing</p>
+                </div>
+                <div class="svg-section-column">
+                  <div id="svgScaleModeControl">
+                    <label style="margin-top:0">Scale unit</label>
+                    <div class="seg scale-mode-seg" id="svgScaleModeSeg">
+                      <button type="button" data-scale-mode="screen" class="active">Screen · px</button>
+                      <button type="button" data-scale-mode="map">Ground scale</button>
+                    </div>
+                    <div id="svgReferenceZoomControl" class="is-disabled">
+                      <label>Reference zoom <span class="val" id="svgReferenceZoomVal">z12</span></label>
+                      <input type="range" id="svgReferenceZoom" min="0" max="22" step="1" value="12" disabled />
+                      <button type="button" class="action ghost scale-reference-action" id="svgUseCurrentZoom" disabled>Use current zoom</button>
+                    </div>
                   </div>
+                  <p class="hint" id="svgQualityHint">High-density rendering is automatic.</p>
                 </div>
-                <div class="switch" style="margin-top:9px">
-                  <label for="svgNoCutToggle" style="margin:0">Keep symbols whole</label>
-                  <input type="checkbox" id="svgNoCutToggle" />
-                </div>
-                <p class="hint" id="symbolPlacementHint">Symbols continue to the edge and are clipped by the boundary.</p>
-                <p class="scale-readout" id="svgScaleReadout">At z12: 24 px motif · 72 px spacing</p>
-                <p class="hint" id="svgQualityHint">High-density rendering is automatic.</p>
-              </div>
+              </section>
             </div>
           </fieldset>
         </div>
@@ -1392,6 +1431,37 @@
     const t = $("toast"); t.textContent = msg; t.classList.add("show");
     clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600);
   };
+
+  const SVG_PATTERN_CATALOG = [
+    { family: "vegetation", familyLabel: "Vegetation", value: "grass-tuft", label: "Grass tuft" },
+    { family: "vegetation", familyLabel: "Vegetation", value: "fern", label: "Fern" },
+    { family: "vegetation", familyLabel: "Vegetation", value: "wildflower", label: "Wildflower" },
+    { family: "vegetation", familyLabel: "Vegetation", value: "small-bush", label: "Small bush" },
+    { family: "trees", familyLabel: "Trees", value: "round-canopy", label: "Round canopy" },
+    { family: "trees", familyLabel: "Trees", value: "conifer", label: "Conifer" },
+    { family: "trees", familyLabel: "Trees", value: "palm", label: "Palm" },
+    { family: "agriculture", familyLabel: "Agriculture", value: "orchard", label: "Orchard" },
+    { family: "agriculture", familyLabel: "Agriculture", value: "vineyard", label: "Vineyard" },
+    { family: "agriculture", familyLabel: "Agriculture", value: "grapes", label: "Grapes" },
+    { family: "agriculture", familyLabel: "Agriculture", value: "crop-rows", label: "Crop rows" },
+    { family: "agriculture", familyLabel: "Agriculture", value: "pasture", label: "Pasture" },
+    { family: "water", familyLabel: "Water", value: "reeds", label: "Reeds" },
+    { family: "water", familyLabel: "Water", value: "ripple", label: "Ripple" },
+    { family: "water", familyLabel: "Water", value: "wave-lines", label: "Wave lines" },
+    { family: "water", familyLabel: "Water", value: "droplet", label: "Droplet" },
+    { family: "water", familyLabel: "Water", value: "marsh", label: "Marsh" },
+    { family: "terrain", familyLabel: "Terrain", value: "sand", label: "Sand" },
+    { family: "terrain", familyLabel: "Terrain", value: "gravel", label: "Gravel" },
+    { family: "terrain", familyLabel: "Terrain", value: "rocks", label: "Rocks" },
+    { family: "terrain", familyLabel: "Terrain", value: "scree", label: "Scree" },
+    { family: "land-use", familyLabel: "Land use", value: "cemetery", label: "Cemetery" },
+    { family: "land-use", familyLabel: "Land use", value: "camping", label: "Camping" },
+    { family: "shapes", familyLabel: "Shapes", value: "triangles", label: "Triangles" },
+    { family: "shapes", familyLabel: "Shapes", value: "hexagon", label: "Hexagon" },
+    { family: "shapes", familyLabel: "Shapes", value: "confetti", label: "Confetti" },
+    { family: "custom", familyLabel: "Custom", value: "custom", label: "Custom SVG" },
+  ];
+  let activeMotifFamily = "vegetation";
 
   // Bundled sample SVGs (kept in sync by hand with ./patterns/*.svg and
   // ./icons/*.svg). They are inlined so the demo works from file:// with zero
@@ -2356,10 +2426,7 @@
     });
   }
 
-  function wireCustomSvgPanel({ selectId, panelId, textId, fileId, applyId, onApply }) {
-    $(selectId).addEventListener("change", (e) => {
-      $(panelId).classList.toggle("hidden", e.target.value !== "custom");
-    });
+  function wireCustomSvgPanel({ panelId, textId, fileId, applyId, onApply }) {
     $(fileId).addEventListener("change", async (e) => {
       const file = e.target.files[0]; if (!file) return;
       $(textId).value = await file.text();
@@ -2370,6 +2437,56 @@
       onApply(text);
       toast("Custom SVG applied");
     });
+  }
+
+  function motifCatalogEntry(sample) {
+    return SVG_PATTERN_CATALOG.find((item) => item.value === sample);
+  }
+
+  function renderMotifBrowser() {
+    const families = [...new Map(
+      SVG_PATTERN_CATALOG.map((item) => [item.family, item.familyLabel]),
+    )];
+    $("motifFamilyTabs").innerHTML = families.map(([family, label]) => `
+      <button type="button" class="motif-family-button${family === activeMotifFamily ? " active" : ""}"
+        data-motif-family="${family}">${label}</button>
+    `).join("");
+    $("motifGrid").innerHTML = SVG_PATTERN_CATALOG
+      .filter((item) => item.family === activeMotifFamily)
+      .map((item) => {
+        const preview = item.value === "custom"
+          ? `<span class="motif-swatch" aria-hidden="true">SVG</span>`
+          : `<span class="motif-swatch" aria-hidden="true">${SVG_PATTERN_SAMPLES[item.value]}</span>`;
+        const active = state.svgFill.on && item.value === state.svgFill.sample ? " active" : "";
+        return `<button type="button" class="motif-choice${active}" data-svg-sample="${item.value}">
+          ${preview}<span class="motif-choice-label">${item.label}</span>
+        </button>`;
+      }).join("");
+  }
+
+  function openSvgInspectorSection(section) {
+    document.querySelectorAll("[data-svg-section-tab]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.svgSectionTab === section);
+    });
+    document.querySelectorAll("[data-svg-section]").forEach((panel) => {
+      panel.classList.toggle("active", panel.dataset.svgSection === section);
+    });
+  }
+
+  function selectSvgSample(sample) {
+    const entry = motifCatalogEntry(sample);
+    if (!entry) return;
+    state.svgFill.on = true;
+    state.svgFill.sample = sample;
+    activeMotifFamily = entry.family;
+    openSvgInspectorSection("appearance");
+    $("svgFillToggle").checked = true;
+    setGeometricFieldsetEnabled(false);
+    updateFillChoiceUI();
+    updateSvgControlAvailability();
+    updateSvgScaleReadout();
+    updateSvgQualityHint();
+    rebuildLayers();
   }
 
   $("patternPills").addEventListener("click", (e) => {
@@ -2384,16 +2501,21 @@
     renderPreview(); rebuildLayers();
   });
 
-  $("motifPills").addEventListener("click", (e) => {
-    const sample = e.target.dataset.svgSample; if (!sample) return;
-    state.svgFill.on = true;
-    state.svgFill.sample = sample;
-    $("svgFillToggle").checked = true;
-    $("svgFillSample").value = sample;
-    setGeometricFieldsetEnabled(false);
-    updateFillChoiceUI();
-    updateSvgControlAvailability();
-    rebuildLayers();
+  $("motifFamilyTabs").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-motif-family]");
+    if (!button) return;
+    activeMotifFamily = button.dataset.motifFamily;
+    renderMotifBrowser();
+  });
+
+  $("motifGrid").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-svg-sample]");
+    if (button) selectSvgSample(button.dataset.svgSample);
+  });
+
+  $("svgInspectorTabs").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-svg-section-tab]");
+    if (button) openSvgInspectorSection(button.dataset.svgSectionTab);
   });
 
   $("angleSeg").addEventListener("click", (e) => {
@@ -2445,9 +2567,10 @@
     document.querySelectorAll("#patternPills .pill").forEach((element) => {
       element.classList.toggle("active", !state.svgFill.on && element.dataset.p === state.pattern);
     });
-    document.querySelectorAll("#motifPills .pill").forEach((element) => {
-      element.classList.toggle("active", state.svgFill.on && element.dataset.svgSample === state.svgFill.sample);
-    });
+    const entry = motifCatalogEntry(state.svgFill.sample);
+    $("activeMotifLabel").textContent = entry?.label || "Custom SVG";
+    $("svgFillCustomPanel").classList.toggle("hidden", state.svgFill.sample !== "custom");
+    renderMotifBrowser();
   }
   function updatePatternControlAvailability() {
     const angleEnabled = state.pattern === "hachures" || state.pattern === "cross";
@@ -2498,12 +2621,11 @@
     $("svgReferenceZoomControl").classList.toggle("is-disabled", !mapScale);
     $("svgReferenceZoom").disabled = !mapScale;
     $("svgUseCurrentZoom").disabled = !mapScale;
-    $("svgNoCutToggle").checked = state.svgFill.noCut;
-    $("svgNoCutToggle").disabled = !state.svgFill.on;
-    $("svgNoCutToggle").closest(".switch").classList.toggle(
-      "is-disabled",
-      !state.svgFill.on,
-    );
+    document.querySelectorAll("#svgBoundarySeg button").forEach((button) => {
+      const mode = state.svgFill.noCut ? "whole" : "clip";
+      button.classList.toggle("active", button.dataset.boundaryMode === mode);
+      button.disabled = !state.svgFill.on;
+    });
     $("symbolPlacementHint").textContent = state.svgFill.noCut
       ? "Complete symbols stay inside, which leaves a margin near the boundary."
       : "Symbols continue to the edge and are clipped by the boundary.";
@@ -2560,16 +2682,10 @@
     updateSvgQualityHint();
     rebuildLayers();
   });
-  $("svgFillSample").addEventListener("change", (e) => {
-    state.svgFill.sample = e.target.value;
-    updateFillChoiceUI();
-    updateSvgControlAvailability();
-    updateSvgScaleReadout();
-    updateSvgQualityHint();
-    if (state.svgFill.on) rebuildLayers();
-  });
-  $("svgNoCutToggle").addEventListener("change", (event) => {
-    state.svgFill.noCut = event.target.checked;
+  $("svgBoundarySeg").addEventListener("click", (event) => {
+    const mode = event.target.dataset.boundaryMode;
+    if (!mode) return;
+    state.svgFill.noCut = mode === "whole";
     updateSvgScaleModeControls();
     updateSvgQualityHint();
     if (state.svgFill.on) rebuildLayers();
@@ -2640,7 +2756,7 @@
   });
   $("svgSeed").addEventListener("change", (e) => { state.svgFill.seed = e.target.value; if (state.svgFill.on) syncSvgFill(); });
   wireCustomSvgPanel({
-    selectId: "svgFillSample", panelId: "svgFillCustomPanel", textId: "svgFillCustomText", fileId: "svgFillCustomFile", applyId: "svgFillCustomApply",
+    panelId: "svgFillCustomPanel", textId: "svgFillCustomText", fileId: "svgFillCustomFile", applyId: "svgFillCustomApply",
     onApply: (svg) => {
       state.svgFill.customSvg = svg;
       if (state.svgFill.on && state.svgFill.sample === "custom") syncSvgFill();
@@ -3245,8 +3361,8 @@ if (map.isStyleLoaded()) {
     $("lineToggle").checked = state.outline.on;
     $("dashInput").value = (state.outline.dash || []).join(" ");
     $("svgFillToggle").checked = state.svgFill.on;
-    $("svgNoCutToggle").checked = state.svgFill.noCut;
-    $("svgFillSample").value = state.svgFill.sample;
+    const motif = motifCatalogEntry(state.svgFill.sample);
+    if (motif) activeMotifFamily = motif.family;
     $("svgFillCustomPanel").classList.toggle("hidden", state.svgFill.sample !== "custom");
     $("svgFillCustomText").value = state.svgFill.customSvg;
     $("svgVisualSize").value = state.svgFill.visualSize;
