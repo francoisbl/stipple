@@ -54,10 +54,11 @@ describe("demo pattern library", () => {
   });
 
   it("uses symbol layers for stable SVG sizing", () => {
-    expect(demo).toMatch(/function syncSvgFill\(\) \{\s+syncSvgIconScatter\(\);/);
+    expect(demo).toMatch(/function syncSvgFill\(\) \{[\s\S]*?setTimeout\(\(\) => syncSvgIconScatter\(\), 40\)/);
     expect(demo).toMatch(/scaleMode:\s*style\.svgFill\.scaleMode/);
     expect(demo).toMatch(/edgeClearance:\s*true/);
     expect(demo).toMatch(/state\.svgFill\.scaleMode === "screen"[\s\S]*?syncSvgIconScatter\(\)/);
+    expect(demo).toMatch(/map\.on\("moveend"/);
     expect(demo).not.toMatch(/map\.on\("zoomend"[\s\S]*?scaleMode === "map"[\s\S]*?syncSvgIconScatter\(\)/);
   });
 });

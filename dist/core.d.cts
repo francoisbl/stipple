@@ -72,6 +72,13 @@ interface ScatterPointsOptions {
     distribution?: SvgDistributionMode;
     /** Extra minimum gap between natural-layout icon envelopes. Default 0. */
     minSpacing?: number;
+    /** Optional planar bounds limiting generated point centres. Polygon containment and edge clearance still use every ring. */
+    clipBounds?: {
+        minX: number;
+        minY: number;
+        maxX: number;
+        maxY: number;
+    };
 }
 /**
  * Scatters points inside a (possibly holed) polygon whose complete clearance

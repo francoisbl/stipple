@@ -50,7 +50,8 @@ function scatterPointsInPolygon(rings, options) {
     positionJitter = 0.15,
     stagger = true,
     distribution = stagger ? "offset" : "regular",
-    minSpacing = 0
+    minSpacing = 0,
+    clipBounds
   } = options;
   if (!Number.isFinite(radius) || radius < 0) {
     throw new RangeError("radius must be a finite number greater than or equal to 0");
@@ -91,34 +92,74 @@ function scatterPointsInPolygon(rings, options) {
   const points = [];
   const width = maxX - minX;
   const height = maxY - minY;
+  const clipMinX = Math.max(minX, clipBounds?.minX ?? minX);
+  const clipMinY = Math.max(minY, clipBounds?.minY ?? minY);
+  const clipMaxX = Math.min(maxX, clipBounds?.maxX ?? maxX);
+  const clipMaxY = Math.min(maxY, clipBounds?.maxY ?? maxY);
+  if (clipMaxX <= clipMinX || clipMaxY <= clipMinY) return [];
   if (distribution === "natural") {
-    const targetCount = Math.max(1, Math.round(density * width * height / 1e4));
-    const minimumDistance = radius * 2 * (1 + scaleJitter) + minSpacing;
+    const clippedWidth = clipMaxX - clipMinX;
+    const clippedHeight = clipMaxY - clipMinY;
+    const targetCount = Math.max(1, Math.round(density * clippedWidth * clippedHeight / 1e4));
+    const minimumDistance = Math.max(
+      cell * 0.76,
+      radius * 2 * (1 + scaleJitter) + minSpacing
+    );
     const conservativeRadius = radius * (1 + scaleJitter);
-    while (points.length < targetCount) {
-      let best;
-      let bestDistanceSquared = -1;
-      for (let candidateIndex = 0; candidateIndex < 32; candidateIndex++) {
-        const x = minX + rand() * width;
-        const y = minY + rand() * height;
-        if (!discFitsInside(x, y, conservativeRadius, rings)) continue;
-        let nearestDistanceSquared = Infinity;
-        for (const point of points) {
-          const distanceSquared = (x - point.x) ** 2 + (y - point.y) ** 2;
-          if (distanceSquared < nearestDistanceSquared) nearestDistanceSquared = distanceSquared;
-        }
-        if (nearestDistanceSquared > bestDistanceSquared) {
-          best = [x, y];
-          bestDistanceSquared = nearestDistanceSquared;
+    const minimumDistanceSquared = minimumDistance ** 2;
+    const gridCell = Math.max(minimumDistance / Math.SQRT2, 1);
+    const grid = /* @__PURE__ */ new Map();
+    const active = [];
+    const gridCoordinate = (value, origin) => Math.floor((value - origin) / gridCell);
+    const gridKey = (column, row) => `${column}:${row}`;
+    const isFarEnough = (x, y) => {
+      if (minimumDistanceSquared === 0) return true;
+      const column = gridCoordinate(x, clipMinX);
+      const row = gridCoordinate(y, clipMinY);
+      for (let offsetY = -2; offsetY <= 2; offsetY++) {
+        for (let offsetX = -2; offsetX <= 2; offsetX++) {
+          const pointIndex = grid.get(gridKey(column + offsetX, row + offsetY));
+          if (pointIndex === void 0) continue;
+          const point = points[pointIndex];
+          if ((x - point.x) ** 2 + (y - point.y) ** 2 < minimumDistanceSquared) return false;
         }
       }
-      if (!best || bestDistanceSquared < minimumDistance ** 2) break;
+      return true;
+    };
+    const addPoint = (x, y) => {
+      const pointIndex = points.length;
       points.push({
-        x: best[0],
-        y: best[1],
+        x,
+        y,
         rotation: (rand() * 2 - 1) * rotationJitterDeg,
         scale: 1 + (rand() * 2 - 1) * scaleJitter
       });
+      active.push(pointIndex);
+      grid.set(gridKey(
+        gridCoordinate(x, clipMinX),
+        gridCoordinate(y, clipMinY)
+      ), pointIndex);
+    };
+    for (let attempt = 0; attempt < 128 && points.length === 0; attempt++) {
+      const x = clipMinX + rand() * clippedWidth;
+      const y = clipMinY + rand() * clippedHeight;
+      if (discFitsInside(x, y, conservativeRadius, rings)) addPoint(x, y);
+    }
+    while (active.length > 0 && points.length < targetCount) {
+      const activeSlot = Math.floor(rand() * active.length);
+      const origin = points[active[activeSlot]];
+      let accepted = false;
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const angle = rand() * Math.PI * 2;
+        const distance = minimumDistance * (1 + rand());
+        const x = origin.x + Math.cos(angle) * distance;
+        const y = origin.y + Math.sin(angle) * distance;
+        if (x < clipMinX || x > clipMaxX || y < clipMinY || y > clipMaxY || !discFitsInside(x, y, conservativeRadius, rings) || !isFarEnough(x, y)) continue;
+        addPoint(x, y);
+        accepted = true;
+        break;
+      }
+      if (!accepted) active.splice(activeSlot, 1);
     }
     return points;
   }
@@ -126,12 +167,24 @@ function scatterPointsInPolygon(rings, options) {
   const rows = Math.max(1, Math.floor(height / cell));
   const startX = minX + (width - (columns - 1) * cell) / 2;
   const startY = minY + (height - (rows - 1) * cell) / 2;
-  for (let row = 0; row < rows; row++) {
+  const jitterMargin = cell * positionJitter / 2;
+  const firstRow = Math.max(0, Math.ceil((clipMinY - jitterMargin - startY) / cell));
+  const lastRow = Math.min(rows - 1, Math.floor((clipMaxY + jitterMargin - startY) / cell));
+  for (let row = firstRow; row <= lastRow; row++) {
     const rowOffset = distribution === "offset" && columns > 1 ? row % 2 === 0 ? -cell / 4 : cell / 4 : 0;
-    for (let column = 0; column < columns; column++) {
+    const firstColumn = Math.max(
+      0,
+      Math.ceil((clipMinX - jitterMargin - startX - rowOffset) / cell)
+    );
+    const lastColumn = Math.min(
+      columns - 1,
+      Math.floor((clipMaxX + jitterMargin - startX - rowOffset) / cell)
+    );
+    for (let column = firstColumn; column <= lastColumn; column++) {
       const jitter = distribution === "offset" ? positionJitter : 0;
       const jx = startX + column * cell + rowOffset + (rand() - 0.5) * cell * jitter;
       const jy = startY + row * cell + (rand() - 0.5) * cell * jitter;
+      if (jx < clipMinX || jx > clipMaxX || jy < clipMinY || jy > clipMaxY) continue;
       const rotation = (rand() * 2 - 1) * rotationJitterDeg;
       const scale = 1 + (rand() * 2 - 1) * scaleJitter;
       if (discFitsInside(jx, jy, radius * scale, rings)) points.push({ x: jx, y: jy, rotation, scale });
@@ -143,4 +196,4 @@ function scatterPointsInPolygon(rings, options) {
 export {
   scatterPointsInPolygon
 };
-//# sourceMappingURL=chunk-RIGAT72J.js.map
+//# sourceMappingURL=chunk-WUNIYF3E.js.map

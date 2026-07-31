@@ -1854,10 +1854,24 @@
     });
   }
 
-  async function syncSvgIconScatter() {
-    if (!state.layer) return;
-    await syncSvgIconScatterForFeature(state.layer.source, currentStyle());
-    rememberActiveStyle();
+  let svgScatterSyncPending = false;
+  let svgScatterSyncPromise = null;
+  function syncSvgIconScatter() {
+    svgScatterSyncPending = true;
+    if (svgScatterSyncPromise) return svgScatterSyncPromise;
+    svgScatterSyncPromise = (async () => {
+      try {
+        while (svgScatterSyncPending) {
+          svgScatterSyncPending = false;
+          if (!state.layer) continue;
+          await syncSvgIconScatterForFeature(state.layer.source, currentStyle());
+          rememberActiveStyle();
+        }
+      } finally {
+        svgScatterSyncPromise = null;
+      }
+    })();
+    return svgScatterSyncPromise;
   }
 
   function removeSvgIconScatter() {
@@ -1867,8 +1881,10 @@
     if (map.getSource(source)) map.removeSource(source);
   }
 
+  let svgFillSyncTimer = 0;
   function syncSvgFill() {
-    syncSvgIconScatter();
+    clearTimeout(svgFillSyncTimer);
+    svgFillSyncTimer = setTimeout(() => syncSvgIconScatter(), 40);
   }
 
   // Style layers for the selected polygon.
@@ -3019,7 +3035,7 @@ if (map.isStyleLoaded()) {
     renderPreview();
   }
 
-  map.on("zoomend", () => {
+  map.on("moveend", () => {
     if (!state.svgFill.on) return;
     if (state.svgFill.scaleMode === "screen") {
       syncSvgIconScatter();

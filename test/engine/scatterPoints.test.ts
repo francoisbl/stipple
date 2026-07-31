@@ -61,6 +61,10 @@ describe("scatterPointsInPolygon", () => {
 
     expect(points).toEqual(scatterPointsInPolygon([exterior], options));
     expect(points.length).toBeGreaterThan(5);
+    expect(Math.min(...points.map(({ x }) => x))).toBeLessThan(40);
+    expect(Math.max(...points.map(({ x }) => x))).toBeGreaterThan(260);
+    expect(Math.min(...points.map(({ y }) => y))).toBeLessThan(40);
+    expect(Math.max(...points.map(({ y }) => y))).toBeGreaterThan(260);
     for (let first = 0; first < points.length; first++) {
       for (let second = first + 1; second < points.length; second++) {
         expect(Math.hypot(
@@ -70,4 +74,33 @@ describe("scatterPointsInPolygon", () => {
       }
     }
   });
+
+  it.each(["regular", "offset", "natural"] as const)(
+    "limits %s generation to clipped bounds",
+    (distribution) => {
+      const largeExterior: Ring = [
+        [-10_000, -10_000],
+        [10_000, -10_000],
+        [10_000, 10_000],
+        [-10_000, 10_000],
+        [-10_000, -10_000],
+      ];
+      const clipBounds = { minX: -50, minY: -40, maxX: 550, maxY: 440 };
+      const points = scatterPointsInPolygon([largeExterior], {
+        radius: 8,
+        density: 4,
+        seed: "clipped",
+        distribution,
+        positionJitter: distribution === "offset" ? 0.15 : 0,
+        clipBounds,
+      });
+
+      expect(points.length).toBeGreaterThan(0);
+      expect(points.length).toBeLessThan(250);
+      expect(points.every(({ x, y }) =>
+        x >= clipBounds.minX && x <= clipBounds.maxX &&
+        y >= clipBounds.minY && y <= clipBounds.maxY,
+      )).toBe(true);
+    },
+  );
 });
