@@ -1292,7 +1292,11 @@
                     <button type="button" class="action ghost scale-reference-action" id="svgUseCurrentZoom" disabled>Use current zoom</button>
                   </div>
                 </div>
-                <p class="hint" id="symbolPlacementHint">Symbols stay inside the polygon.</p>
+                <div class="switch" style="margin-top:9px">
+                  <label for="svgNoCutToggle" style="margin:0">Keep symbols whole</label>
+                  <input type="checkbox" id="svgNoCutToggle" />
+                </div>
+                <p class="hint" id="symbolPlacementHint">Symbols continue to the edge and are clipped by the boundary.</p>
                 <p class="scale-readout" id="svgScaleReadout">At z12: 24 px motif · 72 px spacing</p>
                 <p class="hint" id="svgQualityHint">High-density rendering is automatic.</p>
               </div>
@@ -1831,7 +1835,7 @@
     rememberActiveStyle();
   }
 
-  // Experimental mode using exact boundary clearance for whole SVG stamps.
+  // Optional symbol placement for users who prefer complete motifs at edges.
   const svgIconScatterIds = (id = state.layer.source, svgFill = state.svgFill) => ({
     source: `${id}__svgscatter`,
     layer: `${id}__svgscatter_layer`,
@@ -1890,7 +1894,10 @@
   let svgFillSyncTimer = 0;
   function syncSvgFill() {
     clearTimeout(svgFillSyncTimer);
-    svgFillSyncTimer = setTimeout(() => syncSvgIconScatter(), 40);
+    svgFillSyncTimer = setTimeout(() => {
+      if (state.svgFill.noCut) syncSvgIconScatter();
+      else syncSvgTexture();
+    }, 40);
   }
 
   // Style layers for the selected polygon.
@@ -1901,10 +1908,16 @@
       map.addLayer({ id: bg, type: "fill", source: id, paint: { "fill-color": state.bg.color, "fill-opacity": state.bg.opacity } });
     }
 
-    if (state.svgFill.on) {
-      // Symbol layers keep screen-sized motifs stable throughout fractional
-      // zooms. Repeating fill textures scale between integer zoom levels.
+    if (state.svgFill.on && state.svgFill.noCut) {
       syncSvgIconScatterForFeature(id, currentStyle());
+    } else if (state.svgFill.on) {
+      syncSvgTextureForFeature(id, currentStyle());
+      map.addLayer({
+        id: pat,
+        type: "fill",
+        source: id,
+        paint: { "fill-pattern": svgImageId(id), "fill-opacity": state.patOpacity },
+      });
     } else if (state.pattern === "solid") {
       map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity } });
     } else {
@@ -2039,7 +2052,7 @@
 
     const exportedPatternLayerIndex = fragment.layers.findIndex((layer) => layer.id === "<source>__pat");
     if (state.svgFill.noCut) {
-      // No-cut scatter depends on live polygon geometry and remains an
+      // Whole-symbol placement depends on live polygon geometry and remains an
       // experimental runtime operation, so do not export a placeholder fill.
       if (exportedPatternLayerIndex >= 0) fragment.layers.splice(exportedPatternLayerIndex, 1);
       return fragment;
@@ -2301,13 +2314,7 @@
     });
     applyStateToUI();
     showSelection(id);
-    if (state.svgFill.on) {
-      if (state.svgFill.noCut || state.svgFill.scaleMode === "map") {
-        syncSvgFill();
-      } else {
-        repaint();
-      }
-    }
+    if (state.svgFill.on) syncSvgFill();
   }
 
   // UI wiring
@@ -2491,9 +2498,15 @@
     $("svgReferenceZoomControl").classList.toggle("is-disabled", !mapScale);
     $("svgReferenceZoom").disabled = !mapScale;
     $("svgUseCurrentZoom").disabled = !mapScale;
-    $("symbolPlacementHint").textContent = mapScale
-      ? "Symbols scale with the map and stay inside the polygon."
-      : "Symbols keep their screen size and stay inside the polygon.";
+    $("svgNoCutToggle").checked = state.svgFill.noCut;
+    $("svgNoCutToggle").disabled = !state.svgFill.on;
+    $("svgNoCutToggle").closest(".switch").classList.toggle(
+      "is-disabled",
+      !state.svgFill.on,
+    );
+    $("symbolPlacementHint").textContent = state.svgFill.noCut
+      ? "Complete symbols stay inside, which leaves a margin near the boundary."
+      : "Symbols continue to the edge and are clipped by the boundary.";
     updateSvgScaleReadout();
   }
   function updateSvgScaleReadout() {
@@ -2552,6 +2565,12 @@
     updateFillChoiceUI();
     updateSvgControlAvailability();
     updateSvgScaleReadout();
+    updateSvgQualityHint();
+    if (state.svgFill.on) rebuildLayers();
+  });
+  $("svgNoCutToggle").addEventListener("change", (event) => {
+    state.svgFill.noCut = event.target.checked;
+    updateSvgScaleModeControls();
     updateSvgQualityHint();
     if (state.svgFill.on) rebuildLayers();
   });
@@ -3076,7 +3095,7 @@ label or symbol layer.
 
   async function downloadStaticBundle() {
     if (state.svgFill.on && state.svgFill.noCut) {
-      throw new Error("The no-cut scatter mode needs live geometry and cannot be exported as a repeating PNG");
+      throw new Error("Whole-symbol placement needs live geometry and cannot be exported as a repeating PNG");
     }
 
     const exported = buildExportedStyle();
@@ -3120,7 +3139,7 @@ label or symbol layer.
     navigator.clipboard?.writeText($("ioArea").value);
     if (state.svgFill.on) {
       toast(state.svgFill.noCut
-        ? "style.json copied. Note: no-cut icon scatter needs live polygon geometry, so it isn't in the metadata schema; wire installSvgIconScatter() manually"
+        ? "style.json copied. Note: whole-symbol placement needs live polygon geometry, so it isn't in the metadata schema; wire installSvgIconScatter() manually"
         : "runtime-extended style copied. installPatternFills will restore its SVG texture");
     } else {
       toast("Polygon style.json copied to clipboard");
@@ -3226,6 +3245,7 @@ if (map.isStyleLoaded()) {
     $("lineToggle").checked = state.outline.on;
     $("dashInput").value = (state.outline.dash || []).join(" ");
     $("svgFillToggle").checked = state.svgFill.on;
+    $("svgNoCutToggle").checked = state.svgFill.noCut;
     $("svgFillSample").value = state.svgFill.sample;
     $("svgFillCustomPanel").classList.toggle("hidden", state.svgFill.sample !== "custom");
     $("svgFillCustomText").value = state.svgFill.customSvg;
@@ -3259,8 +3279,10 @@ if (map.isStyleLoaded()) {
 
   map.on("moveend", () => {
     if (!state.svgFill.on) return;
-    if (state.svgFill.scaleMode === "screen") {
+    if (state.svgFill.noCut && state.svgFill.scaleMode === "screen") {
       syncSvgIconScatter();
+    } else if (!state.svgFill.noCut && state.svgFill.scaleMode === "map") {
+      syncSvgTexture();
     } else {
       repaint();
     }
