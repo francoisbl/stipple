@@ -148,14 +148,19 @@ map.addLayer({
 ## Demo / playground
 
 [`demo/index.html`](./demo/index.html) is a single, buildless HTML file with a
-control panel for composing polygon fill patterns. Open or drop a GeoJSON file
-to work on its polygons, or use the generated sample. Polygon and MultiPolygon
-geometries are supported, with each polygon part available for individual
-styling. The background and outline controls provide visual context and are
-included in style fragment exports. Bring your own SVG by pasting markup or
-uploading a `.svg` file. The playground loads the library from
-`dist/index.global.js`, so run `npm run build` once, then open the file
-directly:
+control panel for composing polygon fill patterns. Open or drop GeoJSON,
+GeoPackage, GeoParquet, zipped or loose Shapefile data, FlatGeobuf, KML, GPX,
+GML, DXF and other common vector formats. Files are read locally in the browser
+and projected to WGS84 when the source format provides its CRS. Polygon and
+MultiPolygon geometries are supported, with each polygon part available for
+individual styling. Non-polygon features are ignored. The background and
+outline controls provide visual context and are included in style fragment
+exports. Bring your own SVG by pasting markup or uploading a `.svg` file. The
+playground loads the library from `dist/index.global.js`, so run
+`npm run build` once, then open the file directly:
+
+Imports are limited to 200 MB per dataset and the first 48 polygon parts. The
+specialised readers are loaded only when their format is opened.
 
 ```sh
 npm install

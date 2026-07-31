@@ -881,16 +881,18 @@
     /* Fixed GIS workspace */
     .workspace {
       display: grid;
-      grid-template-columns: 230px minmax(0, 1fr) 430px;
+      grid-template-columns: 430px minmax(0, 1fr) 230px;
       min-height: 0;
       overflow: hidden;
       background: var(--canvas);
     }
     .layer-panel {
+      grid-column: 3;
+      grid-row: 1;
       min-width: 0;
       padding: 0;
       background: #f2f4ef;
-      border-right: 1px solid var(--line-strong);
+      border-left: 1px solid var(--line-strong);
     }
     .source-palette,
     .basemap-palette {
@@ -916,11 +918,12 @@
       position: relative;
       inset: auto;
       grid-column: 2;
+      grid-row: 1;
       min-width: 0;
       min-height: 0;
       height: auto;
     }
-    .geojson-drop-overlay {
+    .vector-drop-overlay {
       position: absolute;
       z-index: 8;
       inset: 18px;
@@ -935,18 +938,19 @@
       font: 600 12px/1.4 "IBM Plex Mono", monospace;
       letter-spacing: .03em;
     }
-    .map-shell.is-dragging .geojson-drop-overlay { opacity: 1; }
+    .map-shell.is-dragging .vector-drop-overlay { opacity: 1; }
     #panel.control-dock {
       position: relative;
       inset: auto;
-      grid-column: 3;
+      grid-column: 1;
+      grid-row: 1;
       width: auto;
       max-height: none;
       min-width: 0;
       overflow: hidden;
       transform: none;
       border: 0;
-      border-left: 1px solid var(--line-strong);
+      border-right: 1px solid var(--line-strong);
       border-radius: 0;
       box-shadow: none;
     }
@@ -1025,21 +1029,23 @@
     .export-grid { grid-template-columns: 1fr 1fr; }
     .maplibregl-ctrl-top-right { top: 10px; }
     @media (max-width: 1180px) {
-      .workspace { grid-template-columns: 200px minmax(0, 1fr) 380px; }
+      .workspace { grid-template-columns: 380px minmax(0, 1fr) 200px; }
       .app-tagline { display: none; }
       .pill-group { grid-template-columns: repeat(3, 1fr); }
     }
     @media (max-width: 860px) {
-      .workspace { grid-template-columns: 180px minmax(0, 1fr); }
+      .workspace { grid-template-columns: minmax(0, 1fr) 180px; }
+      .layer-panel { grid-column: 2; }
       #panel.control-dock {
         position: absolute;
         z-index: 6;
         top: 0;
-        right: 0;
+        left: 0;
+        right: auto;
         bottom: 0;
         width: 360px;
       }
-      .map-shell { grid-column: 2; }
+      .map-shell { grid-column: 1; }
     }
   </style>
 </head>
@@ -1064,12 +1070,12 @@
             <select id="layerSelect" aria-label="Selected polygon"></select>
           </div>
           <div class="source-actions">
-            <button type="button" class="import-button" id="importGeoJson">Open GeoJSON</button>
+            <button type="button" class="import-button" id="importVector">Open data</button>
             <button type="button" id="reloadCatalog">Add sample</button>
           </div>
-          <input type="file" id="geoJsonFile" accept=".geojson,.json,application/geo+json,application/json" hidden />
+          <input type="file" id="vectorFile" accept=".geojson,.json,.geojsonl,.ndjson,.gpkg,.zip,.shp,.dbf,.shx,.prj,.cpg,.parquet,.geoparquet,.fgb,.kml,.kmz,.gpx,.csv,.tsv,.dxf,.gml,.tab,.mif,.sqlite,.mbtiles,.osm,.pbf,.vrt" multiple hidden />
           <div class="feature-chips" id="featureChips"></div>
-          <div class="drop-note">Drop a GeoJSON file on the map to replace the sample.</div>
+          <div class="drop-note">Drop GeoJSON, GeoPackage, GeoParquet, zipped Shapefile or related files on the map.</div>
           <div class="hint" id="srcHint"></div>
         </aside>
 
@@ -1086,7 +1092,7 @@
 
       <div class="map-shell">
         <div id="map"></div>
-        <div class="geojson-drop-overlay" id="geoJsonDropOverlay">Drop GeoJSON to open</div>
+        <div class="vector-drop-overlay" id="vectorDropOverlay">Drop vector data to open</div>
       </div>
 
       <section id="panel" class="control-dock" aria-label="Polygon style editor">
@@ -2155,7 +2161,7 @@
     $("reloadCatalog").disabled =
       sourceMode === "import" || count >= MAX_SAMPLE_FEATURES;
     $("reloadCatalog").textContent = sourceMode === "import"
-      ? "GeoJSON open"
+      ? "File loaded"
       : count >= MAX_SAMPLE_FEATURES
         ? "Sample limit"
         : "Add sample";
@@ -2288,7 +2294,7 @@
     $("srcHint").textContent = sourceMode === "import"
       ? `${sourceFileName} · ${label}${count > 1 ? " selected" : ""}`
       : count === 1
-        ? "Adjust its style, open a GeoJSON or add another sample."
+        ? "Adjust its style, open vector data or add another sample."
         : `${label} selected. Click another shape to edit it.`;
     document.querySelectorAll(".feature-chip").forEach((button) => {
       button.classList.toggle("active", button.dataset.feature === id);
@@ -2658,49 +2664,266 @@
   // Source
   $("reloadCatalog").addEventListener("click", addFeature);
   $("layerSelect").addEventListener("change", (e) => selectLayer(e.target.value));
-  const MAX_GEOJSON_BYTES = 10 * 1024 * 1024;
+  const MAX_VECTOR_BYTES = 200 * 1024 * 1024;
+  const GDAL_PACKAGE_URL = "https://cdn.jsdelivr.net/npm/gdal3.js@2.8.1/dist/package";
+  const SHPJS_URL = "https://cdn.jsdelivr.net/npm/shpjs@6.2.0/dist/shp.esm.js";
+  const HYPARQUET_URL = "https://cdn.jsdelivr.net/npm/hyparquet@1.27.1/+esm";
+  const HYPARQUET_COMPRESSORS_URL = "https://cdn.jsdelivr.net/npm/hyparquet-compressors@1.1.1/+esm";
+  const SHAPEFILE_PARTS = new Set(["shp", "shx", "dbf", "prj", "cpg"]);
+  let gdalPromise;
 
-  async function loadGeoJsonFile(file) {
-    if (!file) return;
-    if (file.size > MAX_GEOJSON_BYTES) {
-      throw new RangeError("GeoJSON files are limited to 10 MB");
+  function extensionOf(file) {
+    const match = file.name.toLowerCase().match(/\.([^.]+)$/);
+    return match ? match[1] : "";
+  }
+
+  function collectGeoJsonFeatures(value, features = []) {
+    if (Array.isArray(value)) {
+      value.forEach((entry) => collectGeoJsonFeatures(entry, features));
+    } else if (value?.type === "FeatureCollection" && Array.isArray(value.features)) {
+      features.push(...value.features);
+    } else if (value?.type === "Feature") {
+      features.push(value);
+    } else if (typeof value?.type === "string") {
+      features.push({ type: "Feature", properties: {}, geometry: value });
     }
-    let contents;
+    return features;
+  }
+
+  function serializableProperty(value) {
+    if (typeof value === "bigint") return value.toString();
+    if (value instanceof Uint8Array || value instanceof ArrayBuffer) return undefined;
+    if (Array.isArray(value)) {
+      return value.map(serializableProperty).filter((entry) => entry !== undefined);
+    }
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value)
+          .map(([key, entry]) => [key, serializableProperty(entry)])
+          .filter(([, entry]) => entry !== undefined),
+      );
+    }
+    return value;
+  }
+
+  async function readJsonFile(file) {
     try {
-      contents = JSON.parse(await file.text());
+      return JSON.parse(await file.text());
     } catch {
       throw new TypeError("This file is not valid JSON");
     }
-    const imported = importGeoJsonPolygons(contents, MAX_FEATURES);
-    replaceWithImportedFeatures(imported.features, file.name);
-    const ignored = imported.ignoredFeatures
-      ? `, ${imported.ignoredFeatures} non-polygon feature${imported.ignoredFeatures === 1 ? "" : "s"} ignored`
-      : "";
-    toast(
-      `${imported.features.length} polygon${imported.features.length === 1 ? "" : "s"} opened${ignored}`,
-    );
   }
 
-  async function openGeoJsonFile(file) {
+  async function readShapefile(files) {
+    const { default: shp } = await import(SHPJS_URL);
+    const zip = files.length === 1 && extensionOf(files[0]) === "zip";
+    if (zip) return shp(await files[0].arrayBuffer());
+
+    const parts = new Map(files.map((file) => [extensionOf(file), file]));
+    if (!parts.has("shp")) {
+      throw new TypeError("Select the .shp file with its companion files");
+    }
+    const input = {};
+    for (const extension of ["shp", "dbf", "prj", "cpg"]) {
+      if (parts.has(extension)) input[extension] = await parts.get(extension).arrayBuffer();
+    }
+    return shp(input);
+  }
+
+  function geoParquetMetadata(metadata) {
+    const entries = metadata?.key_value_metadata || metadata?.keyValueMetadata || [];
+    const entry = Array.isArray(entries)
+      ? entries.find((item) => item?.key === "geo")
+      : entries.geo;
+    const raw = entry?.value ?? entry;
+    if (!raw) return null;
     try {
-      await loadGeoJsonFile(file);
-    } catch (error) {
-      toast(error instanceof Error ? error.message : "GeoJSON could not be opened");
+      return JSON.parse(typeof raw === "string" ? raw : new TextDecoder().decode(raw));
+    } catch {
+      return null;
     }
   }
 
-  $("importGeoJson").addEventListener("click", () => $("geoJsonFile").click());
-  $("geoJsonFile").addEventListener("change", async (event) => {
-    const [file] = event.target.files || [];
-    await openGeoJsonFile(file);
+  function assertGeoParquetCrs(geo) {
+    const primary = geo?.primary_column;
+    const crs = primary ? geo?.columns?.[primary]?.crs : null;
+    if (!crs) return;
+    const id = crs.id || crs.coordinate_system?.id;
+    const authority = String(id?.authority || "").toUpperCase();
+    const code = String(id?.code || "").toUpperCase();
+    const allowed = (authority === "EPSG" && code === "4326") ||
+      (authority === "OGC" && code === "CRS84");
+    if (!allowed) {
+      throw new RangeError("This GeoParquet uses a projected CRS. Reproject it to EPSG:4326 before opening it");
+    }
+  }
+
+  async function readGeoParquet(file) {
+    const [{ parquetMetadataAsync, parquetReadObjects }, { compressors }] = await Promise.all([
+      import(HYPARQUET_URL),
+      import(HYPARQUET_COMPRESSORS_URL),
+    ]);
+    const buffer = await file.arrayBuffer();
+    const metadata = await parquetMetadataAsync(buffer);
+    const geo = geoParquetMetadata(metadata);
+    assertGeoParquetCrs(geo);
+    const rows = await parquetReadObjects({ file: buffer, compressors });
+    const primaryColumn = geo?.primary_column;
+    const features = [];
+
+    rows.forEach((row) => {
+      const geometryEntry = primaryColumn && row[primaryColumn]?.type
+        ? [primaryColumn, row[primaryColumn]]
+        : Object.entries(row).find(([, value]) => (
+          value && typeof value === "object" && typeof value.type === "string" &&
+          ("coordinates" in value || value.type === "GeometryCollection")
+        ));
+      if (!geometryEntry) return;
+      const [geometryColumn, geometry] = geometryEntry;
+      const properties = Object.fromEntries(
+        Object.entries(row)
+          .filter(([key]) => key !== geometryColumn)
+          .map(([key, value]) => [key, serializableProperty(value)])
+          .filter(([, value]) => value !== undefined),
+      );
+      features.push({ type: "Feature", geometry, properties });
+    });
+    return { type: "FeatureCollection", features };
+  }
+
+  function loadScript(source) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${source}"]`);
+      if (existing?.dataset.loaded === "true") return resolve();
+      const script = existing || document.createElement("script");
+      script.src = source;
+      script.addEventListener("load", () => {
+        script.dataset.loaded = "true";
+        resolve();
+      }, { once: true });
+      script.addEventListener("error", () => reject(new Error("The format reader could not be loaded")), { once: true });
+      if (!existing) document.head.appendChild(script);
+    });
+  }
+
+  function getGdal() {
+    if (!gdalPromise) {
+      gdalPromise = (async () => {
+        await loadScript(`${GDAL_PACKAGE_URL}/gdal3.js`);
+        if (typeof window.initGdalJs !== "function") {
+          throw new Error("The format reader did not initialise");
+        }
+        return window.initGdalJs({ path: GDAL_PACKAGE_URL, useWorker: false });
+      })();
+    }
+    return gdalPromise;
+  }
+
+  function asFileList(files) {
+    if (files.length === 1) return files[0];
+    const transfer = new DataTransfer();
+    files.forEach((file) => transfer.items.add(file));
+    return transfer.files;
+  }
+
+  async function readWithGdal(files) {
+    const Gdal = await getGdal();
+    const isZip = files.length === 1 && extensionOf(files[0]) === "zip";
+    const opened = await Gdal.open(asFileList(files), [], isZip ? ["vsizip"] : []);
+    if (!opened.datasets.length) {
+      throw new TypeError(opened.errors?.[0] || "This vector dataset could not be opened");
+    }
+    const documents = [];
+    let outputSerial = 0;
+    try {
+      for (const dataset of opened.datasets) {
+        const info = await Gdal.getInfo(dataset);
+        if (info.type !== "vector") continue;
+        const layers = info.layers?.length ? info.layers : [null];
+        for (const layer of layers) {
+          const options = ["-f", "GeoJSON", "-t_srs", "EPSG:4326", "-skipfailures"];
+          if (layer?.name) options.push(layer.name);
+          const output = await Gdal.ogr2ogr(dataset, options, `vector_${++outputSerial}.geojson`);
+          const bytes = await Gdal.getFileBytes(output);
+          documents.push(JSON.parse(new TextDecoder().decode(bytes)));
+        }
+      }
+    } finally {
+      await Promise.all(opened.datasets.map((dataset) => Gdal.close(dataset)));
+    }
+    if (!documents.length) throw new TypeError("No vector layer was found in this dataset");
+    return documents;
+  }
+
+  async function loadVectorFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+    if (totalBytes > MAX_VECTOR_BYTES) {
+      throw new RangeError("The selected files exceed the 200 MB browser limit");
+    }
+
+    const extensions = new Set(files.map(extensionOf));
+    let documents;
+    if (files.length === 1 && (extensions.has("geojson") || extensions.has("json"))) {
+      documents = [await readJsonFile(files[0])];
+    } else if (files.length === 1 && (extensions.has("parquet") || extensions.has("geoparquet"))) {
+      documents = [await readGeoParquet(files[0])];
+    } else if ([...extensions].some((extension) => SHAPEFILE_PARTS.has(extension))) {
+      documents = [await readShapefile(files)];
+    } else if (files.length === 1 && extensions.has("zip")) {
+      try {
+        documents = [await readShapefile(files)];
+      } catch {
+        documents = await readWithGdal(files);
+      }
+    } else {
+      documents = await readWithGdal(files);
+    }
+
+    const geoJson = {
+      type: "FeatureCollection",
+      features: documents.flatMap((document) => collectGeoJsonFeatures(document)),
+    };
+    const imported = importGeoJsonPolygons(geoJson, Number.MAX_SAFE_INTEGER);
+    const openedFeatures = imported.features.slice(0, MAX_FEATURES);
+    const omittedPolygons = imported.features.length - openedFeatures.length;
+    const names = files.map((file) => file.name).join(", ");
+    replaceWithImportedFeatures(openedFeatures, names);
+    const ignored = imported.ignoredFeatures
+      ? `, ${imported.ignoredFeatures} non-polygon feature${imported.ignoredFeatures === 1 ? "" : "s"} ignored`
+      : "";
+    const omitted = omittedPolygons
+      ? `, ${omittedPolygons} additional polygon part${omittedPolygons === 1 ? "" : "s"} not loaded`
+      : "";
+    toast(`${openedFeatures.length} polygon${openedFeatures.length === 1 ? "" : "s"} opened${ignored}${omitted}`);
+  }
+
+  async function openVectorFiles(files) {
+    const button = $("importVector");
+    button.disabled = true;
+    button.textContent = "Opening...";
+    try {
+      await loadVectorFiles(files);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "This dataset could not be opened");
+    } finally {
+      button.disabled = false;
+      button.textContent = "Open data";
+    }
+  }
+
+  $("importVector").addEventListener("click", () => $("vectorFile").click());
+  $("vectorFile").addEventListener("change", async (event) => {
+    await openVectorFiles(event.target.files);
     event.target.value = "";
   });
 
   const mapShell = document.querySelector(".map-shell");
-  let geoJsonDragDepth = 0;
+  let vectorDragDepth = 0;
   mapShell.addEventListener("dragenter", (event) => {
     event.preventDefault();
-    geoJsonDragDepth++;
+    vectorDragDepth++;
     mapShell.classList.add("is-dragging");
   });
   mapShell.addEventListener("dragover", (event) => {
@@ -2708,15 +2931,14 @@
     if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
   });
   mapShell.addEventListener("dragleave", () => {
-    geoJsonDragDepth = Math.max(0, geoJsonDragDepth - 1);
-    if (geoJsonDragDepth === 0) mapShell.classList.remove("is-dragging");
+    vectorDragDepth = Math.max(0, vectorDragDepth - 1);
+    if (vectorDragDepth === 0) mapShell.classList.remove("is-dragging");
   });
   mapShell.addEventListener("drop", async (event) => {
     event.preventDefault();
-    geoJsonDragDepth = 0;
+    vectorDragDepth = 0;
     mapShell.classList.remove("is-dragging");
-    const [file] = event.dataTransfer?.files || [];
-    await openGeoJsonFile(file);
+    await openVectorFiles(event.dataTransfer?.files);
   });
 
   // Export / config
