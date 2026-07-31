@@ -9,6 +9,7 @@ export type PolygonGeometry =
 
 export interface PointFeature {
   type: "Feature";
+  id: number;
   geometry: { type: "Point"; coordinates: [number, number] };
   properties: { rotation: number; scale: number };
 }
@@ -40,6 +41,8 @@ export interface ScatterIconPointsOptions {
   distribution?: SvgDistributionMode;
   /** Extra minimum gap in screen pixels for natural distribution. */
   minSpacing?: number;
+  /** Only generate points inside the visible canvas plus this pixel margin. Omit to process the complete polygon. */
+  viewportPaddingPx?: number;
 }
 
 function toPolygons(polygon: PolygonGeometry): number[][][][] {
@@ -60,8 +63,27 @@ function componentSeed(seed: number | string | undefined, index: number): number
 export function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatureCollection {
   const {
     map, polygon, iconRadiusPx, density, seed, rotationJitterDeg, scaleJitter,
-    positionJitter, stagger, distribution, minSpacing,
+    positionJitter, stagger, distribution, minSpacing, viewportPaddingPx,
   } = options;
+
+  let clipBounds: { minX: number; minY: number; maxX: number; maxY: number } | undefined;
+  if (viewportPaddingPx !== undefined) {
+    if (!Number.isFinite(viewportPaddingPx) || viewportPaddingPx < 0) {
+      throw new RangeError("viewportPaddingPx must be a finite number greater than or equal to 0");
+    }
+    const canvas = map.getCanvas?.();
+    if (canvas) {
+      const pixelRatio = globalThis.devicePixelRatio || 1;
+      const width = canvas.clientWidth || canvas.width / pixelRatio;
+      const height = canvas.clientHeight || canvas.height / pixelRatio;
+      clipBounds = {
+        minX: -viewportPaddingPx,
+        minY: -viewportPaddingPx,
+        maxX: width + viewportPaddingPx,
+        maxY: height + viewportPaddingPx,
+      };
+    }
+  }
 
   const points = toPolygons(polygon).flatMap((polygonRings, polygonIndex) => {
     const pixelRings: Ring[] = polygonRings.map((ring) =>
@@ -81,13 +103,15 @@ export function scatterIconPoints(options: ScatterIconPointsOptions): PointFeatu
       stagger,
       distribution,
       minSpacing,
+      clipBounds,
     });
   });
 
-  const features: PointFeature[] = points.map(({ x, y, rotation, scale }) => {
+  const features: PointFeature[] = points.map(({ x, y, rotation, scale }, index) => {
     const lngLat = map.unproject([x, y]);
     return {
       type: "Feature",
+      id: index,
       geometry: { type: "Point", coordinates: [lngLat.lng, lngLat.lat] },
       properties: { rotation, scale },
     };

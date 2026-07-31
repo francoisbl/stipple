@@ -43,5 +43,41 @@ describe("scatterIconPoints", () => {
 
     expect(result.features.some(({ geometry }) => geometry.coordinates[0] < 500)).toBe(true);
     expect(result.features.some(({ geometry }) => geometry.coordinates[0] > 900)).toBe(true);
+    expect(new Set(result.features.map(({ id }) => id)).size).toBe(result.features.length);
+  });
+
+  it("limits generation to the visible canvas plus padding", () => {
+    const viewportMap = {
+      project: ([lng, lat]: [number, number]) => ({ x: lng, y: lat }),
+      unproject: ([x, y]: [number, number]) => ({ lng: x, lat: y }),
+      getCanvas: () => ({ clientWidth: 500, clientHeight: 400, width: 500, height: 400 }),
+    } as unknown as MaplibreMap;
+    const polygon: PolygonGeometry = {
+      type: "Polygon",
+      coordinates: [[
+        [-10_000, -10_000],
+        [10_000, -10_000],
+        [10_000, 10_000],
+        [-10_000, 10_000],
+        [-10_000, -10_000],
+      ]],
+    };
+
+    const result = scatterIconPoints({
+      map: viewportMap,
+      polygon,
+      iconRadiusPx: 8,
+      density: 4,
+      positionJitter: 0,
+      stagger: false,
+      viewportPaddingPx: 50,
+    });
+
+    expect(result.features.length).toBeGreaterThan(0);
+    expect(result.features.length).toBeLessThan(250);
+    expect(result.features.every(({ geometry }) => {
+      const [x, y] = geometry.coordinates;
+      return x >= -50 && x <= 550 && y >= -50 && y <= 450;
+    })).toBe(true);
   });
 });

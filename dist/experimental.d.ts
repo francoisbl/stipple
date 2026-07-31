@@ -10,6 +10,7 @@ type PolygonGeometry = {
 };
 interface PointFeature {
     type: "Feature";
+    id: number;
     geometry: {
         type: "Point";
         coordinates: [number, number];
@@ -45,6 +46,8 @@ interface ScatterIconPointsOptions {
     distribution?: SvgDistributionMode;
     /** Extra minimum gap in screen pixels for natural distribution. */
     minSpacing?: number;
+    /** Only generate points inside the visible canvas plus this pixel margin. Omit to process the complete polygon. */
+    viewportPaddingPx?: number;
 }
 /**
  * Computes scatter points inside a polygon, in the map's current screen
@@ -85,6 +88,8 @@ interface InstallSvgIconScatterOptions {
     scaleMode?: IconScaleMode;
     /** Keep the complete icon inside the polygon. Default true. */
     edgeClearance?: boolean;
+    /** Extra off-screen area retained for fixed-pixel symbols. Computed from icon size and spacing by default. */
+    viewportPaddingPx?: number;
 }
 /**
  * @experimental
@@ -97,8 +102,8 @@ interface InstallSvgIconScatterOptions {
  *
  * Points are computed in screen pixels at call time, then frozen as
  * lng/lat, so density (icon count per screen area) drifts out of sync
- * with the current zoom unless you recompute after each pan/zoom, e.g.
- * `map.on('zoomend', () => installSvgIconScatter(map, options))`.
+ * with the current zoom unless you recompute after each completed movement,
+ * e.g. `map.on('moveend', () => installSvgIconScatter(map, options))`.
  */
 declare function installSvgIconScatter(map: Map, options: InstallSvgIconScatterOptions): Promise<void>;
 

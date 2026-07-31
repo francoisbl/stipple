@@ -341,7 +341,8 @@ var MaplibrePatternFills = (() => {
       positionJitter = 0.15,
       stagger = true,
       distribution = stagger ? "offset" : "regular",
-      minSpacing = 0
+      minSpacing = 0,
+      clipBounds
     } = options;
     if (!Number.isFinite(radius) || radius < 0) {
       throw new RangeError("radius must be a finite number greater than or equal to 0");
@@ -382,34 +383,74 @@ var MaplibrePatternFills = (() => {
     const points = [];
     const width = maxX - minX;
     const height = maxY - minY;
+    const clipMinX = Math.max(minX, clipBounds?.minX ?? minX);
+    const clipMinY = Math.max(minY, clipBounds?.minY ?? minY);
+    const clipMaxX = Math.min(maxX, clipBounds?.maxX ?? maxX);
+    const clipMaxY = Math.min(maxY, clipBounds?.maxY ?? maxY);
+    if (clipMaxX <= clipMinX || clipMaxY <= clipMinY) return [];
     if (distribution === "natural") {
-      const targetCount = Math.max(1, Math.round(density * width * height / 1e4));
-      const minimumDistance = radius * 2 * (1 + scaleJitter) + minSpacing;
+      const clippedWidth = clipMaxX - clipMinX;
+      const clippedHeight = clipMaxY - clipMinY;
+      const targetCount = Math.max(1, Math.round(density * clippedWidth * clippedHeight / 1e4));
+      const minimumDistance = Math.max(
+        cell * 0.76,
+        radius * 2 * (1 + scaleJitter) + minSpacing
+      );
       const conservativeRadius = radius * (1 + scaleJitter);
-      while (points.length < targetCount) {
-        let best;
-        let bestDistanceSquared = -1;
-        for (let candidateIndex = 0; candidateIndex < 32; candidateIndex++) {
-          const x = minX + rand() * width;
-          const y = minY + rand() * height;
-          if (!discFitsInside(x, y, conservativeRadius, rings)) continue;
-          let nearestDistanceSquared = Infinity;
-          for (const point of points) {
-            const distanceSquared = (x - point.x) ** 2 + (y - point.y) ** 2;
-            if (distanceSquared < nearestDistanceSquared) nearestDistanceSquared = distanceSquared;
-          }
-          if (nearestDistanceSquared > bestDistanceSquared) {
-            best = [x, y];
-            bestDistanceSquared = nearestDistanceSquared;
+      const minimumDistanceSquared = minimumDistance ** 2;
+      const gridCell = Math.max(minimumDistance / Math.SQRT2, 1);
+      const grid = /* @__PURE__ */ new Map();
+      const active = [];
+      const gridCoordinate = (value, origin) => Math.floor((value - origin) / gridCell);
+      const gridKey = (column, row) => `${column}:${row}`;
+      const isFarEnough = (x, y) => {
+        if (minimumDistanceSquared === 0) return true;
+        const column = gridCoordinate(x, clipMinX);
+        const row = gridCoordinate(y, clipMinY);
+        for (let offsetY = -2; offsetY <= 2; offsetY++) {
+          for (let offsetX = -2; offsetX <= 2; offsetX++) {
+            const pointIndex = grid.get(gridKey(column + offsetX, row + offsetY));
+            if (pointIndex === void 0) continue;
+            const point = points[pointIndex];
+            if ((x - point.x) ** 2 + (y - point.y) ** 2 < minimumDistanceSquared) return false;
           }
         }
-        if (!best || bestDistanceSquared < minimumDistance ** 2) break;
+        return true;
+      };
+      const addPoint = (x, y) => {
+        const pointIndex = points.length;
         points.push({
-          x: best[0],
-          y: best[1],
+          x,
+          y,
           rotation: (rand() * 2 - 1) * rotationJitterDeg,
           scale: 1 + (rand() * 2 - 1) * scaleJitter
         });
+        active.push(pointIndex);
+        grid.set(gridKey(
+          gridCoordinate(x, clipMinX),
+          gridCoordinate(y, clipMinY)
+        ), pointIndex);
+      };
+      for (let attempt = 0; attempt < 128 && points.length === 0; attempt++) {
+        const x = clipMinX + rand() * clippedWidth;
+        const y = clipMinY + rand() * clippedHeight;
+        if (discFitsInside(x, y, conservativeRadius, rings)) addPoint(x, y);
+      }
+      while (active.length > 0 && points.length < targetCount) {
+        const activeSlot = Math.floor(rand() * active.length);
+        const origin = points[active[activeSlot]];
+        let accepted = false;
+        for (let attempt = 0; attempt < 30; attempt++) {
+          const angle = rand() * Math.PI * 2;
+          const distance = minimumDistance * (1 + rand());
+          const x = origin.x + Math.cos(angle) * distance;
+          const y = origin.y + Math.sin(angle) * distance;
+          if (x < clipMinX || x > clipMaxX || y < clipMinY || y > clipMaxY || !discFitsInside(x, y, conservativeRadius, rings) || !isFarEnough(x, y)) continue;
+          addPoint(x, y);
+          accepted = true;
+          break;
+        }
+        if (!accepted) active.splice(activeSlot, 1);
       }
       return points;
     }
@@ -417,12 +458,24 @@ var MaplibrePatternFills = (() => {
     const rows = Math.max(1, Math.floor(height / cell));
     const startX = minX + (width - (columns - 1) * cell) / 2;
     const startY = minY + (height - (rows - 1) * cell) / 2;
-    for (let row = 0; row < rows; row++) {
+    const jitterMargin = cell * positionJitter / 2;
+    const firstRow = Math.max(0, Math.ceil((clipMinY - jitterMargin - startY) / cell));
+    const lastRow = Math.min(rows - 1, Math.floor((clipMaxY + jitterMargin - startY) / cell));
+    for (let row = firstRow; row <= lastRow; row++) {
       const rowOffset = distribution === "offset" && columns > 1 ? row % 2 === 0 ? -cell / 4 : cell / 4 : 0;
-      for (let column = 0; column < columns; column++) {
+      const firstColumn = Math.max(
+        0,
+        Math.ceil((clipMinX - jitterMargin - startX - rowOffset) / cell)
+      );
+      const lastColumn = Math.min(
+        columns - 1,
+        Math.floor((clipMaxX + jitterMargin - startX - rowOffset) / cell)
+      );
+      for (let column = firstColumn; column <= lastColumn; column++) {
         const jitter = distribution === "offset" ? positionJitter : 0;
         const jx = startX + column * cell + rowOffset + (rand() - 0.5) * cell * jitter;
         const jy = startY + row * cell + (rand() - 0.5) * cell * jitter;
+        if (jx < clipMinX || jx > clipMaxX || jy < clipMinY || jy > clipMaxY) continue;
         const rotation = (rand() * 2 - 1) * rotationJitterDeg;
         const scale = 1 + (rand() * 2 - 1) * scaleJitter;
         if (discFitsInside(jx, jy, radius * scale, rings)) points.push({ x: jx, y: jy, rotation, scale });
@@ -1204,8 +1257,27 @@ var MaplibrePatternFills = (() => {
       positionJitter,
       stagger,
       distribution,
-      minSpacing
+      minSpacing,
+      viewportPaddingPx
     } = options;
+    let clipBounds;
+    if (viewportPaddingPx !== void 0) {
+      if (!Number.isFinite(viewportPaddingPx) || viewportPaddingPx < 0) {
+        throw new RangeError("viewportPaddingPx must be a finite number greater than or equal to 0");
+      }
+      const canvas = map.getCanvas?.();
+      if (canvas) {
+        const pixelRatio = globalThis.devicePixelRatio || 1;
+        const width = canvas.clientWidth || canvas.width / pixelRatio;
+        const height = canvas.clientHeight || canvas.height / pixelRatio;
+        clipBounds = {
+          minX: -viewportPaddingPx,
+          minY: -viewportPaddingPx,
+          maxX: width + viewportPaddingPx,
+          maxY: height + viewportPaddingPx
+        };
+      }
+    }
     const points = toPolygons(polygon).flatMap((polygonRings, polygonIndex) => {
       const pixelRings = polygonRings.map(
         (ring2) => ring2.map(([lng, lat]) => {
@@ -1222,13 +1294,15 @@ var MaplibrePatternFills = (() => {
         positionJitter,
         stagger,
         distribution,
-        minSpacing
+        minSpacing,
+        clipBounds
       });
     });
-    const features = points.map(({ x, y, rotation, scale }) => {
+    const features = points.map(({ x, y, rotation, scale }, index) => {
       const lngLat = map.unproject([x, y]);
       return {
         type: "Feature",
+        id: index,
         geometry: { type: "Point", coordinates: [lngLat.lng, lngLat.lat] },
         properties: { rotation, scale }
       };
@@ -1276,6 +1350,68 @@ var MaplibrePatternFills = (() => {
   }
 
   // src/maplibre/svgIconScatter.ts
+  var installedScatterFeatures = /* @__PURE__ */ new WeakMap();
+  var installedScatterLayerStates = /* @__PURE__ */ new WeakMap();
+  function featureDiff(previous, next) {
+    const [previousLng, previousLat] = previous.geometry.coordinates;
+    const [nextLng, nextLat] = next.geometry.coordinates;
+    const geometryChanged = previousLng !== nextLng || previousLat !== nextLat;
+    const propertiesChanged = previous.properties.rotation !== next.properties.rotation || previous.properties.scale !== next.properties.scale;
+    if (!geometryChanged && !propertiesChanged) return void 0;
+    return {
+      id: next.id,
+      ...geometryChanged ? { newGeometry: next.geometry } : {},
+      ...propertiesChanged ? {
+        addOrUpdateProperties: [
+          { key: "rotation", value: next.properties.rotation },
+          { key: "scale", value: next.properties.scale }
+        ]
+      } : {}
+    };
+  }
+  function scatterSourceDiff(previous, next) {
+    const sharedCount = Math.min(previous.length, next.length);
+    const update = [];
+    for (let index = 0; index < sharedCount; index++) {
+      const diff = featureDiff(previous[index], next[index]);
+      if (diff) update.push(diff);
+    }
+    return {
+      ...previous.length > next.length ? { remove: previous.slice(next.length).map(({ id }) => id) } : {},
+      ...next.length > previous.length ? { add: next.slice(previous.length) } : {},
+      ...update.length ? { update } : {}
+    };
+  }
+  async function updateScatterSource(map, sourceId, points) {
+    let featuresBySource = installedScatterFeatures.get(map);
+    if (!featuresBySource) {
+      featuresBySource = /* @__PURE__ */ new Map();
+      installedScatterFeatures.set(map, featuresBySource);
+    }
+    const previous = featuresBySource.get(sourceId);
+    featuresBySource.set(sourceId, points.features);
+    const existingSource = map.getSource(sourceId);
+    if (!existingSource) {
+      map.addSource(sourceId, {
+        type: "geojson",
+        data: points,
+        // Point geometry does not need high-zoom vector-tile subdivision.
+        // Overscaling above z14 preserves positions while reducing rebuild work.
+        maxzoom: 14
+      });
+      return;
+    }
+    if (previous && typeof existingSource.updateData === "function") {
+      const diff = scatterSourceDiff(previous, points.features);
+      if (!diff.add && !diff.remove && !diff.update) return;
+      try {
+        await existingSource.updateData(diff);
+        return;
+      } catch {
+      }
+    }
+    existingSource.setData(points);
+  }
   async function installSvgIconScatter(map, options) {
     const {
       sourceId,
@@ -1294,12 +1430,19 @@ var MaplibrePatternFills = (() => {
       minSpacing,
       opacity = 1,
       scaleMode = "screen",
-      edgeClearance = true
+      edgeClearance = true,
+      viewportPaddingPx
     } = options;
     if (scaleMode !== "screen" && scaleMode !== "map") {
       throw new TypeError("scaleMode must be screen or map");
     }
     await addSvgIcon(map, { id: iconId, svg, size });
+    const approximateSpacing = density && density > 0 ? 100 / Math.sqrt(density) : 100;
+    const screenPadding = viewportPaddingPx ?? Math.max(
+      192,
+      size * (1 + (scaleJitter ?? 0)) * 2,
+      approximateSpacing * 2
+    );
     const points = scatterIconPoints({
       map,
       polygon,
@@ -1311,14 +1454,10 @@ var MaplibrePatternFills = (() => {
       positionJitter,
       stagger,
       distribution,
-      minSpacing
+      minSpacing,
+      viewportPaddingPx: scaleMode === "screen" ? screenPadding : void 0
     });
-    const existingSource = map.getSource(sourceId);
-    if (existingSource) {
-      existingSource.setData(points);
-    } else {
-      map.addSource(sourceId, { type: "geojson", data: points });
-    }
+    await updateScatterSource(map, sourceId, points);
     const iconSize = scaleMode === "map" ? [
       "interpolate",
       ["exponential", 2],
@@ -1330,6 +1469,12 @@ var MaplibrePatternFills = (() => {
       map.getZoom() + 8,
       ["*", ["get", "scale"], 256]
     ] : ["get", "scale"];
+    let layerStates = installedScatterLayerStates.get(map);
+    if (!layerStates) {
+      layerStates = /* @__PURE__ */ new Map();
+      installedScatterLayerStates.set(map, layerStates);
+    }
+    const layerModeSignature = scaleMode === "screen" ? "screen" : `map:${map.getZoom()}`;
     if (!map.getLayer(layerId)) {
       map.addLayer({
         id: layerId,
@@ -1339,15 +1484,35 @@ var MaplibrePatternFills = (() => {
           "icon-image": iconId,
           "icon-rotate": ["get", "rotation"],
           "icon-size": iconSize,
-          "icon-allow-overlap": true
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+          "symbol-z-order": "source"
         },
         paint: {
           "icon-opacity": opacity
         }
       });
+      layerStates.set(layerId, {
+        mode: layerModeSignature,
+        iconId,
+        opacity
+      });
     } else {
-      map.setLayoutProperty(layerId, "icon-size", iconSize);
-      map.setPaintProperty(layerId, "icon-opacity", opacity);
+      const previousLayer = layerStates.get(layerId);
+      if (previousLayer?.mode !== layerModeSignature) {
+        map.setLayoutProperty(layerId, "icon-size", iconSize);
+      }
+      if (previousLayer?.iconId !== iconId) {
+        map.setLayoutProperty(layerId, "icon-image", iconId);
+      }
+      if (previousLayer?.opacity !== opacity) {
+        map.setPaintProperty(layerId, "icon-opacity", opacity);
+      }
+      layerStates.set(layerId, {
+        mode: layerModeSignature,
+        iconId,
+        opacity
+      });
     }
   }
   return __toCommonJS(src_exports);
