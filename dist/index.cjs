@@ -41,6 +41,7 @@ __export(src_exports, {
   scalePatternForZoom: () => scalePatternForZoom,
   scatterIconPoints: () => scatterIconPoints,
   scatterPointsInPolygon: () => scatterPointsInPolygon,
+  screenPatternPhase: () => screenPatternPhase,
   serializePatternDefinition: () => serializePatternDefinition,
   syncPatternTexture: () => syncPatternTexture
 });
@@ -654,6 +655,22 @@ function scalePatternForZoom(options) {
     opacity: 1,
     floored: rawScale < minimumScale,
     capped: rawScale > maximumScale
+  };
+}
+
+// src/engine/screenPatternPhase.ts
+function screenPatternPhase(zoom, steps = 8) {
+  if (!Number.isFinite(zoom)) {
+    throw new TypeError("zoom must be a finite number");
+  }
+  if (!Number.isInteger(steps) || steps < 1) {
+    throw new RangeError("steps must be a positive integer");
+  }
+  const fraction = zoom - Math.floor(zoom);
+  const index = Math.min(steps, Math.round(fraction * steps));
+  return {
+    index,
+    pixelRatioScale: 2 ** (index / steps)
   };
 }
 
@@ -1538,6 +1555,7 @@ async function installSvgIconScatter(map, options) {
   scalePatternForZoom,
   scatterIconPoints,
   scatterPointsInPolygon,
+  screenPatternPhase,
   serializePatternDefinition,
   syncPatternTexture
 });

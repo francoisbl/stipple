@@ -1147,7 +1147,7 @@
           </div>
           <input type="file" id="vectorFile" accept=".geojson,.json,.geojsonl,.ndjson,.gpkg,.zip,.shp,.dbf,.shx,.prj,.cpg,.parquet,.geoparquet,.fgb,.kml,.kmz,.gpx,.csv,.tsv,.dxf,.gml,.tab,.mif,.sqlite,.mbtiles,.osm,.pbf,.vrt" multiple hidden />
           <div class="feature-chips" id="featureChips"></div>
-          <div class="drop-note">Drop GeoJSON, GeoPackage, GeoParquet, zipped Shapefile or related files on the map.</div>
+          <div class="drop-note">Drop GeoJSON, GeoPackage or GeoParquet. For Shapefile, use a ZIP or select .shp, .dbf, .shx and .prj together.</div>
           <div class="hint" id="srcHint"></div>
         </aside>
 
@@ -1417,7 +1417,7 @@
     makeTile, syncPatternTexture, buildStyleFragment,
     installSvgPatternFill, installSvgIconScatter,
     createSvgPatternDefinition, createSvgScatterTile,
-    scalePatternForZoom,
+    scalePatternForZoom, screenPatternPhase,
     importGeoJsonPolygons, patternDefinitionId, PATTERN_METADATA_KEY,
   } = window.MaplibrePatternFills;
   const DASH_PRESETS = {
@@ -1878,11 +1878,74 @@
     });
   }
 
+  const SCREEN_PATTERN_STEPS = 8;
+  const SCREEN_PATTERN_PIXEL_RATIO = 2;
+  const screenPatternSignatures = new Map();
+  const screenPatternGenerations = new Map();
+
+  function screenPatternImageId(id, zoom = map.getZoom()) {
+    const phase = screenPatternPhase(zoom, SCREEN_PATTERN_STEPS);
+    return `${svgImageId(id)}__screen_${phase.index}`;
+  }
+
+  function svgPatternImageId(id, style, zoom = map.getZoom()) {
+    return style.svgFill.scaleMode === "screen"
+      ? screenPatternImageId(id, zoom)
+      : svgImageId(id);
+  }
+
+  async function installScreenSvgPatternForFeature(id, style, options) {
+    const definition = createSvgPatternDefinition(options);
+    const signature = JSON.stringify(definition);
+    const imageIds = Array.from(
+      { length: SCREEN_PATTERN_STEPS + 1 },
+      (_, index) => `${svgImageId(id)}__screen_${index}`,
+    );
+    if (
+      screenPatternSignatures.get(id) === signature &&
+      imageIds.every((imageId) => map.hasImage(imageId))
+    ) {
+      const layerId = `${id}__pat`;
+      const imageId = screenPatternImageId(id);
+      if (map.getLayer(layerId) && map.getPaintProperty(layerId, "fill-pattern") !== imageId) {
+        map.setPaintProperty(layerId, "fill-pattern", imageId);
+      }
+      return;
+    }
+
+    const generation = (screenPatternGenerations.get(id) || 0) + 1;
+    screenPatternGenerations.set(id, generation);
+    const tile = await createSvgScatterTile({
+      ...options,
+      pixelRatio: SCREEN_PATTERN_PIXEL_RATIO,
+    });
+    if (screenPatternGenerations.get(id) !== generation) return;
+
+    imageIds.forEach((imageId, index) => {
+      if (map.hasImage(imageId)) {
+        map.updateImage(imageId, tile);
+      } else {
+        const phase = screenPatternPhase(index / SCREEN_PATTERN_STEPS, SCREEN_PATTERN_STEPS);
+        map.addImage(imageId, tile, {
+          pixelRatio: SCREEN_PATTERN_PIXEL_RATIO * phase.pixelRatioScale,
+        });
+      }
+    });
+    screenPatternSignatures.set(id, signature);
+
+    const layerId = `${id}__pat`;
+    if (map.getLayer(layerId)) {
+      map.setPaintProperty(layerId, "fill-pattern", screenPatternImageId(id));
+      map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
+    }
+    map.triggerRepaint();
+  }
+
   async function syncSvgTextureForFeature(id, style) {
     const svg = resolveSvgFillSample(style.svgFill, style.patColor);
     if (!svg) return toast("Paste a custom SVG first");
     const effective = effectiveSvgTexture(style, id);
-    await installSvgPatternFill(map, {
+    const options = {
       imageId: svgImageId(id), svg,
       stampSize: effective.stampSize,
       density: effective.density,
@@ -1892,7 +1955,12 @@
       rotationJitterDeg: style.svgFill.rotationJitterDeg,
       scaleJitter: style.svgFill.scaleJitter,
       seed: style.svgFill.seed,
-    });
+    };
+    if (style.svgFill.scaleMode === "screen") {
+      await installScreenSvgPatternForFeature(id, style, options);
+    } else {
+      await installSvgPatternFill(map, options);
+    }
     const layerId = `${id}__pat`;
     if (map.getLayer(layerId)) {
       map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
@@ -1986,7 +2054,7 @@
         id: pat,
         type: "fill",
         source: id,
-        paint: { "fill-pattern": svgImageId(id), "fill-opacity": state.patOpacity },
+        paint: { "fill-pattern": svgPatternImageId(id, state), "fill-opacity": state.patOpacity },
       });
     } else if (state.pattern === "solid") {
       map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity } });
@@ -2187,6 +2255,12 @@
     [`${id}__line`, `${id}__pat`, `${id}__bg`, `${id}__svgscatter_layer`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
     if (map.hasImage(`${id}__pat_img`)) map.removeImage(`${id}__pat_img`);
     if (map.hasImage(`${id}__svg_img`)) map.removeImage(`${id}__svg_img`);
+    for (let index = 0; index <= SCREEN_PATTERN_STEPS; index += 1) {
+      const imageId = `${id}__svg_img__screen_${index}`;
+      if (map.hasImage(imageId)) map.removeImage(imageId);
+    }
+    screenPatternSignatures.delete(id);
+    screenPatternGenerations.set(id, (screenPatternGenerations.get(id) || 0) + 1);
     if (map.getSource(`${id}__svgscatter`)) map.removeSource(`${id}__svgscatter`);
   }
 
@@ -2859,8 +2933,11 @@
       throw new TypeError("Select the .shp file with its companion files");
     }
     const input = {};
-    for (const extension of ["shp", "dbf", "prj", "cpg"]) {
+    for (const extension of ["shp", "dbf"]) {
       if (parts.has(extension)) input[extension] = await parts.get(extension).arrayBuffer();
+    }
+    for (const extension of ["prj", "cpg"]) {
+      if (parts.has(extension)) input[extension] = await parts.get(extension).text();
     }
     return shp(input);
   }
@@ -3020,7 +3097,24 @@
       type: "FeatureCollection",
       features: documents.flatMap((document) => collectGeoJsonFeatures(document)),
     };
-    const imported = importGeoJsonPolygons(geoJson, Number.MAX_SAFE_INTEGER);
+    let imported;
+    try {
+      imported = importGeoJsonPolygons(geoJson, Number.MAX_SAFE_INTEGER);
+    } catch (error) {
+      const isShapefile = extensions.has("zip") ||
+        [...extensions].some((extension) => SHAPEFILE_PARTS.has(extension));
+      if (isShapefile && error instanceof RangeError && /WGS84/.test(error.message)) {
+        if (!extensions.has("prj") && !extensions.has("zip")) {
+          throw new RangeError(
+            "This Shapefile uses projected coordinates. Select its .prj file together with the .shp and .dbf files, or open the complete dataset as a ZIP",
+          );
+        }
+        throw new RangeError(
+          "The Shapefile CRS could not be converted to WGS84. Check that its .prj file is present and valid",
+        );
+      }
+      throw error;
+    }
     const openedFeatures = imported.features.slice(0, MAX_FEATURES);
     const omittedPolygons = imported.features.length - openedFeatures.length;
     const names = files.map((file) => file.name).join(", ");
@@ -3392,6 +3486,30 @@ if (map.isStyleLoaded()) {
     updateAppearanceControlAvailability();
     renderPreview();
   }
+
+  let currentScreenPatternPhase = -1;
+  map.on("zoom", () => {
+    const phase = screenPatternPhase(map.getZoom(), SCREEN_PATTERN_STEPS).index;
+    if (phase === currentScreenPatternPhase) return;
+    currentScreenPatternPhase = phase;
+    Object.keys(FEATURES).forEach((id) => {
+      const style = id === state.layer?.source ? currentStyle() : FEATURE_STYLES[id];
+      const layerId = `${id}__pat`;
+      if (
+        !style?.svgFill?.on ||
+        style.svgFill.noCut ||
+        style.svgFill.scaleMode !== "screen" ||
+        !map.getLayer(layerId)
+      ) return;
+      const imageId = screenPatternImageId(id);
+      if (
+        map.hasImage(imageId) &&
+        map.getPaintProperty(layerId, "fill-pattern") !== imageId
+      ) {
+        map.setPaintProperty(layerId, "fill-pattern", imageId);
+      }
+    });
+  });
 
   map.on("moveend", () => {
     if (!state.svgFill.on) return;

@@ -57,12 +57,19 @@ describe("demo pattern library", () => {
 
   it("clips SVG motifs at polygon boundaries by default", () => {
     expect(demo).toMatch(/state\.svgFill\.on && state\.svgFill\.noCut[\s\S]*?syncSvgIconScatterForFeature/);
-    expect(demo).toMatch(/else if \(state\.svgFill\.on\)[\s\S]*?"fill-pattern": svgImageId\(id\)/);
+    expect(demo).toMatch(/else if \(state\.svgFill\.on\)[\s\S]*?"fill-pattern": svgPatternImageId\(id, state\)/);
     expect(demo).toMatch(/if \(state\.svgFill\.noCut\) syncSvgIconScatter\(\);[\s\S]*?else syncSvgTexture\(\);/);
     expect(demo).toMatch(/scaleMode:\s*style\.svgFill\.scaleMode/);
     expect(demo).toMatch(/edgeClearance:\s*true/);
     expect(demo).toContain("Symbols continue to the edge and are clipped by the boundary.");
     expect(demo).toMatch(/map\.on\("moveend"/);
+  });
+
+  it("keeps clipped screen motifs stable without rebuilding them during zoom", () => {
+    expect(demo).toMatch(/const SCREEN_PATTERN_STEPS = 8/);
+    expect(demo).toMatch(/map\.on\("zoom", \(\) => \{[\s\S]*?screenPatternImageId\(id\)/);
+    expect(demo).toMatch(/pixelRatio:\s*SCREEN_PATTERN_PIXEL_RATIO \* phase\.pixelRatioScale/);
+    expect(demo).not.toMatch(/map\.on\("zoom", \(\) => \{[\s\S]*?createSvgScatterTile/);
   });
 
   it("opens common vector formats without loading every reader at startup", () => {
@@ -73,6 +80,11 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/await import\(SHPJS_URL\)/);
     expect(demo).toMatch(/parquetReadObjects/);
     expect(demo).toMatch(/Gdal\.ogr2ogr/);
+  });
+
+  it("reads Shapefile projection metadata as text", () => {
+    expect(demo).toMatch(/for \(const extension of \["prj", "cpg"\]\)[\s\S]*?\.text\(\)/);
+    expect(demo).toContain("Select its .prj file together with the .shp and .dbf files");
   });
 
   it("places the style editor left of the map and the data panel on the right", () => {
