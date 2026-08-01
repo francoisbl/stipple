@@ -7,6 +7,8 @@ export { scatterPointsInPolygon } from "./scatterPoints";
 export type { Ring, ScatteredPoint, ScatterPointsOptions } from "./scatterPoints";
 export { createSvgScatterLayout } from "./svgScatterLayout";
 export { scalePatternForZoom } from "./patternScale";
+export { screenPatternPhase } from "./screenPatternPhase";
+export type { ScreenPatternPhase } from "./screenPatternPhase";
 export { importGeoJsonPolygons } from "./geojsonImport";
 export type {
   GeoJsonPolygonImport,

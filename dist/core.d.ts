@@ -124,6 +124,17 @@ interface PatternScaleResult {
  */
 declare function scalePatternForZoom(options: PatternScaleOptions): PatternScaleResult;
 
+interface ScreenPatternPhase {
+    index: number;
+    pixelRatioScale: number;
+}
+/**
+ * Chooses a preloaded image scale that counters MapLibre's fractional-zoom
+ * scaling of fill patterns. The image changes only a few times per zoom level,
+ * while the SVG tile itself stays cached.
+ */
+declare function screenPatternPhase(zoom: number, steps?: number): ScreenPatternPhase;
+
 interface ImportedPolygonFeature {
     type: "Feature";
     id?: string | number;
@@ -143,4 +154,4 @@ interface GeoJsonPolygonImport {
  */
 declare function importGeoJsonPolygons(input: unknown, maximumFeatures?: number): GeoJsonPolygonImport;
 
-export { type GeoJsonPolygonImport, type ImportedPolygonFeature, type MakeTileOptions, type PatternScaleMode, type PatternScaleOptions, type PatternScaleResult, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, SvgDistributionMode, TileContext, TileImage, createMiniContext, hashStringToSeed, importGeoJsonPolygons, makeTile, mulberry32, scalePatternForZoom, scatterPointsInPolygon };
+export { type GeoJsonPolygonImport, type ImportedPolygonFeature, type MakeTileOptions, type PatternScaleMode, type PatternScaleOptions, type PatternScaleResult, PatternType, type Ring, type ScatterPointsOptions, type ScatteredPoint, type ScreenPatternPhase, SvgDistributionMode, TileContext, TileImage, createMiniContext, hashStringToSeed, importGeoJsonPolygons, makeTile, mulberry32, scalePatternForZoom, scatterPointsInPolygon, screenPatternPhase };

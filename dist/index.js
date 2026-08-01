@@ -609,6 +609,22 @@ function scalePatternForZoom(options) {
   };
 }
 
+// src/engine/screenPatternPhase.ts
+function screenPatternPhase(zoom, steps = 8) {
+  if (!Number.isFinite(zoom)) {
+    throw new TypeError("zoom must be a finite number");
+  }
+  if (!Number.isInteger(steps) || steps < 1) {
+    throw new RangeError("steps must be a positive integer");
+  }
+  const fraction = zoom - Math.floor(zoom);
+  const index = Math.min(steps, Math.round(fraction * steps));
+  return {
+    index,
+    pixelRatioScale: 2 ** (index / steps)
+  };
+}
+
 // src/engine/geojsonImport.ts
 function record(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1489,6 +1505,7 @@ export {
   scalePatternForZoom,
   scatterIconPoints,
   scatterPointsInPolygon,
+  screenPatternPhase,
   serializePatternDefinition,
   syncPatternTexture
 };
