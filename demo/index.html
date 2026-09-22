@@ -152,13 +152,25 @@
       border-radius: 50%;
     }
     .svg-mode-pill {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 7px;
       width: 100%;
       margin-top: 6px;
-      border-style: dashed;
-      font-weight: 500;
+      /* Same solid border/background as the other fill-type pills (not the
+         dashed style this used to have, which reads as disabled), just a
+         wider layout for the icon + chevron. The active/selected look is
+         the shared `.pill.active` rule below, same as any other pill. */
+      font-weight: 600;
     }
-    .svg-mode-pill.active { border-style: solid; }
+    .svg-mode-pill svg:first-child { flex: 0 0 auto; width: 16px; height: 16px; }
+    .svg-mode-pill-chevron { flex: 0 0 auto; width: 14px; height: 14px; margin-left: auto; transition: transform .12s; }
+    .svg-mode-pill[aria-expanded="true"] .svg-mode-pill-chevron { transform: rotate(180deg); }
+    /* Its "Motifs" .family-label is the first <span> inside this wrapper,
+       so `.family-label:first-of-type` (meant to zero the gap under a
+       .control-title at the very top of a panel) matches it too and would
+       otherwise glue it straight onto the SVG-motif pill above. */
+    #motifBrowserSection { margin-top: 10px; }
     .motif-browser { margin-top: 7px; }
     .motif-family-tabs {
       display: flex;
@@ -876,7 +888,17 @@
                   <div class="pill" data-p="grid">Grid</div>
                   <div class="pill" data-p="dots">Dots</div>
                 </div>
-                <button type="button" class="pill svg-mode-pill" id="svgModePill">SVG motif</button>
+                <button type="button" class="pill svg-mode-pill" id="svgModePill" aria-expanded="false" aria-controls="motifBrowserSection">
+                  <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12.5 7 8.5 9.5 11.5 12 8 14 12.5" />
+                    <circle cx="7" cy="6" r="1.3" fill="currentColor" stroke="none" />
+                    <rect x="2.5" y="3.5" width="13" height="11" rx="1.5" />
+                  </svg>
+                  SVG motif
+                  <svg class="svg-mode-pill-chevron" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 7.5 9 10.5 12 7.5" />
+                  </svg>
+                </button>
                 <div id="motifBrowserSection" hidden>
                   <span class="family-label">Motifs</span>
                   <div class="motif-browser" id="motifBrowser">
@@ -1358,7 +1380,7 @@
     </svg>`,
     "camping": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M7 52 L31 12 L57 52 Z M31 12 L38 52 M19 52 L31 33 L43 52" />
+        <path d="M7 52 L31 12 L57 52 Z M31 12 L31 52" />
       </g>
     </svg>`,
     // Shapes
@@ -2523,6 +2545,7 @@
       element.classList.toggle("active", !state.svgFill.on && element.dataset.p === state.pattern);
     });
     $("svgModePill").classList.toggle("active", state.svgFill.on);
+    $("svgModePill").setAttribute("aria-expanded", String(state.svgFill.on));
     // The motif browser only exists to configure the "SVG motif" fill type,
     // so it stays out of the way entirely until that's explicitly chosen
     // instead of always being clickable underneath whatever geometric
