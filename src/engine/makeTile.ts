@@ -1,4 +1,5 @@
 import { createMiniContext } from "./miniContext";
+import { hashStringToSeed, mulberry32 } from "./seededRandom";
 import type { PatternType, TileContext, TileImage } from "./types";
 
 export interface MakeTileOptions {
@@ -6,6 +7,17 @@ export interface MakeTileOptions {
   contextFactory?: (size: number) => { ctx: TileContext; toTileImage: () => TileImage };
   /** Raster pixels per MapLibre layout pixel. Use 2 for high-density displays. Default 1. */
   pixelRatio?: number;
+}
+
+/** Shortest distance between two points on a tile that wraps at `period`. */
+function toroidalDistance(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  period: number,
+): number {
+  const dx = Math.min(Math.abs(a.x - b.x), period - Math.abs(a.x - b.x));
+  const dy = Math.min(Math.abs(a.y - b.y), period - Math.abs(a.y - b.y));
+  return Math.hypot(dx, dy);
 }
 
 function defaultContextFactory(size: number): { ctx: TileContext; toTileImage: () => TileImage } {
@@ -48,6 +60,18 @@ export function makeTile(
   const pixelRatio = options.pixelRatio ?? 1;
   if (!Number.isFinite(pixelRatio) || pixelRatio <= 0) {
     throw new RangeError("pixelRatio must be a finite number greater than 0");
+  }
+  if (!Number.isFinite(size) || size <= 0) {
+    throw new RangeError("size must be a finite number greater than 0");
+  }
+  if (!Number.isFinite(weight) || weight <= 0) {
+    throw new RangeError("weight must be a finite number greater than 0");
+  }
+  if (!Number.isFinite(angle)) {
+    throw new TypeError("angle must be a finite number");
+  }
+  if (typeof color !== "string" || color.trim().length === 0) {
+    throw new TypeError("color must be a non-empty string");
   }
   const physicalSize = Math.max(1, Math.round(size * pixelRatio));
   const renderScale = physicalSize / size;
@@ -106,19 +130,46 @@ export function makeTile(
       break;
     }
     case "stipple": {
-      // Offset grid of dots ("scatter" look). Deterministic, so seamless.
-      // Cell count scales with tile size so density stays smooth across the
-      // whole size range, rather than jumping only at a few breakpoints.
+      // A true stipple: a seeded, irregular scatter of dots, not a grid.
+      // Best-candidate sampling (the same idea as the SVG "natural"
+      // distribution in svgScatterLayout.ts) spreads dots out without the
+      // look of an evenly spaced lattice. The seed is derived from `size`
+      // alone, so the dot layout is deterministic and stable across colour,
+      // weight, and angle changes (angle has no effect on a round dot); only
+      // resizing the tile reshuffles it. Every dot whose disc crosses a tile
+      // edge is additionally drawn shifted by whole tiles so the pattern
+      // still repeats with no seam or clipping, at any weight.
       const r = weight * renderScale * 0.6;
-      const cells = Math.max(2, Math.round(size / 6));
-      const s = physicalSize / cells;
-      for (let i = 0; i < cells; i++) {
-        for (let j = 0; j < cells; j++) {
-          const cx = (i + (j % 2 ? 0.75 : 0.25)) * s;
-          const cy = (j + 0.5) * s;
-          ctx.beginPath();
-          ctx.arc(cx % physicalSize, cy % physicalSize, r, 0, Math.PI * 2);
-          ctx.fill();
+      const count = Math.max(1, Math.round((size / 6) ** 2));
+      const rand = mulberry32(hashStringToSeed(`stipple:${size}`));
+      const candidateCount = 20;
+      const positions: Array<{ x: number; y: number }> = [];
+      for (let i = 0; i < count; i++) {
+        let best = { x: rand() * physicalSize, y: rand() * physicalSize };
+        let bestDistance = -1;
+        for (let c = 0; c < candidateCount; c++) {
+          const candidate = { x: rand() * physicalSize, y: rand() * physicalSize };
+          const nearest = positions.length === 0
+            ? Infinity
+            : Math.min(...positions.map((p) => toroidalDistance(candidate, p, physicalSize)));
+          if (nearest > bestDistance) {
+            best = candidate;
+            bestDistance = nearest;
+          }
+        }
+        positions.push(best);
+      }
+      for (const { x, y } of positions) {
+        const minShiftX = Math.ceil((-r - x) / physicalSize);
+        const maxShiftX = Math.floor((physicalSize + r - x) / physicalSize);
+        const minShiftY = Math.ceil((-r - y) / physicalSize);
+        const maxShiftY = Math.floor((physicalSize + r - y) / physicalSize);
+        for (let shiftY = minShiftY; shiftY <= maxShiftY; shiftY++) {
+          for (let shiftX = minShiftX; shiftX <= maxShiftX; shiftX++) {
+            ctx.beginPath();
+            ctx.arc(x + shiftX * physicalSize, y + shiftY * physicalSize, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       }
       break;

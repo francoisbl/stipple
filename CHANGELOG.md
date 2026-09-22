@@ -54,6 +54,10 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
   default; ground scaling uses a visible reference zoom.
 - The playground exposes visual size and spacing instead of the internal
   raster stamp size and density values.
+- The `stipple` geometric pattern is now a seeded, irregular scatter of dots
+  instead of a regular offset grid, matching its name. Dot centres depend
+  only on tile size, so recolouring or adjusting weight/angle no longer
+  reshuffles the layout.
 
 ### Fixed
 
@@ -61,6 +65,15 @@ Versioning once it reaches `1.0.0`; breaking changes remain possible during
 - Disjoint `MultiPolygon` components are scattered independently.
 - Invalid density, jitter, radius, distribution, and spacing options now fail
   early.
+- `stipple` tiles no longer show a mismatched seam at tile sizes whose old
+  grid math produced an odd cell count.
+- `stipple` dots whose disc crossed the tile edge are wrapped instead of
+  clipped, at any stroke weight.
+- `makeTile` now validates `size`, `weight`, `angle`, and `color` instead of
+  silently producing an empty or `NaN`-sized image.
+- The Node mini rasterizer now parses 3/4/8-digit hex and space/slash
+  `rgb()`/`rgba()` syntax, and throws on an unsupported color (named colors,
+  `hsl()`) instead of silently rendering it as black.
 
 ### Compatibility
 
