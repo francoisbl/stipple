@@ -288,6 +288,10 @@
     button.action.ghost { color: var(--ink); background: var(--surface); border-color: var(--line-strong); }
     button.action.ghost:hover { color: var(--accent); background: var(--surface); border-color: var(--accent); }
     .preview-canvas {
+      /* `.row > *` sets `flex: 1`, which (flex-basis: 0%) ignores this
+         element's own width/height and stretches it to fill the row.
+         Opt back out so it renders at its declared 56x56 size. */
+      flex: 0 0 auto;
       width: 56px;
       height: 56px;
       padding: 3px;
@@ -464,12 +468,12 @@
     .icon-button.active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
     .rail-separator { width: 22px; height: 1px; margin: 4px 0; background: var(--line); }
     .rail-group-label {
-      writing-mode: vertical-rl;
       font: 500 9px/1 "IBM Plex Mono", monospace;
-      letter-spacing: .07em;
+      letter-spacing: .05em;
       text-transform: uppercase;
+      text-align: center;
       color: var(--ink-soft);
-      margin: 0 0 4px;
+      margin: 2px 0 4px;
       user-select: none;
     }
     .map-shell {
@@ -527,26 +531,6 @@
       border-color: var(--line-strong) !important;
       color: var(--ink);
     }
-    .export-fab {
-      position: absolute;
-      z-index: 5;
-      right: 12px;
-      bottom: 54px; /* clears MapLibre's own scale + attribution controls */
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 9px 14px;
-      background: var(--ink);
-      color: #fff;
-      border: 0;
-      border-radius: 999px;
-      font: 600 12px/1 "IBM Plex Mono", monospace;
-      letter-spacing: .02em;
-      box-shadow: 0 4px 14px rgba(23, 35, 31, .18);
-      cursor: pointer;
-    }
-    .export-fab:hover { background: var(--accent); }
-    .export-fab svg { width: 14px; height: 14px; }
 
     /* Side panel: Feature / Table */
     .side-panel {
@@ -585,6 +569,72 @@
       scrollbar-color: var(--line-strong) transparent;
     }
     .panel-body[hidden] { display: none; }
+    /* Persistent export button, pinned to the bottom of the side panel
+       (below the scrollable Feature/Layers body), and the options drawer it
+       opens above itself. Self-contained: it has its own actions rather
+       than opening the File menu. */
+    .export-footer-btn {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: calc(100% - 20px);
+      margin: 0 10px 10px;
+      padding: 10px;
+      color: #fff;
+      background: var(--ink);
+      border: 0;
+      border-radius: var(--radius-sm);
+      font: 600 12.5px/1 "IBM Plex Mono", monospace;
+      letter-spacing: .02em;
+      cursor: pointer;
+    }
+    .export-footer-btn:hover { background: var(--accent); }
+    .export-footer-btn svg { width: 14px; height: 14px; }
+    .export-drawer {
+      flex: 0 0 auto;
+      max-height: 60vh;
+      overflow-y: auto;
+      margin: 0 10px 8px;
+      padding: 4px;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      box-shadow: 0 -6px 18px rgba(23, 35, 31, .08);
+    }
+    .export-drawer[hidden] { display: none; }
+    .export-drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 6px 8px;
+    }
+    .export-drawer-close {
+      width: 22px;
+      height: 22px;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .export-drawer-close:hover { background: var(--surface-soft); color: var(--accent); }
+    .export-option {
+      display: block;
+      width: 100%;
+      padding: 8px 10px;
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-sm);
+      text-align: left;
+      cursor: pointer;
+    }
+    .export-option:hover { background: var(--surface-soft); }
+    .export-option-title { display: block; color: var(--ink); font-size: 12.5px; font-weight: 600; }
+    .export-option-desc { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 11px; line-height: 1.4; }
     .dock-context { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .dock-context strong { font-size: 13px; }
     .selection-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); }
@@ -713,14 +763,6 @@
           <button type="button" class="menu-button" id="fileMenuButton" aria-haspopup="true" aria-expanded="false">File</button>
           <div class="menu-popover" id="fileMenuPopover" hidden>
             <button type="button" class="menu-item import-trigger" id="importVector">Open data…</button>
-            <div class="menu-separator"></div>
-            <button type="button" class="menu-item" id="exportJsBtn">Copy MapLibre code</button>
-            <button type="button" class="menu-item" id="downloadBundleBtn">Download JSON + PNG</button>
-            <button type="button" class="menu-item" id="exportBtn">Copy style.json</button>
-            <div class="menu-separator"></div>
-            <button type="button" class="menu-item" id="copyConfigBtn">Copy preset</button>
-            <button type="button" class="menu-item" id="importConfigBtn">Load preset</button>
-            <textarea id="ioArea" class="menu-output" placeholder="Exported style or preset JSON appears here."></textarea>
           </div>
         </div>
         <div class="menu" id="helpMenu">
@@ -734,7 +776,8 @@
 
     <main class="workspace">
       <nav class="icon-rail" aria-label="Data and basemap">
-        <button type="button" class="icon-button import-trigger" id="importVectorRail" title="Open data">
+        <span class="rail-group-label">Data</span>
+        <button type="button" class="icon-button import-trigger" id="importVectorRail" title="Open data: import GeoJSON, Shapefile, GeoPackage, and more">
           <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 8V4.5C3 3.7 3.7 3 4.5 3h3l1.5 1.5h5c.8 0 1.5.7 1.5 1.5v2" />
             <path d="M2.6 8h12.8l-1.4 6.2c-.1.6-.7 1-1.3 1H5.3c-.6 0-1.2-.4-1.3-1L2.6 8Z" />
@@ -743,11 +786,17 @@
         <input type="file" id="vectorFile" accept=".geojson,.json,.geojsonl,.ndjson,.gpkg,.zip,.shp,.dbf,.shx,.prj,.cpg,.parquet,.geoparquet,.fgb,.kml,.kmz,.gpx,.csv,.tsv,.dxf,.gml,.tab,.mif,.sqlite,.mbtiles,.osm,.pbf,.vrt" multiple hidden />
         <select id="layerSelect" aria-label="Selected polygon" hidden></select>
         <div class="rail-separator"></div>
-        <span class="rail-group-label">Basemap</span>
-        <button type="button" class="icon-button active" data-basemap="neutral" title="Neutral basemap">
+        <span class="rail-group-label">Map</span>
+        <button type="button" class="icon-button" data-basemap="liberty" title="OSM Liberty basemap (detailed, default)">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <circle cx="9" cy="9" r="6.5" />
+            <path d="M2.5 9h13M9 2.5c2.6 2 2.6 11.5 0 13M9 2.5c-2.6 2-2.6 11.5 0 13" />
+          </svg>
+        </button>
+        <button type="button" class="icon-button" data-basemap="neutral" title="Neutral basemap (flat, no tiles)">
           <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="3.5" width="11" height="11" rx="1.5" /></svg>
         </button>
-        <button type="button" class="icon-button" data-basemap="streets" title="Streets basemap">
+        <button type="button" class="icon-button" data-basemap="streets" title="Streets basemap (plain OpenStreetMap)">
           <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
             <path d="M3.5 3.5v11M9 3.5v11M14.5 3.5v11M3.5 6.5h11M3.5 11.5h11" />
           </svg>
@@ -792,12 +841,6 @@
             </svg>
           </button>
         </div>
-        <button type="button" class="export-fab" id="exportFab" title="Export this style (opens the File menu)">
-          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 2v9M5.5 7.5 9 11l3.5-3.5" /><path d="M3 12.5v1.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5v-1.5" />
-          </svg>
-          Export
-        </button>
       </div>
 
       <section id="panel" class="side-panel" aria-label="Polygon style editor">
@@ -1040,6 +1083,41 @@
           </table>
           <p class="drop-note">Drop GeoJSON, GeoPackage or GeoParquet. For Shapefile, use a ZIP or select .shp, .dbf, .shx and .prj together.</p>
         </div>
+
+        <div class="export-drawer" id="exportDrawer" hidden>
+          <div class="export-drawer-head">
+            <span class="control-title" style="margin:0">Export</span>
+            <button type="button" class="export-drawer-close" id="exportDrawerClose" aria-label="Close export options">&times;</button>
+          </div>
+          <button type="button" class="export-option" id="exportJsBtn">
+            <span class="export-option-title">Copy MapLibre code</span>
+            <span class="export-option-desc">A JS snippet that reproduces this style in your own app.</span>
+          </button>
+          <button type="button" class="export-option" id="downloadBundleBtn">
+            <span class="export-option-title">Download JSON + PNG</span>
+            <span class="export-option-desc">style.json plus a rendered preview image, as a .zip.</span>
+          </button>
+          <button type="button" class="export-option" id="exportBtn">
+            <span class="export-option-title">Copy style.json</span>
+            <span class="export-option-desc">The raw MapLibre style document.</span>
+          </button>
+          <div class="menu-separator"></div>
+          <button type="button" class="export-option" id="copyConfigBtn">
+            <span class="export-option-title">Copy preset</span>
+            <span class="export-option-desc">This editor's settings, to restore or share later.</span>
+          </button>
+          <button type="button" class="export-option" id="importConfigBtn">
+            <span class="export-option-title">Load preset</span>
+            <span class="export-option-desc">Paste a preset JSON below, then use this to restore it.</span>
+          </button>
+          <textarea id="ioArea" class="menu-output" placeholder="Exported style or preset JSON appears here."></textarea>
+        </div>
+        <button type="button" class="export-footer-btn" id="exportFooterBtn" aria-expanded="false" aria-controls="exportDrawer">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 2v9M5.5 7.5 9 11l3.5-3.5" /><path d="M3 12.5v1.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5v-1.5" />
+          </svg>
+          Export
+        </button>
       </section>
     </main>
   </div>
@@ -1428,12 +1506,38 @@
   }
   // Map and optional context layers.
   const SAMPLE_CENTER = [8.4037, 49.0069];
+  // OSM Liberty (OpenFreeMap, a free/no-key vector basemap) is the default
+  // basemap. Its sources/layers/sprite/glyphs are merged directly into this
+  // style rather than swapped in later with `setStyle`, so switching
+  // basemaps stays an instant layer-visibility toggle with no flash and
+  // never needs the sample polygon layers to be re-added afterwards. Its own
+  // flat "background" layer is dropped since our own "bg" layer already
+  // covers that. None of our own layers use text or icons, so adopting its
+  // glyphs/sprite globally is safe. Falls back to no Liberty layers (the
+  // "Neutral" basemap) if the fetch fails, e.g. offline.
+  const libertyStyle = await fetch("https://tiles.openfreemap.org/styles/liberty")
+    .then((response) => (response.ok ? response.json() : null))
+    .catch(() => null);
+  const libertyIsDefault = Boolean(libertyStyle);
+  const libertyLayers = (libertyStyle?.layers ?? [])
+    .filter((layer) => layer.type !== "background")
+    .map((layer) => ({
+      ...layer,
+      // Set the correct initial visibility directly in the style instead of
+      // calling map.setLayoutProperty() right after construction: the style
+      // hasn't finished loading yet at that point, and MapLibre throws
+      // ("Style is not done loading") for any mutation before it has,
+      // aborting the rest of this script.
+      layout: { ...layer.layout, visibility: libertyIsDefault ? "visible" : "none" },
+    }));
   const map = new maplibregl.Map({
     container: "map",
     style: {
       version: 8,
-      glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+      glyphs: libertyStyle?.glyphs ?? "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+      ...(libertyStyle?.sprite ? { sprite: libertyStyle.sprite } : {}),
       sources: {
+        ...(libertyStyle?.sources ?? {}),
         streets: {
           type: "raster",
           tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
@@ -1462,7 +1566,8 @@
         },
       },
       layers: [
-        { id: "bg", type: "background", paint: { "background-color": "#e9eeec" } },
+        { id: "bg", type: "background", paint: { "background-color": libertyIsDefault ? "#d8dfdc" : "#e9eeec" } },
+        ...libertyLayers,
         { id: "basemap-streets", type: "raster", source: "streets", layout: { visibility: "none" }, paint: { "raster-saturation": -0.35, "raster-opacity": 0.82 } },
         { id: "basemap-positron", type: "raster", source: "positron", layout: { visibility: "none" } },
         { id: "basemap-bright", type: "raster", source: "bright", layout: { visibility: "none" } },
@@ -2190,11 +2295,22 @@
     ["streets", "positron", "bright", "aerial"].forEach((id) => {
       map.setLayoutProperty(`basemap-${id}`, "visibility", name === id ? "visible" : "none");
     });
+    libertyLayers.forEach((layer) => {
+      map.setLayoutProperty(layer.id, "visibility", name === "liberty" ? "visible" : "none");
+    });
     map.setPaintProperty("bg", "background-color", name === "neutral" ? "#e9eeec" : "#d8dfdc");
     document.querySelectorAll(".icon-rail [data-basemap]").forEach((button) => {
       button.classList.toggle("active", button.dataset.basemap === name);
     });
   }
+  // OSM Liberty is the default basemap (falls back to Neutral if it failed
+  // to fetch, e.g. offline). The correct layers/bg colour are already set
+  // directly in the style above; this only needs to mark the right rail
+  // button as active, so it's plain DOM and never touches the MapLibre API
+  // before the style has finished loading.
+  document
+    .querySelector(`.icon-rail [data-basemap="${libertyIsDefault ? "liberty" : "neutral"}"]`)
+    .classList.add("active");
 
   document.querySelector(".icon-rail").addEventListener("click", (event) => {
     const button = event.target.closest("[data-basemap]");
@@ -2225,12 +2341,17 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeMenus();
   });
-  // Persistent export shortcut: opens the exact same File menu (same
-  // popover, same handlers) instead of duplicating its buttons, so the two
-  // entry points can never drift out of sync.
-  $("exportFab").addEventListener("click", (event) => {
-    event.stopPropagation();
-    $("fileMenuButton").click();
+  // Persistent export button, pinned to the bottom of the side panel. Its
+  // own drawer, not the File menu: toggling it just flips `hidden` on a
+  // sibling element already wired to the actual export/preset buttons.
+  $("exportFooterBtn").addEventListener("click", () => {
+    const willOpen = $("exportDrawer").hidden;
+    $("exportDrawer").hidden = !willOpen;
+    $("exportFooterBtn").setAttribute("aria-expanded", String(willOpen));
+  });
+  $("exportDrawerClose").addEventListener("click", () => {
+    $("exportDrawer").hidden = true;
+    $("exportFooterBtn").setAttribute("aria-expanded", "false");
   });
 
   // Zoom / compass / locate
