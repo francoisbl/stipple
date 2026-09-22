@@ -3,6 +3,14 @@ _site/
 *.log
 .DS_Store
 
+# Internal working docs and local tooling config: useful to the maintainer,
+# not needed for the package or the demo to work, so kept local-only rather
+# than published on GitHub. Delete these lines to track them again.
+ROADMAP.md
+CONTRIBUTING.md
+RELEASING.md
+.claude/
+
 # dist/ is committed on purpose: demo/index.html loads the built IIFE bundle
 # directly via a relative <script> tag so the demo stays a buildless, forkable
 # single HTML file. Run `npm run build` after changing src/ and commit dist/.

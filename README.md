@@ -220,17 +220,9 @@ actionable validation error.
 
 ## Status
 
-`v0.1.0`: functional, not yet published to npm. See the project's issue
-tracker / release notes for what's left before a `1.0`.
-
-The planned correctness, API, distribution, and stabilization work is tracked
-in [ROADMAP.md](./ROADMAP.md).
-
-Repository maintenance and release guidance:
-[CONTRIBUTING.md](./CONTRIBUTING.md),
-[CHANGELOG.md](./CHANGELOG.md),
-[SECURITY.md](./SECURITY.md), and
-[RELEASING.md](./RELEASING.md).
+`v0.1.0`: functional, not yet published to npm. See
+[CHANGELOG.md](./CHANGELOG.md) for what's shipped and
+[SECURITY.md](./SECURITY.md) for the support policy.
 
 ## License
 

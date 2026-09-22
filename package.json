@@ -34,7 +34,6 @@
     "CHANGELOG.md",
     "dist",
     "!dist/*.map",
-    "ROADMAP.md",
     "schema"
   ],
   "sideEffects": false,
