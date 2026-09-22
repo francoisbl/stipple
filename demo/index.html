@@ -151,6 +151,14 @@
       background: var(--coral);
       border-radius: 50%;
     }
+    .svg-mode-pill {
+      display: block;
+      width: 100%;
+      margin-top: 6px;
+      border-style: dashed;
+      font-weight: 500;
+    }
+    .svg-mode-pill.active { border-style: solid; }
     .motif-browser { margin-top: 7px; }
     .motif-family-tabs {
       display: flex;
@@ -283,7 +291,6 @@
       width: 56px;
       height: 56px;
       padding: 3px;
-      image-rendering: pixelated;
       background: #fff;
       border: 1px solid var(--line-strong);
       border-radius: var(--radius-sm);
@@ -456,6 +463,15 @@
     .icon-button:hover { color: var(--accent); background: var(--surface-soft); }
     .icon-button.active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
     .rail-separator { width: 22px; height: 1px; margin: 4px 0; background: var(--line); }
+    .rail-group-label {
+      writing-mode: vertical-rl;
+      font: 500 9px/1 "IBM Plex Mono", monospace;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin: 0 0 4px;
+      user-select: none;
+    }
     .map-shell {
       grid-column: 2;
       grid-row: 1;
@@ -511,6 +527,26 @@
       border-color: var(--line-strong) !important;
       color: var(--ink);
     }
+    .export-fab {
+      position: absolute;
+      z-index: 5;
+      right: 12px;
+      bottom: 54px; /* clears MapLibre's own scale + attribution controls */
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      background: var(--ink);
+      color: #fff;
+      border: 0;
+      border-radius: 999px;
+      font: 600 12px/1 "IBM Plex Mono", monospace;
+      letter-spacing: .02em;
+      box-shadow: 0 4px 14px rgba(23, 35, 31, .18);
+      cursor: pointer;
+    }
+    .export-fab:hover { background: var(--accent); }
+    .export-fab svg { width: 14px; height: 14px; }
 
     /* Side panel: Feature / Table */
     .side-panel {
@@ -579,12 +615,10 @@
     .control-block:last-child { padding-bottom: 0; border-bottom: 0; }
     .control-block > label:first-child { margin-top: 0; }
     .parameter-group,
-    #textureScaleControl,
     [data-svg-options],
     [data-bg-options],
     [data-line-options] { transition: opacity .16s; }
     .parameter-group.is-disabled,
-    #textureScaleControl.is-disabled,
     [data-svg-options].is-disabled,
     [data-bg-options].is-disabled,
     [data-line-options].is-disabled { opacity: .34; }
@@ -709,6 +743,7 @@
         <input type="file" id="vectorFile" accept=".geojson,.json,.geojsonl,.ndjson,.gpkg,.zip,.shp,.dbf,.shx,.prj,.cpg,.parquet,.geoparquet,.fgb,.kml,.kmz,.gpx,.csv,.tsv,.dxf,.gml,.tab,.mif,.sqlite,.mbtiles,.osm,.pbf,.vrt" multiple hidden />
         <select id="layerSelect" aria-label="Selected polygon" hidden></select>
         <div class="rail-separator"></div>
+        <span class="rail-group-label">Basemap</span>
         <button type="button" class="icon-button active" data-basemap="neutral" title="Neutral basemap">
           <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="3.5" width="11" height="11" rx="1.5" /></svg>
         </button>
@@ -717,9 +752,16 @@
             <path d="M3.5 3.5v11M9 3.5v11M14.5 3.5v11M3.5 6.5h11M3.5 11.5h11" />
           </svg>
         </button>
-        <button type="button" class="icon-button" data-basemap="topo" title="Topo basemap">
+        <button type="button" class="icon-button" data-basemap="positron" title="Light basemap (minimal, low-contrast)">
           <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M2.5 6.5c2-1.5 4-1.5 6 0s4 1.5 6 0" /><path d="M2.5 10c2-1.5 4-1.5 6 0s4 1.5 6 0" /><path d="M2.5 13.5c2-1.5 4-1.5 6 0s4 1.5 6 0" />
+            <circle cx="9" cy="9" r="3" />
+            <path d="M9 2v2M9 14v2M2 9h2M14 9h2M4.2 4.2l1.4 1.4M12.4 12.4l1.4 1.4M4.2 13.8l1.4-1.4M12.4 5.6l1.4-1.4" />
+          </svg>
+        </button>
+        <button type="button" class="icon-button" data-basemap="bright" title="Bright basemap (colourful streets)">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M2.5 4.5 6.5 3l5 2 3.5-1.5v10L11.5 15l-5-2-3.5 1.5Z" />
+            <path d="M6.5 3v10M11.5 5v10" />
           </svg>
         </button>
         <button type="button" class="icon-button" data-basemap="aerial" title="Aerial basemap (satellite imagery)">
@@ -750,6 +792,12 @@
             </svg>
           </button>
         </div>
+        <button type="button" class="export-fab" id="exportFab" title="Export this style (opens the File menu)">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 2v9M5.5 7.5 9 11l3.5-3.5" /><path d="M3 12.5v1.5c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5v-1.5" />
+          </svg>
+          Export
+        </button>
       </div>
 
       <section id="panel" class="side-panel" aria-label="Polygon style editor">
@@ -776,7 +824,7 @@
             <div class="geometry-grid">
               <div class="control-block">
                 <span class="control-title">Choose a fill</span>
-                <span class="family-label">Linework</span>
+                <span class="family-label">Fill type</span>
                 <div class="pill-group" id="patternPills">
                   <div class="pill" data-p="solid">Solid</div>
                   <div class="pill" data-p="stipple">Stipple</div>
@@ -785,10 +833,13 @@
                   <div class="pill" data-p="grid">Grid</div>
                   <div class="pill" data-p="dots">Dots</div>
                 </div>
-                <span class="family-label">Motifs</span>
-                <div class="motif-browser" id="motifBrowser">
-                  <div class="motif-family-tabs" id="motifFamilyTabs" aria-label="Motif families"></div>
-                  <div class="motif-grid" id="motifGrid" aria-label="Motifs"></div>
+                <button type="button" class="pill svg-mode-pill" id="svgModePill">SVG motif</button>
+                <div id="motifBrowserSection" hidden>
+                  <span class="family-label">Motifs</span>
+                  <div class="motif-browser" id="motifBrowser">
+                    <div class="motif-family-tabs" id="motifFamilyTabs" aria-label="Motif families"></div>
+                    <div class="motif-grid" id="motifGrid" aria-label="Motifs"></div>
+                  </div>
                 </div>
               </div>
 
@@ -809,10 +860,10 @@
                 </div>
               </div>
 
-              <div class="control-block" id="textureScaleControl">
+              <div class="control-block parameter-group" id="textureScaleControl">
                 <span class="control-title">Tile preview</span>
                 <div class="row" style="align-items:flex-start">
-                  <canvas class="preview-canvas" id="tilePreview" width="32" height="32"></canvas>
+                  <canvas class="preview-canvas" id="tilePreview"></canvas>
                   <div>
                     <label style="margin-top:0">Opacity <span class="val" id="patOpacityVal">1.00</span></label>
                     <input type="range" id="patOpacity" min="0" max="1" step="0.05" value="1" />
@@ -820,7 +871,7 @@
                 </div>
               </div>
 
-              <div class="control-block">
+              <div class="control-block parameter-group" id="scaleControl">
                 <span class="control-title">Scale</span>
                 <label style="margin-top:0">Stroke weight <span class="val" id="weightVal">2.00 px</span></label>
                 <input type="range" id="weight" min="0.1" max="8" step="0.1" value="2" />
@@ -854,7 +905,7 @@
                     <button class="action ghost" id="svgFillCustomApply">Use this SVG</button>
                   </div>
                   <div class="svg-appearance-row">
-                    <div id="svgBuiltInColor">
+                    <div id="svgBuiltInColor" class="parameter-group">
                       <label style="margin-top:0">Motif colour</label>
                       <div class="row tight">
                         <input type="color" id="svgPatColor" value="#2c6a5b" style="flex:0 0 auto" />
@@ -883,7 +934,7 @@
                     <button type="button" data-distribution="offset" class="active">Offset</button>
                     <button type="button" data-distribution="natural">Natural</button>
                   </div>
-                  <div id="svgMinSpacingControl" class="is-disabled">
+                  <div id="svgMinSpacingControl" class="parameter-group is-disabled">
                     <label>Minimum gap <span class="val" id="svgMinSpacingVal">4 px</span></label>
                     <input type="range" id="svgMinSpacing" min="0" max="24" step="1" value="4" disabled />
                   </div>
@@ -891,7 +942,7 @@
                   <input type="text" id="svgSeed" value="1" />
                 </div>
                 <div class="svg-section-column">
-                  <div id="svgPositionJitterControl">
+                  <div id="svgPositionJitterControl" class="parameter-group">
                     <label style="margin-top:0">Position variation <span class="val" id="svgPosJitterVal">±0.15</span></label>
                     <input type="range" id="svgPosJitter" min="0" max="0.65" step="0.05" value="0.15" />
                   </div>
@@ -913,13 +964,13 @@
                   <p class="scale-readout" id="svgScaleReadout">At z12: 24 px motif · 72 px spacing</p>
                 </div>
                 <div class="svg-section-column">
-                  <div id="svgScaleModeControl">
+                  <div id="svgScaleModeControl" class="parameter-group">
                     <label style="margin-top:0">Scale unit</label>
                     <div class="seg scale-mode-seg" id="svgScaleModeSeg">
                       <button type="button" data-scale-mode="screen" class="active">Screen · px</button>
                       <button type="button" data-scale-mode="map">Ground scale</button>
                     </div>
-                    <div id="svgReferenceZoomControl" class="is-disabled">
+                    <div id="svgReferenceZoomControl" class="parameter-group is-disabled">
                       <label>Reference zoom <span class="val" id="svgReferenceZoomVal">z12</span></label>
                       <input type="range" id="svgReferenceZoom" min="0" max="22" step="1" value="12" disabled />
                       <button type="button" class="action ghost scale-reference-action" id="svgUseCurrentZoom" disabled>Use current zoom</button>
@@ -1088,8 +1139,12 @@
       <circle cx="32" cy="24" r="5" fill="#c1622f" />
     </svg>`,
     "small-bush": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-      <path d="M8 47 C8 39 14 34 21 34 C21 25 29 19 37 23 C44 20 52 26 51 34 C59 37 59 48 52 52 H14 C10 52 8 50 8 47 Z" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linejoin="round" />
-      <path d="M32 51 V35 M32 42 L23 34 M32 39 L42 30" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" />
+      <g fill="#2c6a5b">
+        <circle cx="32" cy="30" r="10" />
+        <circle cx="18" cy="40" r="12" />
+        <circle cx="46" cy="40" r="12" />
+        <circle cx="32" cy="44" r="14" />
+      </g>
     </svg>`,
     // Trees
     "round-canopy": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
@@ -1165,8 +1220,13 @@
       </g>
     </svg>`,
     "pasture": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-      <g fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round">
-        <path d="M8 48 C13 42 17 38 22 36 M22 48 C21 42 22 36 25 30 M38 30 C42 35 44 41 44 48 M44 48 C48 42 52 39 57 37" />
+      <g fill="none" stroke="#2c6a5b" stroke-width="3.5" stroke-linecap="round">
+        <path d="M14 48 C14 40 14 33 15 26" />
+        <path d="M13 48 C9 41 7 35 5 29" />
+        <path d="M15 48 C19 42 22 36 25 31" />
+        <path d="M49 48 C49 40 49 33 50 26" />
+        <path d="M48 48 C44 41 42 35 40 29" />
+        <path d="M50 48 C54 42 57 36 60 31" />
       </g>
     </svg>`,
     "grapes": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
@@ -1175,7 +1235,7 @@
         <circle cx="20" cy="44" r="7" /><circle cx="33" cy="44" r="7" /><circle cx="46" cy="44" r="7" />
         <circle cx="33" cy="57" r="7" />
       </g>
-      <path d="M33 24 C31 15 34 9 42 5 M34 19 C44 11 52 13 56 19 C48 23 41 22 34 19 Z" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M33 24 C32 17 30 12 25 9" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" />
     </svg>`,
     // Wetlands and terrain
     "marsh": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
@@ -1380,11 +1440,19 @@
           tileSize: 256,
           attribution: "© OpenStreetMap contributors",
         },
-        topo: {
+        positron: {
+          // CARTO's free anonymous raster endpoint now requires an API key,
+          // so this uses Esri's equivalent free, no-key light basemap instead.
           type: "raster",
-          tiles: ["https://a.tile.opentopomap.org/{z}/{x}/{y}.png"],
+          tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
           tileSize: 256,
-          attribution: "© OpenStreetMap contributors, SRTM | © OpenTopoMap",
+          attribution: "Tiles © Esri",
+        },
+        bright: {
+          type: "raster",
+          tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
+          tileSize: 256,
+          attribution: "Tiles © Esri",
         },
         aerial: {
           type: "raster",
@@ -1396,7 +1464,8 @@
       layers: [
         { id: "bg", type: "background", paint: { "background-color": "#e9eeec" } },
         { id: "basemap-streets", type: "raster", source: "streets", layout: { visibility: "none" }, paint: { "raster-saturation": -0.35, "raster-opacity": 0.82 } },
-        { id: "basemap-topo", type: "raster", source: "topo", layout: { visibility: "none" }, paint: { "raster-saturation": -0.2, "raster-opacity": 0.86 } },
+        { id: "basemap-positron", type: "raster", source: "positron", layout: { visibility: "none" } },
+        { id: "basemap-bright", type: "raster", source: "bright", layout: { visibility: "none" } },
         { id: "basemap-aerial", type: "raster", source: "aerial", layout: { visibility: "none" }, paint: { "raster-saturation": -0.25, "raster-brightness-max": 0.82 } },
       ],
     },
@@ -1405,21 +1474,30 @@
   });
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-right");
 
-  // Tile preview canvas in the panel (2x2 tiled to show seams).
+  // Tile preview canvas in the panel (2x2 tiled to show seams). Rendered at
+  // the display's actual physical resolution (CSS size * devicePixelRatio,
+  // capped like the library's own pixelRatio convention) so the swatch is
+  // crisp instead of a small raster blown up and blurred by the browser.
+  const PREVIEW_DISPLAY_PX = 56; // matches .preview-canvas width/height
+  const PREVIEW_REPEATS = 2;
   function renderPreview() {
     const pc = $("tilePreview");
+    const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+    const physicalSize = Math.round(PREVIEW_DISPLAY_PX * dpr);
+    pc.width = pc.height = physicalSize;
     const ctx = pc.getContext("2d");
-    ctx.clearRect(0, 0, 32, 32);
+    ctx.clearRect(0, 0, physicalSize, physicalSize);
     if (state.pattern === "solid") {
       ctx.fillStyle = withOpacity(state.patColor, state.patOpacity);
-      ctx.fillRect(0, 0, 32, 32); return;
+      ctx.fillRect(0, 0, physicalSize, physicalSize); return;
     }
-    const tile = makeTile(state.pattern, state.tile, state.patColor, state.weight, state.angle);
-    const tmp = document.createElement("canvas"); tmp.width = tmp.height = state.tile;
-    tmp.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(tile.data), state.tile, state.tile), 0, 0);
+    const tilePixelRatio = (physicalSize / PREVIEW_REPEATS) / state.tile;
+    const tile = makeTile(state.pattern, state.tile, state.patColor, state.weight, state.angle, { pixelRatio: tilePixelRatio });
+    const tmp = document.createElement("canvas"); tmp.width = tile.width; tmp.height = tile.height;
+    tmp.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(tile.data), tile.width, tile.height), 0, 0);
     const pat = ctx.createPattern(tmp, "repeat");
     ctx.globalAlpha = state.patOpacity;
-    ctx.fillStyle = pat; ctx.fillRect(0, 0, 32, 32);
+    ctx.fillStyle = pat; ctx.fillRect(0, 0, physicalSize, physicalSize);
     ctx.globalAlpha = 1;
   }
 
@@ -2109,7 +2187,7 @@
   });
 
   function setBasemap(name) {
-    ["streets", "topo", "aerial"].forEach((id) => {
+    ["streets", "positron", "bright", "aerial"].forEach((id) => {
       map.setLayoutProperty(`basemap-${id}`, "visibility", name === id ? "visible" : "none");
     });
     map.setPaintProperty("bg", "background-color", name === "neutral" ? "#e9eeec" : "#d8dfdc");
@@ -2147,6 +2225,13 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeMenus();
   });
+  // Persistent export shortcut: opens the exact same File menu (same
+  // popover, same handlers) instead of duplicating its buttons, so the two
+  // entry points can never drift out of sync.
+  $("exportFab").addEventListener("click", (event) => {
+    event.stopPropagation();
+    $("fileMenuButton").click();
+  });
 
   // Zoom / compass / locate
   $("zoomInBtn").addEventListener("click", () => map.zoomIn());
@@ -2180,6 +2265,11 @@
   }
 
   function renderMotifBrowser() {
+    // The custom-SVG panel belongs to the "Custom" tab itself, not to
+    // whichever motif happens to be applied: otherwise switching to another
+    // family tab left the panel stuck on screen (it only hid once a new
+    // motif was actually picked), which felt like there was no way out of it.
+    $("svgFillCustomPanel").classList.toggle("hidden", activeMotifFamily !== "custom");
     const families = [...new Map(
       SVG_PATTERN_CATALOG.map((item) => [item.family, item.familyLabel]),
     )];
@@ -2235,6 +2325,14 @@
     updatePatternControlAvailability();
     updateSvgControlAvailability();
     renderPreview(); rebuildLayers();
+  });
+
+  $("svgModePill").addEventListener("click", () => {
+    // Explicit switch into "SVG motif" mode: reveals the motif browser
+    // (defaulting to whichever motif was last picked, or the catalog's
+    // first one) instead of it being reachable by clicking on what looked
+    // like inert browsing UI underneath the active geometric pattern.
+    selectSvgSample(state.svgFill.sample);
   });
 
   $("motifFamilyTabs").addEventListener("click", (event) => {
@@ -2303,10 +2401,15 @@
     document.querySelectorAll("#patternPills .pill").forEach((element) => {
       element.classList.toggle("active", !state.svgFill.on && element.dataset.p === state.pattern);
     });
+    $("svgModePill").classList.toggle("active", state.svgFill.on);
+    // The motif browser only exists to configure the "SVG motif" fill type,
+    // so it stays out of the way entirely until that's explicitly chosen
+    // instead of always being clickable underneath whatever geometric
+    // pattern is actually active.
+    $("motifBrowserSection").hidden = !state.svgFill.on;
     const entry = motifCatalogEntry(state.svgFill.sample);
     $("activeMotifLabel").textContent = entry?.label || "Custom SVG";
-    $("svgFillCustomPanel").classList.toggle("hidden", state.svgFill.sample !== "custom");
-    renderMotifBrowser();
+    renderMotifBrowser(); // also syncs the custom-SVG panel's visibility
   }
   function updatePatternControlAvailability() {
     const angleEnabled = state.pattern === "hachures" || state.pattern === "cross";
@@ -2316,6 +2419,7 @@
       button.disabled = !angleEnabled;
     });
     $("textureScaleControl").classList.toggle("is-disabled", !textureEnabled);
+    $("scaleControl").classList.toggle("is-disabled", !textureEnabled);
     $("weight").disabled = !textureEnabled;
     $("tile").disabled = !textureEnabled;
   }
@@ -3122,7 +3226,6 @@ if (map.isStyleLoaded()) {
     $("svgFillToggle").checked = state.svgFill.on;
     const motif = motifCatalogEntry(state.svgFill.sample);
     if (motif) activeMotifFamily = motif.family;
-    $("svgFillCustomPanel").classList.toggle("hidden", state.svgFill.sample !== "custom");
     $("svgFillCustomText").value = state.svgFill.customSvg;
     $("svgVisualSize").value = state.svgFill.visualSize;
     $("svgVisualSizeVal").textContent = state.svgFill.visualSize.toFixed(0) + " px";
