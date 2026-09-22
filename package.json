@@ -1,5 +1,5 @@
 {
-  "name": "maplibre-pattern-fills",
+  "name": "stipple-maplibre",
   "version": "0.1.0",
   "description": "Runtime-generated geometric and SVG fill patterns for MapLibre GL JS, with deterministic styling and a visual playground.",
   "license": "MIT",
@@ -62,6 +62,7 @@
     "vitest": "^3.2.7"
   },
   "keywords": [
+    "stipple",
     "maplibre",
     "maplibre-gl",
     "fill-pattern",
@@ -73,11 +74,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/francoisbl/maplibre-pattern-fills.git"
+    "url": "git+https://github.com/francoisbl/stipple.git"
   },
-  "homepage": "https://github.com/francoisbl/maplibre-pattern-fills#readme",
+  "homepage": "https://github.com/francoisbl/stipple#readme",
   "bugs": {
-    "url": "https://github.com/francoisbl/maplibre-pattern-fills/issues"
+    "url": "https://github.com/francoisbl/stipple/issues"
   },
   "publishConfig": {
     "access": "public",

@@ -185,10 +185,10 @@ Acceptance criteria:
 Suggested exports:
 
 ```text
-maplibre-pattern-fills
-maplibre-pattern-fills/core
-maplibre-pattern-fills/maplibre
-maplibre-pattern-fills/experimental
+stipple-maplibre
+stipple-maplibre/core
+stipple-maplibre/maplibre
+stipple-maplibre/experimental
 ```
 
 Acceptance criteria:

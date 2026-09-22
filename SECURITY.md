@@ -10,7 +10,7 @@ fixes. Experimental APIs may change without a compatibility guarantee.
 Do not open a public issue for a suspected vulnerability. Use the repository's
 private security advisory form:
 
-https://github.com/francoisbl/maplibre-pattern-fills/security/advisories/new
+https://github.com/francoisbl/stipple/security/advisories/new
 
 Include a minimal reproduction, affected versions, expected impact, and any
 suggested mitigation. Please allow time to investigate before public

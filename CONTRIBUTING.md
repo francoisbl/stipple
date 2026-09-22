@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve `maplibre-pattern-fills`.
+Thanks for helping improve `Stipple`.
 
 ## Development setup
 

@@ -1294,7 +1294,7 @@ var MaplibrePatternFills = (() => {
   function observePatternFills(map, options = {}) {
     const getStyle = options.getStyle ?? (() => map.getStyle());
     const onError = options.onError ?? ((error) => {
-      console.error("maplibre-pattern-fills: failed to restore pattern images", error);
+      console.error("stipple-maplibre: failed to restore pattern images", error);
     });
     let disposed = false;
     const refresh = async () => {
