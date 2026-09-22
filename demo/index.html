@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>maplibre-pattern-fills · Playground</title>
+  <title>Stipple</title>
   <link href="https://unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl.css" rel="stylesheet" />
   <!-- Built by `npm run build` (tsup); see ../dist. Committed so this demo stays
        a single, buildless HTML file you can open directly (file://), fork, or
@@ -15,19 +15,20 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --canvas: #e9eeec;
-      --panel: #fbfcfb;
+      --canvas: #eef1ee;
+      --panel: #fbfcfa;
       --surface: #ffffff;
-      --surface-soft: #f3f6f4;
-      --line: #dbe2de;
-      --line-strong: #bac7c0;
-      --ink: #17231f;
-      --ink-soft: #68756f;
+      --surface-soft: #f2f4f1;
+      --line: #dde2dc;
+      --line-strong: #b9c2ba;
+      --ink: #1c2622;
+      --ink-soft: #6b756e;
       --accent: #2c6a5b;
       --accent-soft: #dcebe5;
-      --coral: #f06a4f;
-      --focus: rgba(44, 106, 91, .16);
-      --shadow: 0 16px 36px rgba(23, 35, 31, .08);
+      --coral: #d9663f;
+      --focus: rgba(44, 106, 91, .18);
+      --radius: 6px;
+      --radius-sm: 4px;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -38,79 +39,23 @@
       background: var(--canvas);
     }
     button, input, select, textarea { font: inherit; }
-    #app {
-      display: grid;
-      grid-template-columns: minmax(390px, 430px) 1fr;
-      height: 100vh;
-      overflow: hidden;
-    }
-    #panel {
-      position: relative;
-      z-index: 2;
-      overflow-y: auto;
-      padding: 26px 26px 32px;
-      background: var(--panel);
-      border-right: 1px solid var(--line);
-      box-shadow: var(--shadow);
-      counter-reset: studio-section;
-      scrollbar-width: thin;
-      scrollbar-color: var(--line-strong) transparent;
-    }
-    .studio-head {
-      position: relative;
-      padding: 0 0 24px;
-      border-bottom: 1px solid var(--line);
-      margin-bottom: 4px;
-    }
-    h1 {
-      margin: 0;
-      font-size: 21px;
-      font-weight: 700;
-      letter-spacing: -.035em;
-      color: var(--ink);
-    }
-    .product-kicker {
-      display: block;
-      margin-bottom: 5px;
-      color: var(--accent);
-      font: 500 10px/1 "IBM Plex Mono", monospace;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-    }
-    .sub {
-      max-width: 330px;
-      margin: 12px 0 0;
-      color: var(--ink-soft);
-      font-size: 13px;
-      line-height: 1.55;
-    }
+    #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.035em; color: var(--ink); }
     fieldset {
       min-width: 0;
       margin: 0;
-      padding: 23px 0 25px;
+      padding: 0;
       border: 0;
-      border-bottom: 1px solid var(--line);
       background: transparent;
-      counter-increment: studio-section;
     }
     fieldset.dimmed { opacity: .4; pointer-events: none; }
     fieldset.hidden { display: none; }
     legend {
-      width: 100%;
-      padding: 0;
-      color: var(--ink);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: -.01em;
-    }
-    legend::before {
-      content: "0" counter(studio-section);
-      display: inline-block;
-      width: 29px;
-      margin-right: 10px;
-      color: var(--coral);
-      font: 500 10px/1 "IBM Plex Mono", monospace;
-      letter-spacing: .06em;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
     }
     label {
       display: block;
@@ -127,7 +72,7 @@
       color: var(--ink);
       background: var(--surface);
       border: 1px solid var(--line-strong);
-      border-radius: 9px;
+      border-radius: var(--radius-sm);
       font-size: 13px;
       transition: border-color .16s, box-shadow .16s;
     }
@@ -150,14 +95,13 @@
       border-radius: 99px;
     }
     input[type=range]::-webkit-slider-thumb {
-      width: 16px;
-      height: 16px;
-      margin-top: -6.5px;
+      width: 14px;
+      height: 14px;
+      margin-top: -5.5px;
       appearance: none;
       background: var(--surface);
-      border: 4px solid var(--accent);
+      border: 3px solid var(--accent);
       border-radius: 50%;
-      box-shadow: 0 1px 5px rgba(23, 35, 31, .18);
     }
     input[type=checkbox] {
       width: 18px;
@@ -166,36 +110,36 @@
       accent-color: var(--accent);
     }
     input[type=color] {
-      width: 44px;
-      height: 40px;
-      padding: 4px;
+      width: 40px;
+      height: 34px;
+      padding: 3px;
       background: var(--surface);
       border: 1px solid var(--line-strong);
-      border-radius: 9px;
+      border-radius: var(--radius-sm);
       vertical-align: middle;
     }
     input[type=file] { width: 100%; color: var(--ink-soft); font-size: 11.5px; }
     .row { display: flex; gap: 8px; align-items: center; }
     .row > * { flex: 1; }
     .row.tight { gap: 6px; }
-    .pill-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .pill-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
     .pill {
       position: relative;
-      min-height: 39px;
+      min-height: 32px;
       display: grid;
       place-items: center;
-      padding: 7px 5px;
+      padding: 6px 5px;
       color: var(--ink-soft);
       background: var(--surface);
       border: 1px solid var(--line-strong);
-      border-radius: 9px;
-      font-size: 11.5px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
       font-weight: 600;
       text-align: center;
       cursor: pointer;
-      transition: color .15s, background .15s, border-color .15s, transform .15s;
+      transition: color .12s, background .12s, border-color .12s;
     }
-    .pill:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+    .pill:hover { border-color: var(--accent); color: var(--accent); }
     .pill.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
     .pill.active::after {
       content: "";
@@ -209,9 +153,9 @@
     }
     .motif-browser { margin-top: 7px; }
     .motif-family-tabs {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0 9px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px 10px;
       padding-bottom: 4px;
       border-bottom: 1px solid var(--line);
     }
@@ -229,7 +173,7 @@
     .motif-family-button.active { color: var(--accent); border-bottom-color: var(--accent); }
     .motif-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 4px;
       margin-top: 6px;
     }
@@ -280,35 +224,35 @@
     .svg-inspector-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
     .svg-section { display: none; }
     .svg-section.active {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
     .svg-section-column { min-width: 0; }
-    .svg-section-column + .svg-section-column { padding-left: 12px; border-left: 1px solid var(--line); }
-    .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .svg-section-column + .svg-section-column { padding-top: 12px; border-top: 1px solid var(--line); }
+    .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
     .seg button {
-      min-height: 36px;
-      padding: 6px;
+      min-height: 32px;
+      padding: 5px;
       color: var(--ink-soft);
       background: var(--surface);
       border: 1px solid var(--line-strong);
-      border-radius: 8px;
-      font: 500 11px/1 "IBM Plex Mono", monospace;
+      border-radius: var(--radius-sm);
+      font: 500 10.5px/1 "IBM Plex Mono", monospace;
       cursor: pointer;
-      transition: all .15s;
+      transition: border-color .12s, color .12s, background .12s;
     }
     .seg button:hover { border-color: var(--accent); color: var(--accent); }
     .seg button.active { border-color: var(--ink); background: var(--ink); color: #fff; }
     .switch {
-      min-height: 43px;
+      min-height: 40px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 18px;
-      padding: 0 11px;
+      padding: 0 10px;
       background: var(--surface-soft);
-      border-radius: 9px;
+      border-radius: var(--radius-sm);
     }
     .switch + .switch { margin-top: 7px !important; }
     .switch label { line-height: 1.35; }
@@ -320,44 +264,30 @@
     }
     button.action {
       width: 100%;
-      min-height: 42px;
-      padding: 9px 12px;
+      min-height: 38px;
+      padding: 8px 12px;
       margin-top: 7px;
       color: #fff;
       background: var(--ink);
       border: 1px solid var(--ink);
-      border-radius: 9px;
+      border-radius: var(--radius-sm);
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: transform .15s, background .15s, border-color .15s, box-shadow .15s;
+      transition: background .12s, border-color .12s;
     }
-    button.action:hover {
-      transform: translateY(-1px);
-      background: var(--accent);
-      border-color: var(--accent);
-      box-shadow: 0 7px 16px rgba(44, 106, 91, .15);
-    }
-    button.action:active { transform: translateY(0); box-shadow: none; }
+    button.action:hover { background: var(--accent); border-color: var(--accent); }
     button.action.ghost { color: var(--ink); background: var(--surface); border-color: var(--line-strong); }
-    button.action.ghost:hover { color: var(--accent); background: var(--surface); border-color: var(--accent); box-shadow: none; }
-    .export-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 7px;
-      padding-top: 18px;
-    }
-    .export-grid button.action { margin-top: 0; }
-    .export-grid .primary { background: var(--accent); border-color: var(--accent); }
+    button.action.ghost:hover { color: var(--accent); background: var(--surface); border-color: var(--accent); }
     .preview-canvas {
-      width: 70px;
-      height: 70px;
-      padding: 4px;
+      width: 56px;
+      height: 56px;
+      padding: 3px;
       image-rendering: pixelated;
       background: #fff;
       border: 1px solid var(--line-strong);
-      border-radius: 10px;
-      box-shadow: inset 0 0 0 4px var(--surface-soft);
+      border-radius: var(--radius-sm);
+      box-shadow: inset 0 0 0 3px var(--surface-soft);
     }
     .hint { margin-top: 8px; color: var(--ink-soft); font-size: 11.5px; line-height: 1.5; }
     .hint code {
@@ -375,37 +305,29 @@
       color: var(--ink);
       background: var(--surface);
       border: 1px solid var(--line-strong);
-      border-radius: 9px;
+      border-radius: var(--radius-sm);
       font: 10.5px/1.55 "IBM Plex Mono", ui-monospace, monospace;
     }
     .custom-svg-panel {
+      position: absolute;
+      z-index: 8;
+      left: 14px;
+      right: 14px;
       margin-top: 9px;
       padding: 11px;
-      background: var(--surface-soft);
+      background: var(--panel);
       border: 1px dashed var(--line-strong);
-      border-radius: 10px;
+      border-radius: var(--radius);
+      box-shadow: 0 10px 24px rgba(23, 35, 31, .12);
     }
     .custom-svg-panel textarea { height: 64px; margin-bottom: 6px; }
     .custom-svg-panel.hidden { display: none; }
-    .map-shell { position: relative; min-width: 0; height: 100%; overflow: hidden; background: var(--canvas); }
-    .map-shell::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-      opacity: .16;
-      background-image:
-        linear-gradient(rgba(44, 106, 91, .18) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(44, 106, 91, .18) 1px, transparent 1px);
-      background-size: 72px 72px;
-    }
     #map { position: absolute; inset: 0; }
     .maplibregl-ctrl-group {
       overflow: hidden;
       border: 1px solid var(--line-strong);
-      border-radius: 10px;
-      box-shadow: 0 7px 18px rgba(23, 35, 31, .1);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 14px rgba(23, 35, 31, .1);
     }
     .toast {
       position: fixed;
@@ -416,7 +338,7 @@
       padding: 10px 15px;
       color: #fff;
       background: var(--ink);
-      border-radius: 9px;
+      border-radius: var(--radius-sm);
       font-size: 12px;
       font-weight: 600;
       opacity: 0;
@@ -425,243 +347,236 @@
       transition: opacity .18s, transform .18s;
     }
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
-    @media (max-width: 820px) {
-      #app {
-        grid-template-columns: 1fr;
-        grid-template-rows: minmax(360px, 54vh) auto;
-        height: auto;
-        min-height: 100vh;
-        overflow: visible;
-      }
-      #panel {
-        grid-row: 2;
-        overflow: visible;
-        padding: 22px 20px 28px;
-        border-top: 1px solid var(--line);
-        border-right: 0;
-        box-shadow: none;
-      }
-      .map-shell { grid-row: 1; min-height: 360px; }
-      .sub { margin-left: 0; }
-    }
-    @media (max-width: 430px) {
-      .pill-group { grid-template-columns: 1fr 1fr; }
-      .export-grid { grid-template-columns: 1fr; }
-    }
-
-    /* Cartographic workbench */
-    #app {
-      display: grid;
-      grid-template: 68px minmax(0, 1fr) / 1fr;
-      height: 100vh;
-      overflow: hidden;
-    }
-    .app-header {
-      position: relative;
-      z-index: 6;
-      display: grid;
-      grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1fr);
-      align-items: center;
-      gap: 22px;
-      padding: 0 20px;
-      background: rgba(251, 252, 251, .96);
-      border-bottom: 1px solid var(--line);
-      box-shadow: 0 4px 18px rgba(23, 35, 31, .05);
-      backdrop-filter: blur(12px);
-    }
-    .app-brand { min-width: 0; }
-    .app-brand .product-kicker { margin: 0 0 3px; font-size: 9px; }
-    .app-brand h1 { font-size: 18px; white-space: nowrap; }
-    .app-tagline {
-      justify-self: end;
-      margin: 0;
-      color: var(--ink-soft);
-      font-size: 11px;
-      white-space: nowrap;
-    }
-    .tool-tabs {
+    /* Top bar: brand + File/Help menus, à la Placemark */
+    .topbar {
+      flex: 0 0 44px;
       display: flex;
       align-items: center;
-      gap: 3px;
-      padding: 4px;
-      background: var(--surface-soft);
-      border: 1px solid var(--line);
-      border-radius: 11px;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 8px 0 14px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
     }
-    .tool-tab {
-      min-height: 34px;
-      padding: 0 14px;
+    .topbar-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .brand-mark { display: flex; color: var(--accent); }
+    .brand-mark svg { width: 18px; height: 18px; display: block; }
+    .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
+    .menubar { display: flex; gap: 2px; }
+    .menu { position: relative; }
+    .menu-button {
+      height: 30px;
+      padding: 0 10px;
       color: var(--ink-soft);
       background: transparent;
       border: 0;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .menu-button:hover, .menu-button.open { color: var(--ink); background: var(--surface-soft); }
+    .menu-popover {
+      position: absolute;
+      z-index: 20;
+      top: 34px;
+      right: 0;
+      width: 260px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 26px rgba(23, 35, 31, .14);
+    }
+    .menu-popover[hidden] { display: none; }
+    .menu-item {
+      display: block;
+      width: 100%;
+      padding: 8px 10px;
+      color: var(--ink);
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-weight: 500;
+      text-align: left;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .menu-item:hover { background: var(--surface-soft); color: var(--accent); }
+    .menu-separator { height: 1px; margin: 4px 2px; background: var(--line); }
+    .menu-output {
+      width: 100%;
+      height: 84px;
+      margin-top: 2px;
+      padding: 8px;
+      color: var(--ink);
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      font: 10px/1.5 "IBM Plex Mono", monospace;
+      resize: vertical;
+    }
+
+    /* Workspace: icon rail · map · side panel */
+    .workspace {
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) 320px;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--canvas);
+    }
+    .icon-rail {
+      grid-column: 1;
+      grid-row: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 0;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+    }
+    .icon-button {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .icon-button svg { width: 18px; height: 18px; display: block; }
+    .icon-button:hover { color: var(--accent); background: var(--surface-soft); }
+    .icon-button.active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+    .rail-separator { width: 22px; height: 1px; margin: 4px 0; background: var(--line); }
+    .map-shell {
+      grid-column: 2;
+      grid-row: 1;
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      background: var(--canvas);
+    }
+    .vector-drop-overlay {
+      position: absolute;
+      z-index: 8;
+      inset: 14px;
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      background: rgba(242, 246, 243, .92);
+      border: 1px dashed var(--accent);
+      border-radius: var(--radius);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .14s;
+      font: 600 12px/1.4 "IBM Plex Mono", monospace;
+      letter-spacing: .03em;
+    }
+    .map-shell.is-dragging .vector-drop-overlay { opacity: 1; }
+    .map-controls {
+      position: absolute;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 14px rgba(23, 35, 31, .12);
+      overflow: hidden;
+    }
+    .map-controls-bl { left: 12px; bottom: 12px; }
+    .map-ctrl-btn {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+    }
+    .map-ctrl-btn svg { width: 15px; height: 15px; }
+    .map-ctrl-btn:hover { color: var(--accent); background: var(--surface-soft); }
+    .map-ctrl-btn + .map-ctrl-btn { border-top: 1px solid var(--line); }
+    .maplibregl-ctrl-scale {
+      background: var(--surface);
+      border-color: var(--line-strong) !important;
+      color: var(--ink);
+    }
+
+    /* Side panel: Feature / Table */
+    .side-panel {
+      grid-column: 3;
+      grid-row: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border-left: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .panel-head { flex: 0 0 auto; padding: 10px 14px 0; border-bottom: 1px solid var(--line); }
+    .panel-tabs { display: flex; gap: 4px; }
+    .panel-tab {
+      height: 32px;
+      padding: 0 4px;
+      margin-bottom: -1px;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .panel-tab:hover { color: var(--ink); }
+    .panel-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+    .panel-body {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 14px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+    .panel-body[hidden] { display: none; }
+    .dock-context { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .dock-context strong { font-size: 13px; }
+    .selection-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); }
+
+    .tool-tabs { display: flex; gap: 4px; margin-bottom: 12px; padding: 3px; background: var(--surface-soft); border-radius: var(--radius); }
+    .tool-tab {
+      flex: 1;
+      height: 28px;
+      padding: 0 8px;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-sm);
       font-size: 11.5px;
       font-weight: 600;
       cursor: pointer;
     }
     .tool-tab:hover { color: var(--accent); }
     .tool-tab.active { color: #fff; background: var(--ink); }
-    .workspace { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
-    .map-shell { position: absolute; inset: 0; min-width: 0; height: auto; }
-    .map-shell::after { display: none; }
-    .source-palette,
-    .basemap-palette {
-      position: absolute;
-      z-index: 4;
-      top: 16px;
-      padding: 12px;
-      background: rgba(255, 255, 255, .94);
-      border: 1px solid rgba(186, 199, 192, .85);
-      border-radius: 12px;
-      box-shadow: 0 10px 28px rgba(23, 35, 31, .1);
-      backdrop-filter: blur(12px);
-    }
-    .source-palette { left: 16px; width: 315px; }
-    .basemap-palette { right: 58px; }
-    .palette-label {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 9px;
-      color: var(--ink);
-      font-size: 11px;
-      font-weight: 700;
-    }
-    .palette-label small {
-      color: var(--ink-soft);
-      font: 400 9px/1 "IBM Plex Mono", monospace;
-    }
-    .source-line { display: grid; gap: 7px; }
-    .source-line select { height: 36px; }
-    .source-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 7px;
-      margin-top: 7px;
-    }
-    .source-actions button,
-    .basemap-button {
-      min-height: 36px;
-      padding: 0 11px;
-      color: var(--ink);
-      background: var(--surface);
-      border: 1px solid var(--line-strong);
-      border-radius: 8px;
-      font-size: 10.5px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .source-actions button:hover,
-    .basemap-button:hover { color: var(--accent); border-color: var(--accent); }
-    .source-actions .import-button {
-      color: #fff;
-      background: var(--accent);
-      border-color: var(--accent);
-    }
-    .source-actions .import-button:hover {
-      color: #fff;
-      background: #245a4f;
-    }
-    .drop-note {
-      margin-top: 7px;
-      color: var(--ink-soft);
-      font: 400 9px/1.45 "IBM Plex Mono", monospace;
-    }
-    .feature-chips { display: flex; gap: 5px; margin-top: 9px; }
-    .feature-chip {
-      flex: 1;
-      min-height: 27px;
-      padding: 0;
-      color: var(--ink-soft);
-      background: var(--surface-soft);
-      border: 1px solid transparent;
-      border-radius: 7px;
-      font: 500 9px/1 "IBM Plex Mono", monospace;
-      cursor: pointer;
-    }
-    .feature-chip.active {
-      color: var(--accent);
-      background: var(--accent-soft);
-      border-color: var(--accent);
-    }
-    #srcHint { margin: 8px 0 0; font-size: 10px; }
-    .basemap-options { display: flex; gap: 5px; }
-    .basemap-button { min-width: 58px; padding: 0 9px; }
-    .basemap-button.active { color: #fff; background: var(--accent); border-color: var(--accent); }
-    #panel.control-dock {
-      position: absolute;
-      z-index: 5;
-      left: 50%;
-      bottom: 18px;
-      width: min(1120px, calc(100% - 48px));
-      max-height: min(360px, calc(100% - 130px));
-      padding: 0;
-      overflow: hidden;
-      transform: translateX(-50%);
-      background: rgba(251, 252, 251, .97);
-      border: 1px solid rgba(186, 199, 192, .9);
-      border-radius: 14px;
-      box-shadow: 0 18px 44px rgba(23, 35, 31, .14);
-      backdrop-filter: blur(14px);
-      counter-reset: none;
-      transition: transform .2s, opacity .2s;
-    }
-    #panel.control-dock.collapsed {
-      opacity: 0;
-      pointer-events: none;
-      transform: translate(-50%, calc(100% + 30px));
-    }
-    .dock-head {
-      height: 43px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 0 15px;
-      border-bottom: 1px solid var(--line);
-    }
-    .dock-context { display: flex; align-items: center; gap: 9px; min-width: 0; }
-    .dock-context strong { font-size: 12px; }
-    .dock-context span { color: var(--ink-soft); font-size: 10.5px; }
-    .selection-dot { width: 7px; height: 7px; background: var(--coral); border-radius: 50%; }
-    .dock-close {
-      padding: 5px 8px;
-      color: var(--ink-soft);
-      background: transparent;
-      border: 0;
-      font-size: 10.5px;
-      cursor: pointer;
-    }
-    .dock-close:hover { color: var(--ink); }
-    .tool-panel { display: none; max-height: 300px; overflow: auto; padding: 16px 18px 18px; }
+    .tool-panel { display: none; }
     .tool-panel.active { display: block; }
-    .tool-panel fieldset {
-      margin: 0;
-      padding: 0;
-      border: 0;
-      counter-increment: none;
-    }
-    .tool-panel legend {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0 0 0 0);
-    }
-    .tool-panel legend::before { display: none; }
-    .geometry-grid {
-      display: grid;
-      grid-template-columns: minmax(280px, 1.45fr) minmax(210px, 1fr) minmax(190px, .85fr) minmax(200px, 1fr);
-      gap: 18px;
-      align-items: start;
-    }
-    .control-block {
-      min-width: 0;
-      padding-right: 18px;
-      border-right: 1px solid var(--line);
-    }
-    .control-block:last-child { padding-right: 0; border-right: 0; }
+    .svg-settings { display: none !important; border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; }
+    .svg-settings.active.active-mode { display: block !important; }
+    #geometricFieldset.svg-mode .geometry-grid > .control-block:not(:first-child) { display: none; }
+
+    .geometry-grid { display: flex; flex-direction: column; gap: 14px; }
+    .control-block { min-width: 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .control-block:last-child { padding-bottom: 0; border-bottom: 0; }
     .control-block > label:first-child { margin-top: 0; }
     .parameter-group,
     #textureScaleControl,
@@ -675,23 +590,18 @@
     [data-line-options].is-disabled { opacity: .34; }
     button:disabled,
     input:disabled { cursor: not-allowed; }
-    .control-title {
+    .control-title { display: block; margin: 0 0 8px; color: var(--ink); font-size: 11px; font-weight: 700; }
+    .family-label {
       display: block;
-      margin: 0 0 9px;
-      color: var(--ink);
-      font-size: 11px;
-      font-weight: 700;
+      margin: 10px 0 5px;
+      color: var(--ink-soft);
+      font: 500 9px/1 "IBM Plex Mono", monospace;
+      letter-spacing: .07em;
+      text-transform: uppercase;
     }
-    .pill-group { grid-template-columns: repeat(3, 1fr); }
-    .pill { min-height: 34px; }
-    .preview-canvas { width: 58px; height: 58px; }
-    .svg-layout {
-      display: grid;
-      grid-template-columns: minmax(250px, .9fr) minmax(220px, 1fr) minmax(220px, 1fr);
-      gap: 22px;
-    }
-    .svg-column { min-width: 0; }
-    .svg-column + .svg-column { padding-left: 20px; border-left: 1px solid var(--line); }
+    .family-label:first-of-type { margin-top: 0; }
+
+    .svg-layout { display: flex; flex-direction: column; gap: 14px; }
     .scale-mode-seg { grid-template-columns: repeat(2, 1fr); }
     .boundary-mode-seg { grid-template-columns: repeat(2, 1fr); }
     .scale-reference-action { width: 100%; margin-top: 6px; }
@@ -703,483 +613,162 @@
       border-left: 2px solid var(--accent);
       font: 600 10.5px/1.4 "IBM Plex Mono", monospace;
     }
-    .appearance-layout { display: grid; grid-template-columns: 1fr 1.4fr; gap: 28px; }
-    .appearance-layout fieldset + fieldset { padding-left: 26px; border-left: 1px solid var(--line); }
-    .appearance-layout legend {
-      position: static;
-      width: auto;
-      height: auto;
-      clip: auto;
-      margin-bottom: 10px;
-      font-size: 11px;
-    }
-    .output-layout { display: grid; grid-template-columns: 330px 1fr; gap: 18px; }
-    .output-layout .export-grid { padding-top: 0; }
-    .output-layout textarea { height: 150px; }
-    .maplibregl-ctrl-bottom-right { bottom: 10px; }
-    .toast { bottom: 24px; }
-    @media (max-width: 980px) {
-      .app-header { grid-template-columns: 1fr auto; }
-      .app-tagline { display: none; }
-      .geometry-grid { grid-template-columns: 1fr 1fr; }
-      .control-block:nth-child(2) { border-right: 0; }
-      .svg-layout { grid-template-columns: 1fr 1fr; }
-      .svg-column:last-child { grid-column: 1 / -1; padding: 12px 0 0; border: 0; border-top: 1px solid var(--line); }
-    }
-    @media (max-width: 700px) {
-      #app { grid-template-rows: auto minmax(0, 1fr); }
-      .app-header { display: block; padding: 12px 14px 10px; }
-      .app-brand { margin-bottom: 10px; }
-      .tool-tabs { overflow-x: auto; }
-      .tool-tab { flex: 1; padding: 0 10px; }
-      .source-palette { top: 10px; left: 10px; width: calc(100% - 20px); }
-      .basemap-palette { top: 132px; left: 10px; right: auto; }
-      .basemap-button { min-width: 0; }
-      #panel.control-dock {
-        bottom: 10px;
-        width: calc(100% - 20px);
-        max-height: 46%;
-      }
-      .dock-context span { display: none; }
-      .tool-panel { max-height: calc(46vh - 44px); }
-      .geometry-grid,
-      .svg-layout,
-      .appearance-layout,
-      .output-layout { grid-template-columns: 1fr; }
-      .control-block,
-      .svg-column + .svg-column,
-      .appearance-layout fieldset + fieldset {
-        padding: 0 0 14px;
-        border: 0;
-        border-bottom: 1px solid var(--line);
-      }
-      .control-block:last-child,
-      .svg-column:last-child,
-      .appearance-layout fieldset:last-child { border-bottom: 0; }
-      .output-layout textarea { height: 120px; }
-      .maplibregl-ctrl-top-right { top: 185px; }
-    }
+    .svg-appearance-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 7px; }
 
-    /* Editorial cartographic workshop */
-    :root {
-      --canvas: #e7ebe6;
-      --panel: #f7f8f3;
-      --surface: #fbfcf8;
-      --surface-soft: #eef1eb;
-      --line: #c8cec6;
-      --line-strong: #9da89f;
-      --ink: #233029;
-      --ink-soft: #677169;
-      --accent: #496755;
-      --accent-soft: #e2e9e2;
-      --coral: #a96543;
-      --focus: rgba(73, 103, 85, .15);
-      --shadow: none;
-    }
-    html, body { font-family: "Source Sans 3", system-ui, sans-serif; }
-    .app-header {
-      grid-template-columns: 1fr auto;
-      padding: 0 24px;
-      background: #f7f8f3;
-      border-bottom-color: var(--line-strong);
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-    .app-brand h1 {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 20px;
-      font-weight: 600;
-      letter-spacing: -.025em;
-    }
-    .app-brand .product-kicker {
-      color: var(--ink-soft);
-      letter-spacing: .09em;
-    }
-    .app-tagline { font-size: 11.5px; }
-    .source-palette,
-    .basemap-palette {
-      background: #f8f9f4;
-      border-color: var(--line-strong);
-      border-radius: 2px;
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-    .source-palette { border-left: 3px solid var(--accent); }
-    .source-line select,
-    .source-line button,
-    .basemap-button,
-    select,
-    input[type=text],
-    input[type=number],
-    input[type=color],
-    textarea {
-      border-radius: 2px;
-    }
-    .source-line button,
-    .basemap-button {
-      background: transparent;
-      border-color: var(--line);
-      border-radius: 2px;
-    }
-    .basemap-button.active {
-      color: var(--ink);
-      background: var(--accent-soft);
-      border-color: var(--accent);
-    }
-    .feature-chip {
-      border-radius: 1px;
-      background: transparent;
-      border-color: var(--line);
-    }
-    .feature-chip.active {
-      color: var(--ink);
-      background: var(--accent-soft);
-      border-color: var(--accent);
-    }
-    #panel.control-dock {
-      max-height: min(390px, calc(100% - 130px));
-      overflow: auto;
-      background: #f7f8f3;
-      border-color: var(--line-strong);
-      border-radius: 2px;
-      box-shadow: 0 5px 18px rgba(35, 48, 41, .09);
-      backdrop-filter: none;
-    }
-    .dock-head {
-      position: sticky;
-      top: 0;
-      z-index: 4;
-      height: 47px;
-      background: #f7f8f3;
-      border-bottom-color: var(--line-strong);
-    }
-    .selection-dot {
-      width: 3px;
-      height: 17px;
-      border-radius: 0;
-      background: var(--accent);
-    }
-    .tool-tabs {
-      gap: 18px;
-      padding: 0;
-      background: transparent;
-      border: 0;
-      border-radius: 0;
-    }
-    .tool-tab {
-      min-height: 47px;
-      padding: 0 1px;
-      border-bottom: 2px solid transparent;
-      border-radius: 0;
-      font-size: 11.5px;
-    }
-    .tool-tab.active {
-      color: var(--ink);
-      background: transparent;
-      border-bottom-color: var(--accent);
-    }
-    .tool-panel {
-      max-height: none;
-      overflow: visible;
-      padding: 17px 18px 19px;
-    }
-    .geometry-grid { grid-template-columns: minmax(300px, 1.5fr) minmax(210px, 1fr) minmax(190px, .8fr) minmax(200px, 1fr); }
-    .control-title {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    .family-label {
-      display: block;
-      margin: 10px 0 5px;
-      color: var(--ink-soft);
-      font: 500 9px/1 "IBM Plex Mono", monospace;
-      letter-spacing: .07em;
-      text-transform: uppercase;
-    }
-    .family-label:first-of-type { margin-top: 0; }
-    .pill {
-      min-height: 31px;
-      justify-items: start;
-      padding: 6px 9px;
-      background: transparent;
-      border-color: var(--line);
-      border-radius: 1px;
-      font-size: 11px;
-      text-align: left;
-      transform: none;
-    }
-    .pill:hover {
+    .appearance-layout { display: flex; flex-direction: column; gap: 16px; }
+    .appearance-layout fieldset + fieldset { padding-top: 16px; border-top: 1px solid var(--line); }
+
+    /* Table tab */
+    .table-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .table-toolbar span { color: var(--ink-soft); font: 500 11px/1 "IBM Plex Mono", monospace; }
+    .table-toolbar button {
+      height: 28px;
+      padding: 0 10px;
       color: var(--ink);
       background: var(--surface);
-      border-color: var(--accent);
-      transform: none;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
     }
-    .pill.active {
-      color: var(--ink);
-      background: var(--accent-soft);
-      border-color: var(--accent);
-      box-shadow: inset 3px 0 0 var(--accent);
-    }
-    .pill.active::after { display: none; }
-    .seg button,
-    button.action,
-    .switch,
-    .preview-canvas,
-    .custom-svg-panel,
-    .toast { border-radius: 2px; }
-    .preview-canvas,
-    .toast,
-    .maplibregl-ctrl-group { box-shadow: none; }
-    .maplibregl-ctrl-group { border-radius: 2px; }
-    button.action {
-      box-shadow: none;
-      transform: none;
-    }
-    button.action:hover {
-      box-shadow: none;
-      transform: none;
-    }
-    .svg-settings { display: none !important; border-top: 1px solid var(--line); }
-    .svg-settings.active.active-mode { display: block !important; }
-    #geometricFieldset.svg-mode .geometry-grid {
-      grid-template-columns: minmax(300px, 440px);
-    }
-    #geometricFieldset.svg-mode .geometry-grid > .control-block:not(:first-child) {
-      display: none;
-    }
-    @media (max-width: 700px) {
-      .app-header { display: flex; padding: 11px 14px; }
-      .app-brand { margin: 0; }
-      .dock-head { height: auto; min-height: 76px; flex-wrap: wrap; padding: 8px 12px 0; }
-      .tool-tabs { order: 3; width: 100%; gap: 14px; }
-      .tool-tab { min-height: 35px; flex: 0 0 auto; }
-      #panel.control-dock { max-height: 52%; }
-      .geometry-grid { grid-template-columns: 1fr; }
-    }
+    .table-toolbar button:hover { color: var(--accent); border-color: var(--accent); }
+    .table-toolbar button:disabled { opacity: .5; cursor: not-allowed; }
+    #srcHint { margin-bottom: 10px; }
+    .feature-table { width: 100%; margin-top: 4px; border-collapse: collapse; font-size: 12px; }
+    .feature-table tr { cursor: pointer; }
+    .feature-table td { padding: 7px 4px; border-bottom: 1px solid var(--line); color: var(--ink-soft); }
+    .feature-table tr:hover td { background: var(--surface-soft); }
+    .feature-table tr.active td { color: var(--ink); background: var(--accent-soft); }
+    .feature-table .row-index { width: 22px; color: var(--ink-soft); font: 500 10px/1 "IBM Plex Mono", monospace; }
+    .feature-table .row-eye { width: 20px; text-align: center; color: var(--line-strong); }
+    .feature-table tr.active .row-eye { color: var(--accent); }
+    .feature-table .row-eye svg { width: 14px; height: 14px; display: block; }
+    .feature-table .row-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .drop-note { margin-top: 12px; color: var(--ink-soft); font: 400 9px/1.45 "IBM Plex Mono", monospace; }
 
-    /* Fixed GIS workspace */
-    .workspace {
-      display: grid;
-      grid-template-columns: 430px minmax(0, 1fr) 230px;
-      min-height: 0;
-      overflow: hidden;
-      background: var(--canvas);
-    }
-    .layer-panel {
-      grid-column: 3;
-      grid-row: 1;
-      min-width: 0;
-      padding: 0;
-      background: #f2f4ef;
-      border-left: 1px solid var(--line-strong);
-    }
-    .source-palette,
-    .basemap-palette {
-      position: static;
-      width: auto;
-      padding: 16px 14px;
-      border: 0;
-      border-bottom: 1px solid var(--line-strong);
-      background: transparent;
-    }
-    .source-palette { border-left: 0; }
-    .source-line { grid-template-columns: 1fr; }
-    .source-actions button { width: 100%; }
-    .feature-chips {
-      flex-wrap: wrap;
-      max-height: 90px;
-      overflow-y: auto;
-    }
-    .feature-chip { flex: 0 0 calc(33.333% - 4px); }
-    .basemap-options { display: grid; grid-template-columns: 1fr 1fr; }
-    .basemap-button { min-width: 0; }
-    .map-shell {
-      position: relative;
-      inset: auto;
-      grid-column: 2;
-      grid-row: 1;
-      min-width: 0;
-      min-height: 0;
-      height: auto;
-    }
-    .vector-drop-overlay {
-      position: absolute;
-      z-index: 8;
-      inset: 18px;
-      display: grid;
-      place-items: center;
-      color: var(--ink);
-      background: rgba(242, 246, 243, .92);
-      border: 1px dashed var(--accent);
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity .14s;
-      font: 600 12px/1.4 "IBM Plex Mono", monospace;
-      letter-spacing: .03em;
-    }
-    .map-shell.is-dragging .vector-drop-overlay { opacity: 1; }
-    #panel.control-dock {
-      position: relative;
-      inset: auto;
-      grid-column: 1;
-      grid-row: 1;
-      width: auto;
-      max-height: none;
-      min-width: 0;
-      overflow: hidden;
-      transform: none;
-      border: 0;
-      border-right: 1px solid var(--line-strong);
-      border-radius: 0;
-      box-shadow: none;
-    }
-    #panel.control-dock.collapsed {
-      opacity: 1;
-      pointer-events: auto;
-      transform: none;
-    }
-    .dock-head {
-      position: static;
-      min-height: 78px;
-      height: auto;
-      flex-wrap: wrap;
-      align-content: space-between;
-      padding: 11px 14px 0;
-    }
-    .dock-context { width: 100%; }
-    .tool-tabs {
-      width: 100%;
-      gap: 16px;
-    }
-    .tool-tab { min-height: 36px; }
-    .tool-panel {
-      padding: 12px 14px 14px;
-      overflow: hidden;
-    }
-    .geometry-grid {
-      grid-template-columns: 1fr 1fr;
-      gap: 10px 12px;
-    }
-    .geometry-grid > .control-block:first-child { grid-column: 1 / -1; }
-    .geometry-grid > .control-block:last-child { grid-column: 1 / -1; }
-    .control-block {
-      padding: 0 0 9px;
-      border-right: 0;
-      border-bottom: 1px solid var(--line);
-    }
-    .control-block:last-child { border-bottom: 0; }
-    .pill-group { grid-template-columns: repeat(4, 1fr); gap: 4px; }
-    .pill { min-height: 27px; padding: 4px 7px; font-size: 10px; }
-    .family-label { margin: 7px 0 4px; }
-    .control-title { margin-bottom: 6px; }
-    label { margin: 7px 0 3px; }
-    select,
-    input[type=text],
-    input[type=number] { height: 34px; }
-    input[type=color] { height: 34px; }
-    input[type=range] { height: 14px; }
-    .switch { min-height: 34px; }
-    .preview-canvas { width: 48px; height: 48px; }
-    #geometricFieldset.svg-mode .geometry-grid {
-      grid-template-columns: 1fr;
-    }
-    .svg-settings { padding-top: 10px; }
-    .svg-layout { display: block; }
-    .svg-appearance-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 7px;
-    }
-    .custom-svg-panel { position: absolute; z-index: 8; right: 14px; left: 14px; background: var(--panel); }
-    .appearance-layout { grid-template-columns: 1fr 1fr; gap: 14px; }
-    .appearance-layout fieldset + fieldset { padding-left: 14px; }
-    .output-layout { grid-template-columns: 1fr; gap: 10px; }
-    .output-layout textarea { height: 150px; }
-    .export-grid { grid-template-columns: 1fr 1fr; }
-    .maplibregl-ctrl-top-right { top: 10px; }
-    @media (max-width: 1180px) {
-      .workspace { grid-template-columns: 380px minmax(0, 1fr) 200px; }
-      .app-tagline { display: none; }
-      .pill-group { grid-template-columns: repeat(3, 1fr); }
-      .motif-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    }
-    @media (max-width: 860px) {
-      .workspace { grid-template-columns: minmax(0, 1fr) 180px; }
-      .layer-panel { grid-column: 2; }
-      #panel.control-dock {
-        position: absolute;
-        z-index: 6;
-        top: 0;
-        left: 0;
-        right: auto;
-        bottom: 0;
-        width: 360px;
+    @media (max-width: 760px) {
+      .workspace { grid-template-columns: 40px minmax(0, 1fr); grid-template-rows: minmax(220px, 46vh) auto; }
+      .icon-rail { grid-column: 1; grid-row: 1; }
+      .map-shell { grid-column: 2; grid-row: 1; }
+      .side-panel {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        max-height: 54vh;
       }
-      .map-shell { grid-column: 1; }
+      .brand-name { display: none; }
     }
   </style>
 </head>
 <body>
   <div id="app">
-    <header class="app-header">
-      <div class="app-brand">
-        <span class="product-kicker">Cartographic fill workshop</span>
-        <h1>maplibre-pattern-fills</h1>
+    <header class="topbar">
+      <div class="topbar-brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 18 18" fill="currentColor">
+            <circle cx="4" cy="5" r="1.3" /><circle cx="10" cy="3" r="1.1" /><circle cx="14" cy="7" r="1.4" />
+            <circle cx="6" cy="10" r="1" /><circle cx="12" cy="12" r="1.3" /><circle cx="4" cy="14" r="1" /><circle cx="10" cy="15" r="1.2" />
+          </svg>
+        </span>
+        <span class="brand-name">Stipple</span>
       </div>
-      <p class="app-tagline">A practical workshop for MapLibre polygon fills</p>
+      <nav class="menubar" aria-label="Application menu">
+        <div class="menu" id="fileMenu">
+          <button type="button" class="menu-button" id="fileMenuButton" aria-haspopup="true" aria-expanded="false">File</button>
+          <div class="menu-popover" id="fileMenuPopover" hidden>
+            <button type="button" class="menu-item import-trigger" id="importVector">Open data…</button>
+            <div class="menu-separator"></div>
+            <button type="button" class="menu-item" id="exportJsBtn">Copy MapLibre code</button>
+            <button type="button" class="menu-item" id="downloadBundleBtn">Download JSON + PNG</button>
+            <button type="button" class="menu-item" id="exportBtn">Copy style.json</button>
+            <div class="menu-separator"></div>
+            <button type="button" class="menu-item" id="copyConfigBtn">Copy preset</button>
+            <button type="button" class="menu-item" id="importConfigBtn">Load preset</button>
+            <textarea id="ioArea" class="menu-output" placeholder="Exported style or preset JSON appears here."></textarea>
+          </div>
+        </div>
+        <div class="menu" id="helpMenu">
+          <button type="button" class="menu-button" id="helpMenuButton" aria-haspopup="true" aria-expanded="false">Help</button>
+          <div class="menu-popover" id="helpMenuPopover" hidden>
+            <a class="menu-item" href="https://github.com/maplibre/maplibre-pattern-fills" target="_blank" rel="noopener">Documentation on GitHub</a>
+          </div>
+        </div>
+      </nav>
     </header>
 
     <main class="workspace">
-      <aside class="layer-panel" aria-label="Map layers">
-        <aside class="source-palette" aria-label="Polygon selection">
-          <div class="palette-label">
-            <span>Polygons</span>
-            <small id="polygonCount">1 polygon</small>
-          </div>
-          <div class="source-line">
-            <select id="layerSelect" aria-label="Selected polygon"></select>
-          </div>
-          <div class="source-actions">
-            <button type="button" class="import-button" id="importVector">Open data</button>
-            <button type="button" id="reloadCatalog">Add sample</button>
-          </div>
-          <input type="file" id="vectorFile" accept=".geojson,.json,.geojsonl,.ndjson,.gpkg,.zip,.shp,.dbf,.shx,.prj,.cpg,.parquet,.geoparquet,.fgb,.kml,.kmz,.gpx,.csv,.tsv,.dxf,.gml,.tab,.mif,.sqlite,.mbtiles,.osm,.pbf,.vrt" multiple hidden />
-          <div class="feature-chips" id="featureChips"></div>
-          <div class="drop-note">Drop GeoJSON, GeoPackage or GeoParquet. For Shapefile, use a ZIP or select .shp, .dbf, .shx and .prj together.</div>
-          <div class="hint" id="srcHint"></div>
-        </aside>
-
-        <aside class="basemap-palette" aria-label="Basemap">
-          <div class="palette-label"><span>Basemap</span></div>
-          <div class="basemap-options" id="basemapOptions">
-            <button type="button" class="basemap-button active" data-basemap="neutral">Neutral</button>
-            <button type="button" class="basemap-button" data-basemap="streets">Streets</button>
-            <button type="button" class="basemap-button" data-basemap="topo">Topo</button>
-            <button type="button" class="basemap-button" data-basemap="aerial">Aerial</button>
-          </div>
-        </aside>
-      </aside>
+      <nav class="icon-rail" aria-label="Data and basemap">
+        <button type="button" class="icon-button import-trigger" id="importVectorRail" title="Open data">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 8V4.5C3 3.7 3.7 3 4.5 3h3l1.5 1.5h5c.8 0 1.5.7 1.5 1.5v2" />
+            <path d="M2.6 8h12.8l-1.4 6.2c-.1.6-.7 1-1.3 1H5.3c-.6 0-1.2-.4-1.3-1L2.6 8Z" />
+          </svg>
+        </button>
+        <input type="file" id="vectorFile" accept=".geojson,.json,.geojsonl,.ndjson,.gpkg,.zip,.shp,.dbf,.shx,.prj,.cpg,.parquet,.geoparquet,.fgb,.kml,.kmz,.gpx,.csv,.tsv,.dxf,.gml,.tab,.mif,.sqlite,.mbtiles,.osm,.pbf,.vrt" multiple hidden />
+        <select id="layerSelect" aria-label="Selected polygon" hidden></select>
+        <div class="rail-separator"></div>
+        <button type="button" class="icon-button active" data-basemap="neutral" title="Neutral basemap">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="3.5" width="11" height="11" rx="1.5" /></svg>
+        </button>
+        <button type="button" class="icon-button" data-basemap="streets" title="Streets basemap">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3.5 3.5v11M9 3.5v11M14.5 3.5v11M3.5 6.5h11M3.5 11.5h11" />
+          </svg>
+        </button>
+        <button type="button" class="icon-button" data-basemap="topo" title="Topo basemap">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M2.5 6.5c2-1.5 4-1.5 6 0s4 1.5 6 0" /><path d="M2.5 10c2-1.5 4-1.5 6 0s4 1.5 6 0" /><path d="M2.5 13.5c2-1.5 4-1.5 6 0s4 1.5 6 0" />
+          </svg>
+        </button>
+        <button type="button" class="icon-button" data-basemap="aerial" title="Aerial basemap (satellite imagery)">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4">
+            <circle cx="9" cy="9" r="3" fill="currentColor" stroke="none" />
+            <ellipse cx="9" cy="9" rx="7.5" ry="3" transform="rotate(-25 9 9)" />
+            <circle cx="15.3" cy="6.6" r="1.1" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+      </nav>
 
       <div class="map-shell">
         <div id="map"></div>
         <div class="vector-drop-overlay" id="vectorDropOverlay">Drop vector data to open</div>
+        <div class="map-controls map-controls-bl">
+          <button type="button" class="map-ctrl-btn" id="zoomInBtn" title="Zoom in">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 3.5v11M3.5 9h11" /></svg>
+          </button>
+          <button type="button" class="map-ctrl-btn" id="zoomOutBtn" title="Zoom out">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 9h11" /></svg>
+          </button>
+          <button type="button" class="map-ctrl-btn" id="compassBtn" title="Reset bearing">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="9" r="6" /><path d="M9 4.5 11 9l-2 4.5L7 9Z" fill="currentColor" stroke="none" /></svg>
+          </button>
+          <button type="button" class="map-ctrl-btn" id="locateBtn" title="Fit to data">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none" /><path d="M9 2.5v2.4M9 13.1v2.4M2.5 9h2.4M13.1 9h2.4" /><circle cx="9" cy="9" r="4.3" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <section id="panel" class="control-dock" aria-label="Polygon style editor">
-        <div class="dock-head">
+      <section id="panel" class="side-panel" aria-label="Polygon style editor">
+        <div class="panel-head">
+          <nav class="panel-tabs" id="panelTabs" aria-label="Panel sections">
+            <button type="button" class="panel-tab active" data-panel="feature">Feature</button>
+            <button type="button" class="panel-tab" data-panel="table">Layers</button>
+          </nav>
+        </div>
+
+        <div class="panel-body" data-panel-body="feature">
           <div class="dock-context">
             <span class="selection-dot" aria-hidden="true"></span>
             <strong id="activePolygonLabel">Polygon 1</strong>
-            <span>editing selected polygon</span>
           </div>
           <nav class="tool-tabs" id="toolTabs" aria-label="Style sections">
             <button type="button" class="tool-tab active" data-tool="fill">Fill</button>
             <button type="button" class="tool-tab" data-tool="appearance">Background &amp; line</button>
-            <button type="button" class="tool-tab" data-tool="export">Export</button>
           </nav>
-        </div>
 
         <div class="tool-panel fill-base active" data-tool-panel="fill">
           <fieldset id="geometricFieldset">
@@ -1387,20 +976,18 @@
           </div>
         </div>
 
-        <div class="tool-panel" data-tool-panel="export">
-          <div class="output-layout">
-            <div>
-              <div class="export-grid">
-                <button class="action primary" id="exportJsBtn">Copy MapLibre code</button>
-                <button class="action" id="downloadBundleBtn">Download JSON + PNG</button>
-                <button class="action ghost" id="exportBtn">Copy style.json</button>
-                <button class="action ghost" id="copyConfigBtn">Copy preset</button>
-                <button class="action ghost" id="importConfigBtn">Load preset</button>
-              </div>
-              <p class="hint">Add the live pattern to a map, or download a static bundle with no plugin dependency.</p>
-            </div>
-            <textarea id="ioArea" placeholder="Exported style or preset JSON appears here."></textarea>
+        </div>
+
+        <div class="panel-body" data-panel-body="table" hidden>
+          <div class="table-toolbar">
+            <span id="polygonCount">1 polygon</span>
+            <button type="button" id="reloadCatalog">Add sample</button>
           </div>
+          <p class="hint" id="srcHint"></p>
+          <table class="feature-table">
+            <tbody id="featureTableBody"></tbody>
+          </table>
+          <p class="drop-note">Drop GeoJSON, GeoPackage or GeoParquet. For Shapefile, use a ZIP or select .shp, .dbf, .shx and .prj together.</p>
         </div>
       </section>
     </main>
@@ -1780,6 +1367,7 @@
     );
   }
   // Map and optional context layers.
+  const SAMPLE_CENTER = [8.4037, 49.0069];
   const map = new maplibregl.Map({
     container: "map",
     style: {
@@ -1812,10 +1400,10 @@
         { id: "basemap-aerial", type: "raster", source: "aerial", layout: { visibility: "none" }, paint: { "raster-saturation": -0.25, "raster-brightness-max": 0.82 } },
       ],
     },
-    center: [4.62, 50.62], zoom: 12,
+    center: SAMPLE_CENTER, zoom: 12,
     fadeDuration: 0,
   });
-  map.addControl(new maplibregl.NavigationControl());
+  map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-right");
 
   // Tile preview canvas in the panel (2x2 tiled to show seams).
   function renderPreview() {
@@ -2222,18 +1810,31 @@
   }
 
   // Random GeoJSON test features.
-  const MAX_FEATURES = 48;
-  const MAX_SAMPLE_FEATURES = 6;
+  const MAX_FEATURES = 64;
+  const MAX_SAMPLE_FEATURES = 64;
   const FEATURES = {};
   const FEATURE_META = {};
-  const FEATURE_POSITIONS = [
-    [0, 0],
-    [0.95, 0.2],
-    [-0.95, 0.2],
-    [0, -0.9],
-    [0.95, -0.85],
-    [-0.95, -0.85],
-  ];
+  // Simple row-major grid, wrapping every SAMPLE_GRID_COLUMNS entries, centered
+  // on the origin. Spacing (see `spacingX`/`spacingY` in addFeature) is kept
+  // wide enough that no two generated polygons can ever overlap.
+  const SAMPLE_GRID_COLUMNS = 4;
+  function buildGridLattice(count, columns) {
+    const rows = Math.ceil(count / columns);
+    const points = [];
+    for (let i = 0; i < count; i++) {
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+      // Y offsets are in latitude, where larger is further north (up on
+      // screen). Negate so row 0 sits at the top and later rows wrap
+      // downward instead of upward.
+      points.push([col - (columns - 1) / 2, -(row - (rows - 1) / 2)]);
+    }
+    return points;
+  }
+  const SAMPLE_LATTICE = buildGridLattice(MAX_SAMPLE_FEATURES, SAMPLE_GRID_COLUMNS);
+  function samplePosition(index) {
+    return SAMPLE_LATTICE[index] || [0, 0];
+  }
   let featureOrigin = null;
   let featureSerial = 0;
   let sourceMode = "sample";
@@ -2300,18 +1901,27 @@
     });
   }
 
-  function renderFeatureChips() {
-    const chips = $("featureChips");
-    chips.innerHTML = "";
+  const EYE_ICON = '<svg viewBox="0 0 18 10" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 5c1.8-3 4.8-4.5 8-4.5S15.2 2 17 5c-1.8 3-4.8 4.5-8 4.5S2.8 8 1 5Z"/><circle cx="9" cy="5" r="1.7" fill="currentColor" stroke="none"/></svg>';
+
+  function renderFeatureTable() {
+    const body = $("featureTableBody");
+    body.innerHTML = "";
     Object.keys(FEATURES).forEach((id, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "feature-chip";
-      button.dataset.feature = id;
-      button.textContent = String(index + 1).padStart(2, "0");
-      button.title = FEATURE_META[id]?.label || `Polygon ${index + 1}`;
-      button.addEventListener("click", () => selectLayer(id));
-      chips.appendChild(button);
+      const row = document.createElement("tr");
+      row.dataset.feature = id;
+      row.className = id === state.layer?.source ? "active" : "";
+      const indexCell = document.createElement("td");
+      indexCell.className = "row-index";
+      indexCell.textContent = String(index + 1).padStart(2, "0");
+      const labelCell = document.createElement("td");
+      labelCell.className = "row-label";
+      labelCell.textContent = FEATURE_META[id]?.label || `Polygon ${index + 1}`;
+      const eyeCell = document.createElement("td");
+      eyeCell.className = "row-eye";
+      eyeCell.innerHTML = EYE_ICON;
+      row.append(indexCell, labelCell, eyeCell);
+      row.addEventListener("click", () => selectLayer(id));
+      body.appendChild(row);
     });
     const count = Object.keys(FEATURES).length;
     $("polygonCount").textContent = `${count} polygon${count === 1 ? "" : "s"}`;
@@ -2379,9 +1989,17 @@
     const index = Object.keys(FEATURES).length;
     if (index >= MAX_SAMPLE_FEATURES) return;
     const span = 0.028;
-    const [offsetX, offsetY] = FEATURE_POSITIONS[index];
-    const cx = featureOrigin.lng + offsetX * span * 2;
-    const cy = featureOrigin.lat + offsetY * span * 2;
+    // randomPolygon draws an ellipse-ish shape (y scaled by 0.7), so its
+    // vertices never reach farther than ~1.07*span horizontally or
+    // ~0.75*span vertically from its own center. Spacing each axis to that
+    // axis's own worst case (with a small margin) keeps any two generated
+    // polygons from ever touching while packing them much closer than a
+    // single shared spacing value would.
+    const spacingX = span * 2.2;
+    const spacingY = span * 1.55;
+    const [offsetX, offsetY] = samplePosition(index);
+    const cx = featureOrigin.lng + offsetX * spacingX;
+    const cy = featureOrigin.lat + offsetY * spacingY;
     const feature = randomPolygon(cx, cy, span * 0.82);
     const id = addFeatureToMap(
       feature,
@@ -2390,7 +2008,7 @@
     );
     sourceMode = "sample";
     sourceFileName = "";
-    renderFeatureChips();
+    renderFeatureTable();
     selectLayer(id);
     fitAllFeatures();
   }
@@ -2434,7 +2052,7 @@
       const id = addFeatureToMap(feature, label, DEFAULT_STYLE, true);
       firstId ||= id;
     });
-    renderFeatureChips();
+    renderFeatureTable();
     selectLayer(firstId);
     fitAllFeatures();
   }
@@ -2453,8 +2071,8 @@
       : count === 1
         ? "Adjust its style, open vector data or add another sample."
         : `${label} selected. Click another shape to edit it.`;
-    document.querySelectorAll(".feature-chip").forEach((button) => {
-      button.classList.toggle("active", button.dataset.feature === id);
+    document.querySelectorAll("#featureTableBody tr").forEach((row) => {
+      row.classList.toggle("active", row.dataset.feature === id);
     });
     applyStateToUI();
     showSelection(id);
@@ -2463,8 +2081,7 @@
 
   // UI wiring
   function openTool(tool) {
-    $("panel").classList.remove("collapsed");
-    document.querySelectorAll(".tool-tab").forEach((button) => {
+    document.querySelectorAll("#toolTabs .tool-tab").forEach((button) => {
       button.classList.toggle("active", button.dataset.tool === tool);
     });
     document.querySelectorAll("[data-tool-panel]").forEach((panel) => {
@@ -2477,20 +2094,65 @@
     if (tool) openTool(tool);
   });
 
+  function openPanelTab(tab) {
+    document.querySelectorAll("#panelTabs .panel-tab").forEach((button) => {
+      button.classList.toggle("active", button.dataset.panel === tab);
+    });
+    document.querySelectorAll("[data-panel-body]").forEach((body) => {
+      body.hidden = body.dataset.panelBody !== tab;
+    });
+  }
+
+  $("panelTabs").addEventListener("click", (event) => {
+    const tab = event.target.dataset.panel;
+    if (tab) openPanelTab(tab);
+  });
+
   function setBasemap(name) {
     ["streets", "topo", "aerial"].forEach((id) => {
       map.setLayoutProperty(`basemap-${id}`, "visibility", name === id ? "visible" : "none");
     });
     map.setPaintProperty("bg", "background-color", name === "neutral" ? "#e9eeec" : "#d8dfdc");
-    document.querySelectorAll(".basemap-button").forEach((button) => {
+    document.querySelectorAll(".icon-rail [data-basemap]").forEach((button) => {
       button.classList.toggle("active", button.dataset.basemap === name);
     });
   }
 
-  $("basemapOptions").addEventListener("click", (event) => {
-    const basemap = event.target.dataset.basemap;
-    if (basemap) setBasemap(basemap);
+  document.querySelector(".icon-rail").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-basemap]");
+    if (button) setBasemap(button.dataset.basemap);
   });
+
+  // File / Help menus
+  function closeMenus(except) {
+    document.querySelectorAll(".menu-popover").forEach((popover) => {
+      if (popover !== except) popover.hidden = true;
+    });
+    document.querySelectorAll(".menu-button").forEach((button) => {
+      if (button.nextElementSibling !== except) button.classList.remove("open");
+    });
+  }
+  document.querySelectorAll(".menu-button").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const popover = button.nextElementSibling;
+      const willOpen = popover.hidden;
+      closeMenus(willOpen ? popover : null);
+      popover.hidden = !willOpen;
+      button.classList.toggle("open", willOpen);
+      button.setAttribute("aria-expanded", String(willOpen));
+    });
+  });
+  document.addEventListener("click", () => closeMenus());
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenus();
+  });
+
+  // Zoom / compass / locate
+  $("zoomInBtn").addEventListener("click", () => map.zoomIn());
+  $("zoomOutBtn").addEventListener("click", () => map.zoomOut());
+  $("compassBtn").addEventListener("click", () => map.easeTo({ bearing: 0, pitch: 0, duration: 250 }));
+  $("locateBtn").addEventListener("click", () => fitAllFeatures());
 
   function bindColor(colorId, hexId, apply) {
     const col = $(colorId), hex = $(hexId);
@@ -3129,20 +2791,23 @@
   }
 
   async function openVectorFiles(files) {
-    const button = $("importVector");
-    button.disabled = true;
-    button.textContent = "Opening...";
+    const triggers = document.querySelectorAll(".import-trigger");
+    const label = $("importVector");
+    triggers.forEach((el) => { el.disabled = true; });
+    label.textContent = "Opening…";
     try {
       await loadVectorFiles(files);
     } catch (error) {
       toast(error instanceof Error ? error.message : "This dataset could not be opened");
     } finally {
-      button.disabled = false;
-      button.textContent = "Open data";
+      triggers.forEach((el) => { el.disabled = false; });
+      label.textContent = "Open data…";
     }
   }
 
-  $("importVector").addEventListener("click", () => $("vectorFile").click());
+  document.querySelectorAll(".import-trigger").forEach((trigger) => {
+    trigger.addEventListener("click", () => $("vectorFile").click());
+  });
   $("vectorFile").addEventListener("change", async (event) => {
     await openVectorFiles(event.target.files);
     event.target.value = "";
