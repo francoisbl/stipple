@@ -7,17 +7,56 @@ interface RGBA {
   a: number;
 }
 
+/**
+ * Parses the small subset of CSS colors this mini rasterizer supports: hex
+ * (3/4/6/8 digit) and `rgb()`/`rgba()` in comma or space/slash syntax. Unlike
+ * a real Canvas 2D context, which silently falls back to black for anything
+ * it can't parse, this throws: silently rendering the wrong colour in the
+ * Node rasterizer (used for SSR/tooling/tests) is worse than a clear error.
+ * Named colors and `hsl()` need a real browser canvas.
+ */
 function parseColor(v: string): RGBA {
-  const hex = v.match(/^#([0-9a-f]{6})$/i);
-  if (hex) {
-    const n = parseInt(hex[1], 16);
+  const hex8 = v.match(/^#([0-9a-f]{8})$/i);
+  if (hex8) {
+    const n = parseInt(hex8[1], 16);
+    return { r: (n >>> 24) & 255, g: (n >>> 16) & 255, b: (n >>> 8) & 255, a: (n & 255) / 255 };
+  }
+  const hex6 = v.match(/^#([0-9a-f]{6})$/i);
+  if (hex6) {
+    const n = parseInt(hex6[1], 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 1 };
   }
-  const rgba = v.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/i);
-  if (rgba) {
-    return { r: +rgba[1], g: +rgba[2], b: +rgba[3], a: rgba[4] !== undefined ? +rgba[4] : 1 };
+  const hex4 = v.match(/^#([0-9a-f]{4})$/i);
+  if (hex4) {
+    const [r, g, b, a] = hex4[1].split("").map((c) => parseInt(c + c, 16));
+    return { r, g, b, a: a / 255 };
   }
-  return { r: 0, g: 0, b: 0, a: 1 };
+  const hex3 = v.match(/^#([0-9a-f]{3})$/i);
+  if (hex3) {
+    const [r, g, b] = hex3[1].split("").map((c) => parseInt(c + c, 16));
+    return { r, g, b, a: 1 };
+  }
+  const rgbaComma = v.match(
+    /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+%?)\s*)?\)$/i,
+  );
+  const rgbaSpace = v.match(
+    /^rgba?\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+%?)\s*)?\)$/i,
+  );
+  const rgba = rgbaComma ?? rgbaSpace;
+  if (rgba) {
+    const alphaToken = rgba[4];
+    const a = alphaToken === undefined
+      ? 1
+      : alphaToken.endsWith("%")
+        ? parseFloat(alphaToken) / 100
+        : +alphaToken;
+    return { r: +rgba[1], g: +rgba[2], b: +rgba[3], a };
+  }
+  throw new TypeError(
+    `Unsupported color "${v}" in the Node mini rasterizer. Supported: #rgb, #rgba, ` +
+      `#rrggbb, #rrggbbaa, and rgb()/rgba() (comma or space/slash syntax). Named colors ` +
+      `and hsl() require a real browser canvas.`,
+  );
 }
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));

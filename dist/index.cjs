@@ -49,16 +49,41 @@ module.exports = __toCommonJS(src_exports);
 
 // src/engine/miniContext.ts
 function parseColor(v) {
-  const hex = v.match(/^#([0-9a-f]{6})$/i);
-  if (hex) {
-    const n = parseInt(hex[1], 16);
+  const hex8 = v.match(/^#([0-9a-f]{8})$/i);
+  if (hex8) {
+    const n = parseInt(hex8[1], 16);
+    return { r: n >>> 24 & 255, g: n >>> 16 & 255, b: n >>> 8 & 255, a: (n & 255) / 255 };
+  }
+  const hex6 = v.match(/^#([0-9a-f]{6})$/i);
+  if (hex6) {
+    const n = parseInt(hex6[1], 16);
     return { r: n >> 16 & 255, g: n >> 8 & 255, b: n & 255, a: 1 };
   }
-  const rgba = v.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/i);
-  if (rgba) {
-    return { r: +rgba[1], g: +rgba[2], b: +rgba[3], a: rgba[4] !== void 0 ? +rgba[4] : 1 };
+  const hex4 = v.match(/^#([0-9a-f]{4})$/i);
+  if (hex4) {
+    const [r, g, b, a] = hex4[1].split("").map((c) => parseInt(c + c, 16));
+    return { r, g, b, a: a / 255 };
   }
-  return { r: 0, g: 0, b: 0, a: 1 };
+  const hex3 = v.match(/^#([0-9a-f]{3})$/i);
+  if (hex3) {
+    const [r, g, b] = hex3[1].split("").map((c) => parseInt(c + c, 16));
+    return { r, g, b, a: 1 };
+  }
+  const rgbaComma = v.match(
+    /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+%?)\s*)?\)$/i
+  );
+  const rgbaSpace = v.match(
+    /^rgba?\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+%?)\s*)?\)$/i
+  );
+  const rgba = rgbaComma ?? rgbaSpace;
+  if (rgba) {
+    const alphaToken = rgba[4];
+    const a = alphaToken === void 0 ? 1 : alphaToken.endsWith("%") ? parseFloat(alphaToken) / 100 : +alphaToken;
+    return { r: +rgba[1], g: +rgba[2], b: +rgba[3], a };
+  }
+  throw new TypeError(
+    `Unsupported color "${v}" in the Node mini rasterizer. Supported: #rgb, #rgba, #rrggbb, #rrggbbaa, and rgb()/rgba() (comma or space/slash syntax). Named colors and hsl() require a real browser canvas.`
+  );
 }
 var clamp01 = (v) => Math.max(0, Math.min(1, v));
 function createMiniContext(size) {
@@ -174,7 +199,32 @@ function createMiniContext(size) {
   };
 }
 
+// src/engine/seededRandom.ts
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a |= 0;
+    a = a + 1831565813 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function hashStringToSeed(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = h << 13 | h >>> 19;
+  }
+  return (h ^ h >>> 16) >>> 0;
+}
+
 // src/engine/makeTile.ts
+function toroidalDistance(a, b, period) {
+  const dx = Math.min(Math.abs(a.x - b.x), period - Math.abs(a.x - b.x));
+  const dy = Math.min(Math.abs(a.y - b.y), period - Math.abs(a.y - b.y));
+  return Math.hypot(dx, dy);
+}
 function defaultContextFactory(size) {
   if (typeof document !== "undefined") {
     const canvas = document.createElement("canvas");
@@ -195,6 +245,18 @@ function makeTile(pattern, size, color, weight, angle, options = {}) {
   const pixelRatio = options.pixelRatio ?? 1;
   if (!Number.isFinite(pixelRatio) || pixelRatio <= 0) {
     throw new RangeError("pixelRatio must be a finite number greater than 0");
+  }
+  if (!Number.isFinite(size) || size <= 0) {
+    throw new RangeError("size must be a finite number greater than 0");
+  }
+  if (!Number.isFinite(weight) || weight <= 0) {
+    throw new RangeError("weight must be a finite number greater than 0");
+  }
+  if (!Number.isFinite(angle)) {
+    throw new TypeError("angle must be a finite number");
+  }
+  if (typeof color !== "string" || color.trim().length === 0) {
+    throw new TypeError("color must be a non-empty string");
   }
   const physicalSize = Math.max(1, Math.round(size * pixelRatio));
   const renderScale = physicalSize / size;
@@ -249,15 +311,34 @@ function makeTile(pattern, size, color, weight, angle, options = {}) {
     }
     case "stipple": {
       const r = weight * renderScale * 0.6;
-      const cells = Math.max(2, Math.round(size / 6));
-      const s = physicalSize / cells;
-      for (let i = 0; i < cells; i++) {
-        for (let j = 0; j < cells; j++) {
-          const cx = (i + (j % 2 ? 0.75 : 0.25)) * s;
-          const cy = (j + 0.5) * s;
-          ctx.beginPath();
-          ctx.arc(cx % physicalSize, cy % physicalSize, r, 0, Math.PI * 2);
-          ctx.fill();
+      const count = Math.max(1, Math.round((size / 6) ** 2));
+      const rand = mulberry32(hashStringToSeed(`stipple:${size}`));
+      const candidateCount = 20;
+      const positions = [];
+      for (let i = 0; i < count; i++) {
+        let best = { x: rand() * physicalSize, y: rand() * physicalSize };
+        let bestDistance = -1;
+        for (let c = 0; c < candidateCount; c++) {
+          const candidate = { x: rand() * physicalSize, y: rand() * physicalSize };
+          const nearest = positions.length === 0 ? Infinity : Math.min(...positions.map((p) => toroidalDistance(candidate, p, physicalSize)));
+          if (nearest > bestDistance) {
+            best = candidate;
+            bestDistance = nearest;
+          }
+        }
+        positions.push(best);
+      }
+      for (const { x, y } of positions) {
+        const minShiftX = Math.ceil((-r - x) / physicalSize);
+        const maxShiftX = Math.floor((physicalSize + r - x) / physicalSize);
+        const minShiftY = Math.ceil((-r - y) / physicalSize);
+        const maxShiftY = Math.floor((physicalSize + r - y) / physicalSize);
+        for (let shiftY = minShiftY; shiftY <= maxShiftY; shiftY++) {
+          for (let shiftX = minShiftX; shiftX <= maxShiftX; shiftX++) {
+            ctx.beginPath();
+            ctx.arc(x + shiftX * physicalSize, y + shiftY * physicalSize, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       }
       break;
@@ -273,26 +354,6 @@ function makeTile(pattern, size, color, weight, angle, options = {}) {
       break;
   }
   return toTileImage();
-}
-
-// src/engine/seededRandom.ts
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return function next() {
-    a |= 0;
-    a = a + 1831565813 | 0;
-    let t = Math.imul(a ^ a >>> 15, 1 | a);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-function hashStringToSeed(str) {
-  let h = 1779033703 ^ str.length;
-  for (let i = 0; i < str.length; i++) {
-    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-    h = h << 13 | h >>> 19;
-  }
-  return (h ^ h >>> 16) >>> 0;
 }
 
 // src/engine/scatterPoints.ts
@@ -499,7 +560,7 @@ function nonNegativeFinite(name, value) {
 function modulo(value, divisor) {
   return (value % divisor + divisor) % divisor;
 }
-function toroidalDistance(first, second, tileSize) {
+function toroidalDistance2(first, second, tileSize) {
   const dx = Math.min(Math.abs(first.x - second.x), tileSize - Math.abs(first.x - second.x));
   const dy = Math.min(Math.abs(first.y - second.y), tileSize - Math.abs(first.y - second.y));
   return Math.hypot(dx, dy);
@@ -512,7 +573,7 @@ function createNaturalPositions(count, tileSize, minimumDistance, rand) {
     let bestDistance = -1;
     for (let candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++) {
       const candidate = { x: rand() * tileSize, y: rand() * tileSize };
-      const nearest = positions.length === 0 ? Infinity : Math.min(...positions.map((position2) => toroidalDistance(candidate, position2, tileSize)));
+      const nearest = positions.length === 0 ? Infinity : Math.min(...positions.map((position2) => toroidalDistance2(candidate, position2, tileSize)));
       if (nearest > bestDistance) {
         best = candidate;
         bestDistance = nearest;
