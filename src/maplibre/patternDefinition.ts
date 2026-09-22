@@ -2,7 +2,6 @@ import type { PatternType } from "../engine/types";
 import type { SvgDistributionMode } from "../engine/svgScatterLayout";
 
 export const PATTERN_METADATA_KEY = "maplibre-pattern-fills:v1" as const;
-export const LEGACY_PATTERN_METADATA_KEY = "enhanced:pattern" as const;
 
 export type GeometricPatternType = Exclude<PatternType, "solid">;
 

@@ -1,4 +1,4 @@
-# maplibre-pattern-fills
+# Stipple
 
 A focused library and visual playground for designing, generating, and
 installing fill patterns in
@@ -41,17 +41,16 @@ package does not fork or patch MapLibre.
 ## Install
 
 ```sh
-npm install maplibre-pattern-fills maplibre-gl
+npm install stipple-maplibre maplibre-gl
 ```
 
-`maplibre-gl` is a peer dependency (`>=4 <7`). CI checks MapLibre GL JS 4, 5,
-and 6 independently.
+`maplibre-gl` is a peer dependency (`>=4 <7`).
 
 ## Minimal example
 
 ```js
 import maplibregl from "maplibre-gl";
-import { buildStyleFragment, installPatternFills } from "maplibre-pattern-fills";
+import { buildStyleFragment, installPatternFills } from "stipple-maplibre";
 
 // 1. Describe the pattern once. This only carries *which* pattern to use;
 //    the angle/density/weight are not baked into MapLibre paint properties;
@@ -82,9 +81,7 @@ map.on("load", async () => {
 The generated fragment is a **runtime-extended MapLibre style**, not a
 standalone style. MapLibre, Maputnik, and MapLibre Native do not interpret the
 `maplibre-pattern-fills:v1` metadata themselves; this package must install the
-referenced images after the style loads. Legacy `enhanced:pattern` geometric
-metadata remains readable during the `0.x` migration. The v1 payload is
-documented by
+referenced images after the style loads. The metadata payload is documented by
 [`schema/pattern-metadata-v1.schema.json`](./schema/pattern-metadata-v1.schema.json).
 
 SVG markup embedded in metadata becomes part of the style document. Treat
@@ -117,7 +114,7 @@ For applications that replace styles repeatedly, create one observer and
 dispose it with the map or owning component:
 
 ```js
-import { observePatternFills } from "maplibre-pattern-fills/maplibre";
+import { observePatternFills } from "stipple-maplibre";
 
 const patterns = observePatternFills(map);
 map.on("load", () => patterns.refresh());
@@ -129,7 +126,7 @@ patterns.dispose();
 ### SVG scatter fill
 
 ```js
-import { installSvgPatternFill } from "maplibre-pattern-fills";
+import { installSvgPatternFill } from "stipple-maplibre";
 
 await installSvgPatternFill(map, {
   imageId: "grass_pattern",
@@ -147,8 +144,10 @@ map.addLayer({
 
 ## Demo / playground
 
-[`demo/index.html`](./demo/index.html) is a single, buildless HTML file with a
-control panel for composing polygon fill patterns. Open or drop GeoJSON,
+[`demo/index.html`](./demo/index.html) is the entry page for a browser-based
+control panel for composing polygon fill patterns. Its presentation, motif
+catalogue and application logic live in `demo/styles.css`, `demo/patterns.js`
+and `demo/app.js`. Open or drop GeoJSON,
 GeoPackage, GeoParquet, zipped or loose Shapefile data, FlatGeobuf, KML, GPX,
 GML, DXF and other common vector formats. Files are read locally in the browser
 and projected to WGS84 when the source format provides its CRS. Polygon and
@@ -168,9 +167,6 @@ npm run build
 open demo/index.html
 ```
 
-For Cloudflare Pages, use `npm run build:site` as the build command and
-`_site` as the output directory.
-
 ## Package layout
 
 - `src/engine`: the pure pattern rasterizer (`makeTile`), scatter-point
@@ -183,54 +179,9 @@ For Cloudflare Pages, use `npm run build:site` as the build command and
   `installSvgPatternFill`.
 - `demo/`: the playground UI described above.
 
-## Entry points
-
-- `maplibre-pattern-fills`: backwards-compatible complete `0.x` surface.
-- `maplibre-pattern-fills/core`: pure raster and layout engine.
-- `maplibre-pattern-fills/maplibre`: stable MapLibre integration.
-- `maplibre-pattern-fills/experimental`: whole-stamp scattering for
-  reducing clipping at polygon boundaries.
-
-## Migrating legacy pattern metadata
-
-`installPatternFills` still reads the former `enhanced:pattern` shape, so
-existing styles keep working during `0.x`. Newly generated fragments use:
-
-```json
-{
-  "metadata": {
-    "maplibre-pattern-fills:v1": {
-      "imageId": "mpf_12345678",
-      "definition": {
-        "kind": "geometric",
-        "pattern": "hachures",
-        "size": 16,
-        "color": "#1f4e79",
-        "weight": 2,
-        "angle": 45
-      }
-    }
-  }
-}
-```
-
-Regenerate a fragment with `buildStyleFragment` to migrate automatically.
-Unknown metadata versions are ignored; malformed v1 metadata throws an
-actionable validation error.
-
 ## Status
 
-`v0.1.0`: functional, not yet published to npm. See the project's issue
-tracker / release notes for what's left before a `1.0`.
-
-The planned correctness, API, distribution, and stabilization work is tracked
-in [ROADMAP.md](./ROADMAP.md).
-
-Repository maintenance and release guidance:
-[CONTRIBUTING.md](./CONTRIBUTING.md),
-[CHANGELOG.md](./CHANGELOG.md),
-[SECURITY.md](./SECURITY.md), and
-[RELEASING.md](./RELEASING.md).
+`v0.1.0`: functional, not yet published to npm.
 
 ## License
 

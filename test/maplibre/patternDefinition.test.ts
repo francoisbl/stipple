@@ -42,7 +42,7 @@ describe("pattern definitions", () => {
     });
   });
 
-  it("normalizes legacy stagger metadata to a distribution mode", () => {
+  it("derives the distribution mode from the stagger option", () => {
     const definition = createSvgPatternDefinition({
       svg: "<svg />",
       stagger: false,

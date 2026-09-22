@@ -1,8 +1,5 @@
 node_modules/
 _site/
+dist/
 *.log
 .DS_Store
-
-# dist/ is committed on purpose: demo/index.html loads the built IIFE bundle
-# directly via a relative <script> tag so the demo stays a buildless, forkable
-# single HTML file. Run `npm run build` after changing src/ and commit dist/.

@@ -28,7 +28,7 @@ export function observePatternFills(
 ): PatternFillObserver {
   const getStyle = options.getStyle ?? (() => map.getStyle() as StyleLike);
   const onError = options.onError ?? ((error: unknown) => {
-    console.error("maplibre-pattern-fills: failed to restore pattern images", error);
+    console.error("stipple-maplibre: failed to restore pattern images", error);
   });
   let disposed = false;
 

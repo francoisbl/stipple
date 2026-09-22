@@ -9,26 +9,12 @@ const outExtension = ({ format }: { format: string }) => {
 export default defineConfig([
   {
     entry: { index: "src/index.ts" },
-    format: ["esm", "cjs", "iife"],
+    format: ["esm", "iife"],
     globalName: "MaplibrePatternFills",
     external: ["maplibre-gl"],
     dts: true,
-    sourcemap: true,
+    sourcemap: false,
     clean: true,
-    minify: false,
-    outExtension,
-  },
-  {
-    entry: {
-      core: "src/entries/core.ts",
-      maplibre: "src/entries/maplibre.ts",
-      experimental: "src/experimental.ts",
-    },
-    format: ["esm", "cjs"],
-    external: ["maplibre-gl"],
-    dts: true,
-    sourcemap: true,
-    clean: false,
     minify: false,
     outExtension,
   },

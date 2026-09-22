@@ -4,5 +4,5 @@
     <circle cx="20" cy="44" r="7"/><circle cx="33" cy="44" r="7"/><circle cx="46" cy="44" r="7"/>
     <circle cx="33" cy="57" r="7"/>
   </g>
-  <path d="M33 24C31 15 34 9 42 5M34 19C44 11 52 13 56 19C48 23 41 22 34 19Z" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M33 24C32 17 30 12 25 9" fill="none" stroke="#2c6a5b" stroke-width="3" stroke-linecap="round"/>
 </svg>

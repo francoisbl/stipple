@@ -1,53 +1,31 @@
 {
-  "name": "maplibre-pattern-fills",
+  "name": "stipple-maplibre",
   "version": "0.1.0",
   "description": "Runtime-generated geometric and SVG fill patterns for MapLibre GL JS, with deterministic styling and a visual playground.",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./core": {
-      "types": "./dist/core.d.ts",
-      "import": "./dist/core.js",
-      "require": "./dist/core.cjs"
-    },
-    "./maplibre": {
-      "types": "./dist/maplibre.d.ts",
-      "import": "./dist/maplibre.js",
-      "require": "./dist/maplibre.cjs"
-    },
-    "./experimental": {
-      "types": "./dist/experimental.d.ts",
-      "import": "./dist/experimental.js",
-      "require": "./dist/experimental.cjs"
+      "import": "./dist/index.js"
     },
     "./schema/pattern-metadata-v1.schema.json": "./schema/pattern-metadata-v1.schema.json"
   },
   "files": [
-    "CHANGELOG.md",
     "dist",
-    "!dist/*.map",
-    "ROADMAP.md",
     "schema"
   ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
-    "build:site": "npm run build && node scripts/build-site.mjs",
     "dev": "tsup --watch",
-    "package:check": "node scripts/check-package.mjs",
     "prepublishOnly": "npm run validate",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "validate": "npm test && npm run typecheck && npm run build && npm run package:check"
+    "validate": "npm test && npm run typecheck && npm run build"
   },
   "engines": {
     "node": ">=18"
@@ -62,6 +40,7 @@
     "vitest": "^3.2.7"
   },
   "keywords": [
+    "stipple",
     "maplibre",
     "maplibre-gl",
     "fill-pattern",
@@ -73,11 +52,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/francoisbl/maplibre-pattern-fills.git"
+    "url": "git+https://github.com/francoisbl/stipple.git"
   },
-  "homepage": "https://github.com/francoisbl/maplibre-pattern-fills#readme",
+  "homepage": "https://github.com/francoisbl/stipple#readme",
   "bugs": {
-    "url": "https://github.com/francoisbl/maplibre-pattern-fills/issues"
+    "url": "https://github.com/francoisbl/stipple/issues"
   },
   "publishConfig": {
     "access": "public",

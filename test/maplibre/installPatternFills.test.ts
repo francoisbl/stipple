@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { Map as MaplibreMap } from "maplibre-gl";
 import { installPatternFills } from "../../src/maplibre/installPatternFills";
 import {
-  LEGACY_PATTERN_METADATA_KEY,
   PATTERN_METADATA_KEY,
   patternDefinitionId,
   type GeometricPatternDefinition,
@@ -43,29 +42,6 @@ describe("installPatternFills", () => {
 
     expect(map.addImage).toHaveBeenCalledTimes(1);
     expect(map.updateImage).not.toHaveBeenCalled();
-  });
-
-  it("continues to read legacy geometric metadata during migration", async () => {
-    const { map } = createMapMock();
-    await installPatternFills(map, {
-      layers: [{
-        metadata: {
-          [LEGACY_PATTERN_METADATA_KEY]: {
-            type: "dots",
-            tile: 16,
-            color: "#000000",
-            weight: 2,
-            angle: 0,
-            imageId: "legacy",
-          },
-        },
-      }],
-    });
-    expect(map.addImage).toHaveBeenCalledWith(
-      "legacy",
-      expect.objectContaining({ width: 16, height: 16 }),
-      { pixelRatio: 1 },
-    );
   });
 
   it("rejects conflicting definitions for one image id", async () => {

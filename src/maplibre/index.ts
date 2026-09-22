@@ -2,7 +2,6 @@ export type { PatternFillConfig, BackgroundFillConfig, OutlineConfig } from "./t
 
 export {
   PATTERN_METADATA_KEY,
-  LEGACY_PATTERN_METADATA_KEY,
   createSvgPatternDefinition,
   parsePatternDefinition,
   parsePatternMetadata,

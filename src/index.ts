@@ -1,5 +1,14 @@
 export * from "./engine";
 export * from "./maplibre";
-// Kept on the root entry for 0.x compatibility. New code should import these
-// APIs from "maplibre-pattern-fills/experimental".
-export * from "./experimental";
+export { scatterIconPoints } from "./maplibre/scatterIconPoints";
+export type {
+  PointFeature,
+  PointFeatureCollection,
+  PolygonGeometry,
+  ScatterIconPointsOptions,
+} from "./maplibre/scatterIconPoints";
+export { installSvgIconScatter } from "./maplibre/svgIconScatter";
+export type {
+  IconScaleMode,
+  InstallSvgIconScatterOptions,
+} from "./maplibre/svgIconScatter";

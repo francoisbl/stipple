@@ -2,7 +2,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const demo = readFileSync("demo/index.html", "utf8");
+const demo = ["index.html", "styles.css", "patterns.js", "app.js"]
+  .map((file) => readFileSync(join("demo", file), "utf8"))
+  .join("\n");
 
 function patternFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -17,9 +19,9 @@ function compact(svg: string): string {
 
 describe("demo pattern library", () => {
   it("keeps the files, inline samples, and selector in sync", () => {
-    const objectSource = demo.match(/const SVG_PATTERN_SAMPLES = \{([\s\S]*?)\n  \};/)?.[1];
-    const metricsSource = demo.match(/const SVG_PATTERN_METRICS = \{([\s\S]*?)\n  \};/)?.[1];
-    const catalogSource = demo.match(/const SVG_PATTERN_CATALOG = \[([\s\S]*?)\n  \];/)?.[1];
+    const objectSource = demo.match(/const SVG_PATTERN_SAMPLES = \{([\s\S]*?)\n\s*\};/)?.[1];
+    const metricsSource = demo.match(/const SVG_PATTERN_METRICS = \{([\s\S]*?)\n\s*\};/)?.[1];
+    const catalogSource = demo.match(/const SVG_PATTERN_CATALOG = \[([\s\S]*?)\n\s*\];/)?.[1];
     expect(objectSource).toBeDefined();
     expect(metricsSource).toBeDefined();
     expect(catalogSource).toBeDefined();
@@ -87,10 +89,15 @@ describe("demo pattern library", () => {
     expect(demo).toContain("Select its .prj file together with the .shp and .dbf files");
   });
 
-  it("places the style editor left of the map and the data panel on the right", () => {
-    expect(demo).toMatch(/\.workspace \{[\s\S]*?grid-template-columns: 430px minmax\(0, 1fr\) 230px;/);
-    expect(demo).toMatch(/\.layer-panel \{[\s\S]*?grid-column: 3;[\s\S]*?grid-row: 1;/);
-    expect(demo).toMatch(/#panel\.control-dock \{[\s\S]*?grid-column: 1;[\s\S]*?grid-row: 1;/);
+  it("places the icon rail left of the map and the Feature/Table panel on the right", () => {
+    expect(demo).toMatch(/\.workspace \{[\s\S]*?grid-template-columns: 48px minmax\(0, 1fr\) 320px;/);
+    expect(demo).toMatch(/\.icon-rail \{[\s\S]*?grid-column: 1;[\s\S]*?grid-row: 1;/);
     expect(demo).toMatch(/\.map-shell \{[\s\S]*?grid-column: 2;[\s\S]*?grid-row: 1;/);
+    expect(demo).toMatch(/\.side-panel \{[\s\S]*?grid-column: 3;[\s\S]*?grid-row: 1;/);
+  });
+
+  it("places the sample polygons in Karlsruhe", () => {
+    expect(demo).toContain("const SAMPLE_CENTER = [8.4037, 49.0069]");
+    expect(demo).toMatch(/center:\s*SAMPLE_CENTER/);
   });
 });
