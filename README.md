@@ -1,4 +1,4 @@
-# maplibre-pattern-fills
+# Stipple
 
 A focused library and visual playground for designing, generating, and
 installing fill patterns in
@@ -41,7 +41,7 @@ package does not fork or patch MapLibre.
 ## Install
 
 ```sh
-npm install maplibre-pattern-fills maplibre-gl
+npm install stipple-maplibre maplibre-gl
 ```
 
 `maplibre-gl` is a peer dependency (`>=4 <7`). CI checks MapLibre GL JS 4, 5,
@@ -51,7 +51,7 @@ and 6 independently.
 
 ```js
 import maplibregl from "maplibre-gl";
-import { buildStyleFragment, installPatternFills } from "maplibre-pattern-fills";
+import { buildStyleFragment, installPatternFills } from "stipple-maplibre";
 
 // 1. Describe the pattern once. This only carries *which* pattern to use;
 //    the angle/density/weight are not baked into MapLibre paint properties;
@@ -117,7 +117,7 @@ For applications that replace styles repeatedly, create one observer and
 dispose it with the map or owning component:
 
 ```js
-import { observePatternFills } from "maplibre-pattern-fills/maplibre";
+import { observePatternFills } from "stipple-maplibre/maplibre";
 
 const patterns = observePatternFills(map);
 map.on("load", () => patterns.refresh());
@@ -129,7 +129,7 @@ patterns.dispose();
 ### SVG scatter fill
 
 ```js
-import { installSvgPatternFill } from "maplibre-pattern-fills";
+import { installSvgPatternFill } from "stipple-maplibre";
 
 await installSvgPatternFill(map, {
   imageId: "grass_pattern",
@@ -185,10 +185,10 @@ For Cloudflare Pages, use `npm run build:site` as the build command and
 
 ## Entry points
 
-- `maplibre-pattern-fills`: backwards-compatible complete `0.x` surface.
-- `maplibre-pattern-fills/core`: pure raster and layout engine.
-- `maplibre-pattern-fills/maplibre`: stable MapLibre integration.
-- `maplibre-pattern-fills/experimental`: whole-stamp scattering for
+- `stipple-maplibre`: backwards-compatible complete `0.x` surface.
+- `stipple-maplibre/core`: pure raster and layout engine.
+- `stipple-maplibre/maplibre`: stable MapLibre integration.
+- `stipple-maplibre/experimental`: whole-stamp scattering for
   reducing clipping at polygon boundaries.
 
 ## Migrating legacy pattern metadata

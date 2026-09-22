@@ -780,7 +780,7 @@
         <div class="menu" id="helpMenu">
           <button type="button" class="menu-button" id="helpMenuButton" aria-haspopup="true" aria-expanded="false">Help</button>
           <div class="menu-popover" id="helpMenuPopover" hidden>
-            <a class="menu-item" href="https://github.com/maplibre/maplibre-pattern-fills" target="_blank" rel="noopener">Documentation on GitHub</a>
+            <a class="menu-item" href="https://github.com/francoisbl/stipple" target="_blank" rel="noopener">Documentation on GitHub</a>
           </div>
         </div>
       </nav>
@@ -3182,7 +3182,7 @@ export async function addPatternFill(map, {
     return `# MapLibre pattern fill
 
 This bundle contains a static copy of the pattern designed in
-maplibre-pattern-fills. It does not require the plugin at runtime.
+Stipple. It does not require the plugin at runtime.
 
 ## Files
 
@@ -3272,8 +3272,8 @@ label or symbol layer.
   function buildIntegrationSnippet() {
     const fragment = JSON.stringify(buildExportedStyle(), null, 2);
     return `// Put this import at the top of the module that creates your map.
-// Install the package first with: npm install maplibre-pattern-fills
-import { installPatternFills } from "maplibre-pattern-fills";
+// Install the package first with: npm install stipple-maplibre
+import { installPatternFills } from "stipple-maplibre";
 
 // Use the id of a polygon source that already exists in your map.
 const SOURCE_ID = "my-polygons";

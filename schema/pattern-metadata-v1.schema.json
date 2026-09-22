@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/francoisbl/maplibre-pattern-fills/blob/main/schema/pattern-metadata-v1.schema.json",
+  "$id": "https://github.com/francoisbl/stipple/blob/main/schema/pattern-metadata-v1.schema.json",
   "title": "MapLibre Pattern Fills metadata v1",
   "type": "object",
   "additionalProperties": false,

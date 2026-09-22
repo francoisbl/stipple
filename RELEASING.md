@@ -10,7 +10,7 @@ After the package exists on npm:
 1. Open the package's Trusted Publisher settings.
 2. Choose GitHub Actions.
 3. Set owner `francoisbl`.
-4. Set repository `maplibre-pattern-fills`.
+4. Set repository `stipple`.
 5. Set workflow filename `publish.yml`.
 6. Allow `npm publish`.
 

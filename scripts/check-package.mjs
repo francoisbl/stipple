@@ -29,7 +29,7 @@ const output = execFileSync(
     encoding: "utf8",
     env: {
       ...process.env,
-      npm_config_cache: process.env.MPF_NPM_CACHE ?? join(tmpdir(), "maplibre-pattern-fills-npm-cache"),
+      npm_config_cache: process.env.MPF_NPM_CACHE ?? join(tmpdir(), "stipple-npm-cache"),
     },
   },
 );
