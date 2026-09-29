@@ -1,28 +1,31 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/stipple-logo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./assets/stipple-logo-light.svg">
+  <img alt="Stipple logo" src="./assets/stipple-logo-light.svg" width="72" height="72">
+</picture>
+
 # Stipple
 
-Pattern fills for MapLibre, without making a pile of tiny PNGs by hand.
+A focused library and visual playground for designing, generating, and
+installing fill patterns in
+[MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/).
 
-Stipple can fill a polygon with dots, hatches, letters, or repeating SVG
-symbols. Pick a pattern in the playground, adjust it until it looks right,
-then export the MapLibre code.
-
-[MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) does the rendering.
-Stipple makes the texture.
+It supports geometric patterns, repeated text, and SVG symbols. Patterns can
+be configured in JavaScript or prepared in the playground and exported as
+MapLibre code.
 
 <!-- Add a wide screenshot of the playground here. -->
 
 ## What problem does it solve?
 
-MapLibre already has a `fill-pattern` property. It repeats an image inside a
-polygon, which is great — but first you need to make that image, make it tile
-cleanly, keep it sharp on Retina screens, add it to the map, and update it when
-the style changes.
+MapLibre already has a `fill-pattern` property that repeats an image inside a
+polygon. That image still has to be created, made seamless, registered on the
+map, and kept at an appropriate resolution when the display or style changes.
 
-Stipple takes care of that part.
-
-You describe the pattern you want. Stipple draws the tile in the browser,
-installs it with MapLibre's public `addImage` API, and gives your layer the
-right `fill-pattern` value. It does not patch or fork MapLibre.
+Stipple generates this image from a small set of pattern parameters. It draws
+the tile in the browser, installs it with MapLibre's public `addImage` API,
+and provides the corresponding `fill-pattern` value. It does not patch or
+fork MapLibre.
 
 ## What can I make with it?
 
@@ -44,11 +47,9 @@ produces the same arrangement.
 
 ## Do I need to write code to try it?
 
-No. The playground is there for that.
-
-It lets you draw or import polygons, try every fill type, switch basemaps, and
-export the result. Files stay in the browser; the demo does not upload them to
-a server.
+The playground can be used without writing code. It lets you draw or import
+polygons, try every fill type, switch basemaps, and export the result. Files
+stay in the browser; the demo does not upload them to a server.
 
 To run it locally:
 
@@ -61,9 +62,9 @@ Then open [`demo/index.html`](./demo/index.html) in a browser.
 
 <!-- Add a short GIF or three-step screenshot sequence of the playground here. -->
 
-## What can I drop into the playground?
+## Supported file formats
 
-GeoJSON works, of course. The playground also understands GeoPackage,
+The basic input is GeoJSON. The playground also understands GeoPackage,
 GeoParquet, Shapefile (loose or zipped), FlatGeobuf, KML, GPX, GML, DXF, and
 other common vector formats.
 
@@ -76,7 +77,7 @@ Formats with a known CRS are reprojected to WGS84 in the browser.
 
 ## What happens when I zoom the map?
 
-You choose.
+Two scaling modes are available:
 
 - **Screen scale** keeps the pattern the same visual size on screen.
 - **Ground scale** makes it behave like something printed on the map itself.
@@ -89,7 +90,7 @@ scale, so dots and symbols do not reshuffle on every zoom.
 By default, textures follow the display pixel ratio, capped at 2x. You can
 also force a softer 1x texture when that suits the map better.
 
-## How do I install it?
+## Installation
 
 ```sh
 npm install stipple-maplibre maplibre-gl
@@ -98,7 +99,7 @@ npm install stipple-maplibre maplibre-gl
 `maplibre-gl` is a peer dependency. Stipple currently supports MapLibre GL JS
 versions 4, 5, and 6.
 
-## What is the smallest useful example?
+## Basic usage
 
 This adds a 45-degree hatch texture to an existing GeoJSON source called
 `my-polygons`:
@@ -134,10 +135,10 @@ map.on("load", () => {
 });
 ```
 
-That is the basic idea: make a texture, give it a name, and use that name in
-`fill-pattern`.
+The generated texture is registered as `my-hatches`, and that same name is
+used in the layer's `fill-pattern` property.
 
-## Can I repeat an SVG instead?
+## SVG patterns
 
 Yes. Pass Stipple an SVG string and choose how the symbols should be spread
 out:
@@ -157,7 +158,7 @@ await installSvgPatternFill(map, {
 You can then use `grass-pattern` as the layer's `fill-pattern`. The playground
 also accepts pasted SVG markup or an uploaded `.svg` file.
 
-## Can I repeat text too?
+## Font patterns
 
 Yes. Font fills are rasterized after the requested web font is ready:
 
@@ -211,11 +212,10 @@ patterns.dispose();
 
 ## Is the exported style just normal MapLibre JSON?
 
-Mostly, with one small extra step.
-
-The layers are normal MapLibre layers, but generated textures cannot live
-inside plain style JSON. Stipple stores their recipes in versioned layer
-metadata, then recreates and installs the images when the style loads.
+The layers are normal MapLibre layers, with one additional runtime step:
+generated textures cannot live inside plain style JSON. Stipple stores their
+recipes in versioned layer metadata, then recreates and installs the images
+when the style loads.
 
 That means MapLibre, Maputnik, and MapLibre Native will not interpret the
 `maplibre-pattern-fills:v1` metadata on their own. Call
@@ -236,7 +236,7 @@ whole icon fits inside the polygon. It is useful when clipped trees, houses,
 or other recognizable symbols would look wrong. This API may still change
 before version 1.0.
 
-## Is there anything security-related to know?
+## Security and browser support
 
 If you let people provide their own SVG, treat that markup as untrusted input.
 Apply the same validation and Content Security Policy rules you use elsewhere
@@ -249,7 +249,7 @@ The package targets modern evergreen browsers and Node.js 18 or newer. SVG
 and font rasterization need a browser; the geometric pattern engine also runs
 in Node.
 
-## Where is everything in the repository?
+## Repository structure
 
 - `src/engine` draws patterns, scatters points, and calculates zoom scaling.
   It has no MapLibre dependency.
@@ -257,11 +257,11 @@ in Node.
 - `demo/` contains the playground, its motif catalogue, and its interface.
 - `schema/` contains the exported metadata schema.
 
-## Is it ready to use?
+## Project status
 
 Version `0.1.0` is functional and being prepared for its first npm release.
 The whole-symbol scatter API is the only part currently marked experimental.
 
-## What is the licence?
+## Licence
 
 MIT. See [LICENSE](./LICENSE).
