@@ -15,7 +15,7 @@ It supports geometric patterns, repeated text, and SVG symbols. Patterns can
 be configured in JavaScript or prepared in the playground and exported as
 MapLibre code.
 
-<!-- Add a wide screenshot of the playground here. -->
+<img width="1456" height="858" alt="image" src="https://github.com/user-attachments/assets/f7d28a0f-267a-4bd3-b7a2-30b49eabf709" />
 
 ## What problem does it solve?
 
@@ -45,9 +45,6 @@ agriculture, water, terrain, land use, and simple shapes. The same seed always
 produces the same arrangement.
 
 <!-- Add a small gallery here: geometric, font, SVG, and custom SVG. -->
-
-<img width="1456" height="858" alt="image" src="https://github.com/user-attachments/assets/f7d28a0f-267a-4bd3-b7a2-30b49eabf709" />
-
 
 
 ## Do I need to write code to try it?
