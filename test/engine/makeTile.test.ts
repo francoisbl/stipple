@@ -38,7 +38,7 @@ describe("makeTile", () => {
       const tile = makeTile("stipple", size, "#000000", weight, 0);
       const totalAlpha = tile.data.reduce((sum, v, i) => (i % 4 === 3 ? sum + v : sum), 0);
       const r = weight * 0.6;
-      const count = Math.max(1, Math.round((size / 6) ** 2));
+      const count = 7;
       const expectedFullInk = count * Math.PI * r * r * 255;
       expect(totalAlpha).toBeGreaterThan(expectedFullInk * 0.9);
     });
@@ -77,10 +77,34 @@ describe("makeTile", () => {
       expect(checked).toBeGreaterThan(0);
     });
 
-    it("reshuffles the layout when the tile size changes", () => {
-      const a = makeTile("stipple", 16, "#000000", 2, 0);
-      const b = makeTile("stipple", 24, "#000000", 2, 0);
-      expect(a.data).not.toEqual(b.data);
+    it("preserves the normalized default texture when tile size and weight scale together", () => {
+      const small = makeTile("stipple", 8, "#000000", 1, 0, { pixelRatio: 2 });
+      const large = makeTile("stipple", 16, "#000000", 2, 0);
+      expect(small.data).toEqual(large.data);
+    });
+
+    it("allows a custom sparse dot count", () => {
+      const standard = makeTile("stipple", 24, "#000000", 2, 0);
+      const sparse = makeTile("stipple", 24, "#000000", 2, 0, { stippleCount: 4 });
+      const alpha = (tile: typeof standard) => tile.data.reduce(
+        (sum, value, index) => index % 4 === 3 ? sum + value : sum,
+        0,
+      );
+      expect(alpha(sparse)).toBeLessThan(alpha(standard) * 0.75);
+    });
+
+    it("preserves the exact normalized texture across ground-scale variants", () => {
+      const small = makeTile("stipple", 8, "#000000", 1, 0, {
+        pixelRatio: 2,
+        stippleCount: 7,
+      });
+      const large = makeTile("stipple", 16, "#000000", 2, 0, {
+        pixelRatio: 1,
+        stippleCount: 7,
+      });
+      expect(small.width).toBe(large.width);
+      expect(small.height).toBe(large.height);
+      expect(small.data).toEqual(large.data);
     });
   });
 
@@ -91,6 +115,10 @@ describe("makeTile", () => {
 
     it.each([0, -1, Number.NaN])("rejects a weight of %p", (weight) => {
       expect(() => makeTile("stipple", 16, "#000", weight, 0)).toThrow(RangeError);
+    });
+
+    it.each([0, -1, 1.5])("rejects a stipple count of %p", (stippleCount) => {
+      expect(() => makeTile("stipple", 16, "#000", 2, 0, { stippleCount })).toThrow(RangeError);
     });
 
     it.each([Number.NaN, Number.POSITIVE_INFINITY])("rejects an angle of %p", (angle) => {

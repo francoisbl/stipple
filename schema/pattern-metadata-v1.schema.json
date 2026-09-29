@@ -13,7 +13,8 @@
     "definition": {
       "oneOf": [
         { "$ref": "#/$defs/geometric" },
-        { "$ref": "#/$defs/svg" }
+        { "$ref": "#/$defs/svg" },
+        { "$ref": "#/$defs/font" }
       ]
     },
     "variants": {
@@ -29,7 +30,8 @@
           "definition": {
             "oneOf": [
               { "$ref": "#/$defs/geometric" },
-              { "$ref": "#/$defs/svg" }
+              { "$ref": "#/$defs/svg" },
+              { "$ref": "#/$defs/font" }
             ]
           }
         }
@@ -60,7 +62,47 @@
         },
         "angle": {
           "type": "number"
+        },
+        "pixelRatio": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "stippleCount": {
+          "type": "integer",
+          "minimum": 1
         }
+      }
+    },
+    "font": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "text",
+        "fontFamily",
+        "fontSize",
+        "fontWeight",
+        "fontStyle",
+        "letterSpacing",
+        "horizontalSpacing",
+        "verticalSpacing",
+        "rotationDeg",
+        "stagger",
+        "color"
+      ],
+      "properties": {
+        "kind": { "const": "font" },
+        "text": { "type": "string", "minLength": 1 },
+        "fontFamily": { "type": "string", "minLength": 1 },
+        "fontSize": { "type": "number", "exclusiveMinimum": 0 },
+        "fontWeight": { "type": "string", "minLength": 1 },
+        "fontStyle": { "enum": ["normal", "italic"] },
+        "letterSpacing": { "type": "number" },
+        "horizontalSpacing": { "type": "number", "minimum": 0 },
+        "verticalSpacing": { "type": "number", "minimum": 0 },
+        "rotationDeg": { "type": "number" },
+        "stagger": { "type": "boolean" },
+        "color": { "type": "string", "minLength": 1 }
       }
     },
     "svg": {

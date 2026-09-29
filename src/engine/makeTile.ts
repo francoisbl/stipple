@@ -7,7 +7,15 @@ export interface MakeTileOptions {
   contextFactory?: (size: number) => { ctx: TileContext; toTileImage: () => TileImage };
   /** Raster pixels per MapLibre layout pixel. Use 2 for high-density displays. Default 1. */
   pixelRatio?: number;
+  /** Fixed dot count for a stipple tile, useful when the tile itself scales with zoom. */
+  stippleCount?: number;
 }
+
+// Seven dots give the default 16 px stipple tile an irregular but still open
+// texture. Keeping that count independent of the tile dimensions is
+// important: tile size is the density/scale control, so making a tile larger
+// must not silently inject more dots and turn it into a solid-looking fill.
+const DEFAULT_STIPPLE_COUNT = 7;
 
 /** Shortest distance between two points on a tile that wraps at `period`. */
 function toroidalDistance(
@@ -69,6 +77,12 @@ export function makeTile(
   }
   if (!Number.isFinite(angle)) {
     throw new TypeError("angle must be a finite number");
+  }
+  if (
+    options.stippleCount !== undefined &&
+    (!Number.isInteger(options.stippleCount) || options.stippleCount <= 0)
+  ) {
+    throw new RangeError("stippleCount must be a positive integer");
   }
   if (typeof color !== "string" || color.trim().length === 0) {
     throw new TypeError("color must be a non-empty string");
@@ -136,12 +150,15 @@ export function makeTile(
       // look of an evenly spaced lattice. The seed is derived from `size`
       // alone, so the dot layout is deterministic and stable across colour,
       // weight, and angle changes (angle has no effect on a round dot); only
-      // resizing the tile reshuffles it. Every dot whose disc crosses a tile
-      // edge is additionally drawn shifted by whole tiles so the pattern
+      // resizing the tile preserves the normalized point set. Tile size can
+      // therefore control density (or ground scale) without reshuffling the
+      // texture or silently adding more dots. Every dot whose disc crosses a
+      // tile edge is additionally drawn shifted by whole tiles so the pattern
       // still repeats with no seam or clipping, at any weight.
       const r = weight * renderScale * 0.6;
-      const count = Math.max(1, Math.round((size / 6) ** 2));
-      const rand = mulberry32(hashStringToSeed(`stipple:${size}`));
+      const count = options.stippleCount ?? DEFAULT_STIPPLE_COUNT;
+      const seedKey = `fixed:${count}`;
+      const rand = mulberry32(hashStringToSeed(`stipple:${seedKey}`));
       const candidateCount = 20;
       const positions: Array<{ x: number; y: number }> = [];
       for (let i = 0; i < count; i++) {

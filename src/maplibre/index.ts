@@ -2,6 +2,7 @@ export type { PatternFillConfig, BackgroundFillConfig, OutlineConfig } from "./t
 
 export {
   PATTERN_METADATA_KEY,
+  createFontPatternDefinition,
   createSvgPatternDefinition,
   parsePatternDefinition,
   parsePatternMetadata,
@@ -11,6 +12,7 @@ export {
 export type {
   GeometricPatternDefinition,
   GeometricPatternType,
+  FontPatternDefinition,
   PatternDefinition,
   PatternMetadataV1,
   PatternVariant,
@@ -31,3 +33,6 @@ export type { ObservePatternFillsOptions, PatternFillObserver } from "./observeP
 
 export { createSvgScatterTile, installSvgPatternFill } from "./svgPattern";
 export type { SvgPatternOptions } from "./svgPattern";
+
+export { createFontPatternTile, installFontPatternFill } from "./fontPattern";
+export type { FontPatternOptions } from "./fontPattern";

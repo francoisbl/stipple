@@ -70,6 +70,25 @@ describe("scalePatternForZoom", () => {
     expect(capped.capped).toBe(true);
   });
 
+  it("tightens spacing only after a motif reaches its readable floor", () => {
+    const reference = scalePatternForZoom({
+      ...base,
+      mode: "map",
+      zoom: 12,
+      maxSpacingAtReadableFloorRatio: 2,
+    });
+    const minimum = scalePatternForZoom({
+      ...base,
+      mode: "map",
+      zoom: 10,
+      maxSpacingAtReadableFloorRatio: 2,
+    });
+    expect(reference.spacing).toBe(72);
+    expect(minimum.visualSize).toBe(12);
+    expect(minimum.spacing).toBe(24);
+    expect(minimum.density).toBeCloseTo(10_000 / (24 * 24));
+  });
+
   it("never enlarges a user size that is below the readability guide", () => {
     const minimum = scalePatternForZoom({
       ...base,
@@ -95,5 +114,11 @@ describe("scalePatternForZoom", () => {
       zoom: 12,
       opticalScale: Number.NaN,
     })).toThrow(/opticalScale/);
+    expect(() => scalePatternForZoom({
+      ...base,
+      mode: "map",
+      zoom: 12,
+      maxSpacingAtReadableFloorRatio: 0,
+    })).toThrow(/maxSpacingAtReadableFloorRatio/);
   });
 });

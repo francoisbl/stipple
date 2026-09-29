@@ -34,4 +34,24 @@ describe("buildStyleFragment v1 metadata", () => {
     expect(first.imageId).toBe(second.imageId);
     expect((firstLayer.paint as Record<string, unknown>)["fill-pattern"]).toBe(first.imageId);
   });
+
+  it("exports an explicit geometric pixel ratio", () => {
+    const result = buildStyleFragment({
+      source: "soft",
+      sourceLayer: "soft",
+      pattern: {
+        pattern: "grid",
+        tile: 12,
+        color: "#ff9900",
+        opacity: 1,
+        weight: 0.75,
+        angle: 0,
+        pixelRatio: 1,
+      },
+    });
+    const metadata = parsePatternMetadata(
+      (result.layers[0].metadata as Record<string, unknown>)[PATTERN_METADATA_KEY],
+    );
+    expect(metadata.definition).toMatchObject({ pixelRatio: 1 });
+  });
 });

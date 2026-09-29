@@ -9,6 +9,13 @@ export interface PatternScaleOptions {
   opticalScale?: number;
   minReadableSize?: number;
   maxVisualSize?: number;
+  /**
+   * When a map-scaled motif reaches its readable-size floor, cap the spacing
+   * to this multiple of the visible motif size. This keeps small polygons
+   * from becoming empty while preserving the configured spacing at normal
+   * and close zooms.
+   */
+  maxSpacingAtReadableFloorRatio?: number;
 }
 
 export interface PatternScaleResult {
@@ -62,6 +69,12 @@ export function scalePatternForZoom(
     options.maxVisualSize ?? 72,
     "maxVisualSize",
   );
+  const maxSpacingAtReadableFloorRatio = options.maxSpacingAtReadableFloorRatio === undefined
+    ? undefined
+    : positive(
+      options.maxSpacingAtReadableFloorRatio,
+      "maxSpacingAtReadableFloorRatio",
+    );
   if (maxVisualSize < minReadableSize) {
     throw new RangeError("maxVisualSize must be greater than or equal to minReadableSize");
   }
@@ -75,7 +88,16 @@ export function scalePatternForZoom(
   const maximumScale = maxVisualSize / visualSize;
   const scale = clamp(rawScale, minimumScale, maximumScale);
   const renderedVisualSize = visualSize * scale;
-  const renderedSpacing = spacing * scale;
+  let renderedSpacing = spacing * scale;
+  if (
+    maxSpacingAtReadableFloorRatio !== undefined &&
+    rawScale <= minimumScale
+  ) {
+    renderedSpacing = Math.min(
+      renderedSpacing,
+      renderedVisualSize * maxSpacingAtReadableFloorRatio,
+    );
+  }
 
   return {
     scale,

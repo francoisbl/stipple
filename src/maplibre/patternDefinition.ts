@@ -12,6 +12,10 @@ export interface GeometricPatternDefinition {
   color: string;
   weight: number;
   angle: number;
+  /** Raster pixels per MapLibre layout pixel. Omit for the display ratio. */
+  pixelRatio?: number;
+  /** Fixed dot count used by ground-scaled stipple variants. */
+  stippleCount?: number;
 }
 
 export interface SvgPatternDefinition {
@@ -29,7 +33,22 @@ export interface SvgPatternDefinition {
   minSpacing: number;
 }
 
-export type PatternDefinition = GeometricPatternDefinition | SvgPatternDefinition;
+export interface FontPatternDefinition {
+  kind: "font";
+  text: string;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: string;
+  fontStyle: "normal" | "italic";
+  letterSpacing: number;
+  horizontalSpacing: number;
+  verticalSpacing: number;
+  rotationDeg: number;
+  stagger: boolean;
+  color: string;
+}
+
+export type PatternDefinition = GeometricPatternDefinition | SvgPatternDefinition | FontPatternDefinition;
 
 export interface PatternVariant {
   zoom: number;
@@ -91,7 +110,7 @@ export function parsePatternDefinition(value: unknown): PatternDefinition {
     if (typeof value.pattern !== "string" || !geometricTypes.has(value.pattern as GeometricPatternType)) {
       throw new TypeError("pattern must be a supported non-solid geometric pattern");
     }
-    return {
+    const definition: GeometricPatternDefinition = {
       kind: "geometric",
       pattern: value.pattern as GeometricPatternType,
       size: positiveNumber(value, "size"),
@@ -99,6 +118,17 @@ export function parsePatternDefinition(value: unknown): PatternDefinition {
       weight: positiveNumber(value, "weight"),
       angle: finiteNumber(value, "angle"),
     };
+    if (value.pixelRatio !== undefined) {
+      definition.pixelRatio = positiveNumber(value, "pixelRatio");
+    }
+    if (value.stippleCount !== undefined) {
+      const stippleCount = positiveNumber(value, "stippleCount");
+      if (!Number.isInteger(stippleCount)) {
+        throw new RangeError("stippleCount must be a positive integer");
+      }
+      definition.stippleCount = stippleCount;
+    }
+    return definition;
   }
 
   if (value.kind === "svg") {
@@ -139,7 +169,29 @@ export function parsePatternDefinition(value: unknown): PatternDefinition {
     };
   }
 
-  throw new TypeError('pattern definition kind must be "geometric" or "svg"');
+  if (value.kind === "font") {
+    const fontStyle = value.fontStyle;
+    if (fontStyle !== "normal" && fontStyle !== "italic") {
+      throw new TypeError("fontStyle must be normal or italic");
+    }
+    if (typeof value.stagger !== "boolean") throw new TypeError("stagger must be a boolean");
+    return {
+      kind: "font",
+      text: nonEmptyString(value, "text"),
+      fontFamily: nonEmptyString(value, "fontFamily"),
+      fontSize: positiveNumber(value, "fontSize"),
+      fontWeight: nonEmptyString(value, "fontWeight"),
+      fontStyle,
+      letterSpacing: finiteNumber(value, "letterSpacing"),
+      horizontalSpacing: nonNegativeNumber(value, "horizontalSpacing"),
+      verticalSpacing: nonNegativeNumber(value, "verticalSpacing"),
+      rotationDeg: finiteNumber(value, "rotationDeg"),
+      stagger: value.stagger,
+      color: nonEmptyString(value, "color"),
+    };
+  }
+
+  throw new TypeError('pattern definition kind must be "geometric", "svg", or "font"');
 }
 
 /** Parses a complete v1 metadata payload from a style layer. */
@@ -216,4 +268,33 @@ export function createSvgPatternDefinition(options: {
     distribution,
     minSpacing: options.minSpacing ?? 0,
   }) as SvgPatternDefinition;
+}
+
+export function createFontPatternDefinition(options: {
+  text: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  fontStyle?: "normal" | "italic";
+  letterSpacing?: number;
+  horizontalSpacing?: number;
+  verticalSpacing?: number;
+  rotationDeg?: number;
+  stagger?: boolean;
+  color?: string;
+}): FontPatternDefinition {
+  return parsePatternDefinition({
+    kind: "font",
+    text: options.text,
+    fontFamily: options.fontFamily ?? "sans-serif",
+    fontSize: options.fontSize ?? 18,
+    fontWeight: options.fontWeight ?? "500",
+    fontStyle: options.fontStyle ?? "normal",
+    letterSpacing: options.letterSpacing ?? 0,
+    horizontalSpacing: options.horizontalSpacing ?? 26,
+    verticalSpacing: options.verticalSpacing ?? 22,
+    rotationDeg: options.rotationDeg ?? 0,
+    stagger: options.stagger ?? true,
+    color: options.color ?? "#000000",
+  }) as FontPatternDefinition;
 }

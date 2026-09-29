@@ -5,6 +5,7 @@ import {
   serializePatternDefinition,
 } from "./patternDefinition";
 import { installSvgPatternFill } from "./svgPattern";
+import { installFontPatternFill } from "./fontPattern";
 import { syncPatternTexture } from "./syncPatternTexture";
 
 export interface StyleLike {
@@ -50,9 +51,13 @@ export async function installPatternFills(map: MaplibreMap, style: StyleLike): P
           color: p.color,
           weight: p.weight,
           angle: p.angle,
+          pixelRatio: p.pixelRatio,
+          stippleCount: p.stippleCount,
         });
-      } else {
+      } else if (p.kind === "svg") {
         pending.push(installSvgPatternFill(map, { imageId: item.imageId, ...p }));
+      } else {
+        pending.push(installFontPatternFill(map, { imageId: item.imageId, ...p }));
       }
     }
   }

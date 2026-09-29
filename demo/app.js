@@ -5,7 +5,8 @@ const {
   makeTile, syncPatternTexture, buildStyleFragment,
   installSvgPatternFill, installSvgIconScatter,
   createSvgPatternDefinition, createSvgScatterTile,
-  scalePatternForZoom, screenPatternPhase,
+  installFontPatternFill, createFontPatternDefinition, createFontPatternTile,
+  scalePatternForZoom,
   importGeoJsonPolygons, patternDefinitionId, PATTERN_METADATA_KEY,
 } = window.MaplibrePatternFills;
 const DASH_PRESETS = {
@@ -13,6 +14,16 @@ const DASH_PRESETS = {
   dotted: [1, 2],
   dashdot: [4, 2, 1, 2],
 };
+const GEOMETRIC_DEFAULT_WEIGHTS = Object.freeze({
+  solid: 2,
+  stipple: 2,
+  hachures: 2,
+  cross: 1.25,
+  grid: 2,
+  dots: 2,
+});
+const FONT_GROUND_SCALE_MAX = 48;
+const SVG_GROUND_SCALE_MAX = 56;
 
 const $ = (id) => document.getElementById(id);
 const toast = (msg) => {
@@ -32,15 +43,35 @@ const state = {
   patOpacity: 1,
   weight: 2,
   tile: 16,
+  geometricScale: {
+    mode: "screen",
+    referenceZoom: 12,
+    pixelRatio: "auto",
+  },
   bg: { on: true, color: "#dce8e3", opacity: 0.35 },
   outline: { on: true, color: "#234c46", width: 1.5, dash: [] },
+  fontFill: {
+    on: false,
+    text: "A",
+    fontFamily: "'IBM Plex Mono', monospace",
+    fontSize: 18,
+    fontWeight: "500",
+    fontStyle: "normal",
+    letterSpacing: 0,
+    horizontalSpacing: 26,
+    verticalSpacing: 22,
+    rotationDeg: 0,
+    stagger: true,
+    scaleMode: "screen",
+    referenceZoom: 12,
+  },
   svgFill: {
     on: false,
     noCut: false,
     sample: "grass-tuft",
     customSvg: "",
-    visualSize: 24,
-    spacing: 72,
+    visualSize: 14,
+    spacing: 20,
     distribution: "offset",
     minSpacing: 4,
     positionJitter: 0.15,
@@ -51,6 +82,9 @@ const state = {
     seed: "1",
   },
 };
+const geometricWeightByPattern = new Map([
+  [state.pattern, state.weight],
+]);
 const FEATURE_STYLES = {};
 
 function clone(value) {
@@ -65,8 +99,10 @@ function currentStyle() {
     patOpacity: state.patOpacity,
     weight: state.weight,
     tile: state.tile,
+    geometricScale: state.geometricScale,
     bg: state.bg,
     outline: state.outline,
+    fontFill: state.fontFill,
     svgFill: state.svgFill,
   });
 }
@@ -74,10 +110,23 @@ function currentStyle() {
 function loadStyle(style) {
   const selectedLayer = state.layer;
   const loaded = clone(style);
+  const fontFill = {
+    ...state.fontFill,
+    ...(loaded.fontFill || {}),
+  };
   const svgFill = {
     ...state.svgFill,
     ...(loaded.svgFill || {}),
   };
+  const geometricScale = {
+    ...state.geometricScale,
+    ...(loaded.geometricScale || {}),
+  };
+  geometricScale.mode ??= "screen";
+  geometricScale.referenceZoom ??= 12;
+  geometricScale.pixelRatio ??= "auto";
+  fontFill.scaleMode ??= "screen";
+  fontFill.referenceZoom ??= 12;
   svgFill.distribution = svgFill.distribution ?? (svgFill.stagger === false ? "regular" : "offset");
   svgFill.minSpacing ??= 4;
   svgFill.scaleMode ??= "screen";
@@ -88,7 +137,14 @@ function loadStyle(style) {
   delete svgFill.stagger;
   delete svgFill.stampSize;
   delete svgFill.density;
-  Object.assign(state, loaded, { svgFill, layer: selectedLayer });
+  if (svgFill.on) fontFill.on = false;
+  Object.assign(state, loaded, {
+    fontFill,
+    svgFill,
+    geometricScale,
+    layer: selectedLayer,
+  });
+  geometricWeightByPattern.set(state.pattern, state.weight);
 }
 
 function rememberActiveStyle() {
@@ -119,7 +175,9 @@ function resolveSvgFillSample(svgFill = state.svgFill, color = state.patColor) {
   );
 }
 // Map and optional context layers.
-const SAMPLE_CENTER = [8.4037, 49.0069];
+// Hardtwald, just north of Karlsruhe. This is only the anchor for Sample 1;
+// subsequent samples follow the regular left-to-right grid below.
+const SAMPLE_CENTER = [8.425, 49.066];
 // OSM Liberty (OpenFreeMap, a free/no-key vector basemap) is the default
 // basemap. Its sources/layers/sprite/glyphs are merged directly into this
 // style rather than swapped in later with `setStyle`, so switching
@@ -144,54 +202,130 @@ const libertyLayers = (libertyStyle?.layers ?? [])
     // aborting the rest of this script.
     layout: { ...layer.layout, visibility: libertyIsDefault ? "visible" : "none" },
   }));
+const basemapStyle = {
+  version: 8,
+  glyphs: libertyStyle?.glyphs ?? "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+  ...(libertyStyle?.sprite ? { sprite: libertyStyle.sprite } : {}),
+  sources: {
+    ...(libertyStyle?.sources ?? {}),
+    streets: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors",
+    },
+    positron: {
+      // CARTO's free anonymous raster endpoint now requires an API key,
+      // so this uses Esri's equivalent free, no-key light basemap instead.
+      type: "raster",
+      tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
+      tileSize: 256,
+      attribution: "Tiles © Esri",
+    },
+    bright: {
+      type: "raster",
+      tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
+      tileSize: 256,
+      attribution: "Tiles © Esri",
+    },
+    aerial: {
+      type: "raster",
+      tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      tileSize: 256,
+      attribution: "Tiles © Esri",
+    },
+  },
+  layers: [
+    { id: "bg", type: "background", paint: { "background-color": libertyIsDefault ? "#d8dfdc" : "#e9eeec" } },
+    ...libertyLayers,
+    { id: "basemap-streets", type: "raster", source: "streets", layout: { visibility: "none" }, paint: { "raster-saturation": -0.35, "raster-opacity": 0.82 } },
+    { id: "basemap-positron", type: "raster", source: "positron", layout: { visibility: "none" } },
+    { id: "basemap-bright", type: "raster", source: "bright", layout: { visibility: "none" } },
+    { id: "basemap-aerial", type: "raster", source: "aerial", layout: { visibility: "none" }, paint: { "raster-saturation": -0.25, "raster-brightness-max": 0.82 } },
+  ],
+};
 const map = new maplibregl.Map({
   container: "map",
-  style: {
-    version: 8,
-    glyphs: libertyStyle?.glyphs ?? "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-    ...(libertyStyle?.sprite ? { sprite: libertyStyle.sprite } : {}),
-    sources: {
-      ...(libertyStyle?.sources ?? {}),
-      streets: {
-        type: "raster",
-        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors",
-      },
-      positron: {
-        // CARTO's free anonymous raster endpoint now requires an API key,
-        // so this uses Esri's equivalent free, no-key light basemap instead.
-        type: "raster",
-        tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
-        tileSize: 256,
-        attribution: "Tiles © Esri",
-      },
-      bright: {
-        type: "raster",
-        tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
-        tileSize: 256,
-        attribution: "Tiles © Esri",
-      },
-      aerial: {
-        type: "raster",
-        tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
-        tileSize: 256,
-        attribution: "Tiles © Esri",
-      },
-    },
-    layers: [
-      { id: "bg", type: "background", paint: { "background-color": libertyIsDefault ? "#d8dfdc" : "#e9eeec" } },
-      ...libertyLayers,
-      { id: "basemap-streets", type: "raster", source: "streets", layout: { visibility: "none" }, paint: { "raster-saturation": -0.35, "raster-opacity": 0.82 } },
-      { id: "basemap-positron", type: "raster", source: "positron", layout: { visibility: "none" } },
-      { id: "basemap-bright", type: "raster", source: "bright", layout: { visibility: "none" } },
-      { id: "basemap-aerial", type: "raster", source: "aerial", layout: { visibility: "none" }, paint: { "raster-saturation": -0.25, "raster-brightness-max": 0.82 } },
-    ],
-  },
+  style: clone(basemapStyle),
   center: SAMPLE_CENTER, zoom: 12,
-  fadeDuration: 0,
 });
 map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-right");
+
+// Resizable desktop style panel. The chosen width is local UI state, so it
+// is remembered independently from the exported pattern configuration.
+const PANEL_WIDTH_KEY = "stipple:panel-width";
+const PANEL_WIDTH_DEFAULT = 320;
+const PANEL_WIDTH_MIN = 280;
+const PANEL_WIDTH_MAX = 720;
+const MAP_WIDTH_MIN = 280;
+const workspace = document.querySelector(".workspace");
+const panelResizer = $("panelResizer");
+let panelWidth = PANEL_WIDTH_DEFAULT;
+let resizeFrame = 0;
+
+function maximumPanelWidth() {
+  const workspaceWidth = workspace.getBoundingClientRect().width;
+  const railWidth = window.innerWidth <= 760 ? 40 : 48;
+  return Math.max(
+    PANEL_WIDTH_MIN,
+    Math.min(PANEL_WIDTH_MAX, workspaceWidth - railWidth - MAP_WIDTH_MIN),
+  );
+}
+
+function setPanelWidth(value, persist = false) {
+  panelWidth = Math.round(Math.max(PANEL_WIDTH_MIN, Math.min(maximumPanelWidth(), value)));
+  workspace.style.setProperty("--panel-width", `${panelWidth}px`);
+  panelResizer.setAttribute("aria-valuenow", String(panelWidth));
+  panelResizer.setAttribute("aria-valuetext", `${panelWidth} pixels`);
+  if (persist) {
+    try { localStorage.setItem(PANEL_WIDTH_KEY, String(panelWidth)); } catch { /* private mode */ }
+  }
+  cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(() => map.resize());
+}
+
+try {
+  const savedPanelWidth = Number(localStorage.getItem(PANEL_WIDTH_KEY));
+  if (Number.isFinite(savedPanelWidth) && savedPanelWidth > 0) panelWidth = savedPanelWidth;
+} catch { /* private mode */ }
+setPanelWidth(panelWidth);
+
+panelResizer.addEventListener("pointerdown", (event) => {
+  if (window.innerWidth <= 760 || event.button !== 0) return;
+  event.preventDefault();
+  panelResizer.setPointerCapture(event.pointerId);
+  document.body.classList.add("is-resizing-panel");
+});
+panelResizer.addEventListener("pointermove", (event) => {
+  if (!panelResizer.hasPointerCapture(event.pointerId)) return;
+  const workspaceRight = workspace.getBoundingClientRect().right;
+  setPanelWidth(workspaceRight - event.clientX);
+});
+function finishPanelResize(event) {
+  if (!panelResizer.hasPointerCapture(event.pointerId)) return;
+  panelResizer.releasePointerCapture(event.pointerId);
+  document.body.classList.remove("is-resizing-panel");
+  setPanelWidth(panelWidth, true);
+}
+panelResizer.addEventListener("pointerup", finishPanelResize);
+panelResizer.addEventListener("pointercancel", finishPanelResize);
+panelResizer.addEventListener("dblclick", () => setPanelWidth(PANEL_WIDTH_DEFAULT, true));
+panelResizer.addEventListener("keydown", (event) => {
+  const step = event.shiftKey ? 40 : 10;
+  let next = panelWidth;
+  if (event.key === "ArrowLeft") next += step;
+  else if (event.key === "ArrowRight") next -= step;
+  else if (event.key === "Home") next = PANEL_WIDTH_MIN;
+  else if (event.key === "End") next = maximumPanelWidth();
+  else if (event.key === "Enter") next = PANEL_WIDTH_DEFAULT;
+  else return;
+  event.preventDefault();
+  setPanelWidth(next, true);
+});
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 760) setPanelWidth(panelWidth);
+  else map.resize();
+});
 
 // Tile preview canvas in the panel (2x2 tiled to show seams). Rendered at
 // the display's actual physical resolution (CSS size * devicePixelRatio,
@@ -199,13 +333,37 @@ map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "
 // crisp instead of a small raster blown up and blurred by the browser.
 const PREVIEW_DISPLAY_PX = 56; // matches .preview-canvas width/height
 const PREVIEW_REPEATS = 2;
-function renderPreview() {
+let previewGeneration = 0;
+async function renderPreview() {
+  const generation = ++previewGeneration;
   const pc = $("tilePreview");
   const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
   const physicalSize = Math.round(PREVIEW_DISPLAY_PX * dpr);
   pc.width = pc.height = physicalSize;
   const ctx = pc.getContext("2d");
   ctx.clearRect(0, 0, physicalSize, physicalSize);
+  if (state.fontFill.on) {
+    const tile = await createFontPatternTile({
+      imageId: "font-preview",
+      ...state.fontFill,
+      color: state.patColor,
+      pixelRatio: dpr,
+    });
+    if (generation !== previewGeneration) return;
+    const tmp = document.createElement("canvas");
+    tmp.width = tile.width; tmp.height = tile.height;
+    tmp.getContext("2d").putImageData(
+      new ImageData(new Uint8ClampedArray(tile.data), tile.width, tile.height),
+      0,
+      0,
+    );
+    ctx.globalAlpha = state.patOpacity;
+    ctx.fillStyle = ctx.createPattern(tmp, "repeat");
+    ctx.fillRect(0, 0, physicalSize, physicalSize);
+    ctx.globalAlpha = 1;
+    return;
+  }
+  if (state.svgFill.on) return;
   if (state.pattern === "solid") {
     ctx.fillStyle = withOpacity(state.patColor, state.patOpacity);
     ctx.fillRect(0, 0, physicalSize, physicalSize); return;
@@ -226,6 +384,7 @@ function withOpacity(hex, a) {
 }
 
 const geomImageId = () => `${state.layer.source}__pat_img`;
+const fontImageId = (id = state.layer.source) => `${id}__font_img`;
 const svgImageId = (id = state.layer.source) => `${id}__svg_img`;
 const ids = () => ({
   src: state.layer.source,
@@ -234,13 +393,160 @@ const ids = () => ({
   line: `${state.layer.source}__line`,
 });
 
-function syncGeomTexture() {
-  if (!state.layer || state.pattern === "solid") return;
-  syncPatternTexture(map, {
-    imageId: geomImageId(), pattern: state.pattern, size: state.tile,
-    color: state.patColor, weight: state.weight, angle: state.angle,
+function geometricPixelRatio(style) {
+  return style.geometricScale.pixelRatio === "1x" ? 1 : undefined;
+}
+
+function geometricWeight(style, size = style.tile) {
+  if (style.geometricScale.mode !== "map") return style.weight;
+  const scaled = style.weight * (size / style.tile);
+  const readabilityFloor = style.pattern === "stipple" ? 1 : 0.5;
+  const readableMinimum = Math.min(style.weight, readabilityFloor);
+  return Math.max(readableMinimum, scaled);
+}
+
+function createGeometricDefinition(style, size = style.tile) {
+  const pixelRatio = geometricPixelRatio(style);
+  // Ground-scaled stipple variants share one normalized point set. Scaling
+  // the tile and the dots therefore preserves the exact texture instead of
+  // generating a new random density at every integer zoom.
+  const stippleCount = style.pattern === "stipple" && style.geometricScale.mode === "map"
+    ? Math.max(1, Math.round((style.tile / 6) ** 2))
+    : undefined;
+  return {
+    kind: "geometric",
+    pattern: style.pattern,
+    size,
+    color: style.patColor,
+    weight: geometricWeight(style, size),
+    angle: style.angle,
+    ...(pixelRatio === undefined ? {} : { pixelRatio }),
+    ...(stippleCount === undefined ? {} : { stippleCount }),
+  };
+}
+
+function automaticGeometricZoomStops(style) {
+  // Eight pixels is the smallest tile that can still reproduce the same
+  // normalized point/line geometry cleanly at 1x. Above the reference zoom,
+  // keep exact powers of two for as long as the image atlas remains cheap.
+  const minimumTile = Math.min(style.tile, 8);
+  const maximumTile = 256;
+  const firstZoom = Math.max(
+    0,
+    Math.floor(style.geometricScale.referenceZoom + Math.log2(minimumTile / style.tile)),
+  );
+  const lastZoom = Math.min(
+    22,
+    Math.max(
+      firstZoom,
+      Math.ceil(style.geometricScale.referenceZoom + Math.log2(maximumTile / style.tile)),
+    ),
+  );
+  const stops = [];
+  for (let zoom = firstZoom; zoom <= lastZoom; zoom++) {
+    stops.push({
+      zoom,
+      tile: Math.max(
+        minimumTile,
+        Math.min(maximumTile, style.tile * 2 ** (zoom - style.geometricScale.referenceZoom)),
+      ),
+    });
+  }
+  return stops;
+}
+
+function geometricZoomStops(style) {
+  return automaticGeometricZoomStops(style);
+}
+
+function createGeometricZoomVariants(style) {
+  return geometricZoomStops(style).map((stop) => {
+    const definition = createGeometricDefinition(style, stop.tile);
+    return {
+      zoom: stop.zoom,
+      imageId: patternDefinitionId(definition),
+      definition,
+    };
   });
+}
+
+function liveGeometricZoomVariants(style, id) {
+  return createGeometricZoomVariants(style).map((variant) => ({
+    ...variant,
+    imageId: `${id}__pat_img_z${variant.zoom}`,
+  }));
+}
+
+function installGeometricDefinition(imageId, definition) {
+  syncPatternTexture(map, {
+    imageId,
+    pattern: definition.pattern,
+    size: definition.size,
+    color: definition.color,
+    weight: definition.weight,
+    angle: definition.angle,
+    pixelRatio: definition.pixelRatio,
+    stippleCount: definition.stippleCount,
+  });
+}
+
+function syncGeomTexture() {
+  if (!state.layer || state.pattern === "solid" || state.fontFill.on || state.svgFill.on) return;
+  const style = currentStyle();
+  const layerId = `${state.layer.source}__pat`;
+  if (style.geometricScale.mode === "map") {
+    const variants = liveGeometricZoomVariants(style, state.layer.source);
+    variants.forEach(({ imageId, definition }) => installGeometricDefinition(imageId, definition));
+    if (map.getLayer(layerId)) {
+      map.setPaintProperty(layerId, "fill-pattern", zoomPatternExpression(variants));
+    }
+  } else {
+    installGeometricDefinition(geomImageId(), createGeometricDefinition(style));
+    if (map.getLayer(layerId)) {
+      map.setPaintProperty(layerId, "fill-pattern", geomImageId());
+    }
+  }
   rememberActiveStyle();
+}
+
+function fontPatternOptions(id, style, imageId = fontImageId(id), fontFill = style.fontFill) {
+  return {
+    imageId,
+    ...fontFill,
+    color: style.patColor,
+  };
+}
+
+async function syncFontTextureForFeature(id, style) {
+  const mapScale = style.fontFill.scaleMode === "map";
+  const variants = mapScale ? liveFontZoomVariants(style, id) : [];
+  if (mapScale) {
+    await Promise.all(variants.map(({ imageId, definition }) => {
+      const { kind: _kind, ...fontFill } = definition;
+      return installFontPatternFill(map, fontPatternOptions(id, style, imageId, fontFill));
+    }));
+  } else {
+    await installFontPatternFill(map, fontPatternOptions(id, style));
+  }
+  const layerId = `${id}__pat`;
+  if (map.getLayer(layerId)) {
+    map.setPaintProperty(
+      layerId,
+      "fill-pattern",
+      mapScale ? zoomPatternExpression(variants) : fontImageId(id),
+    );
+    map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
+  }
+}
+
+let fontFillSyncTimer = 0;
+function syncFontFill() {
+  clearTimeout(fontFillSyncTimer);
+  fontFillSyncTimer = setTimeout(async () => {
+    if (!state.layer || !state.fontFill.on) return;
+    await syncFontTextureForFeature(state.layer.source, currentStyle());
+    rememberActiveStyle();
+  }, 40);
 }
 
 function svgMetrics(svgFill) {
@@ -260,70 +566,9 @@ function effectiveSvgTexture(style, id, zoom = map.getZoom()) {
     spacing: style.svgFill.spacing,
     opticalScale: metrics.opticalScale,
     minReadableSize: metrics.minReadableSize,
+    maxVisualSize: Math.max(style.svgFill.visualSize, SVG_GROUND_SCALE_MAX),
+    maxSpacingAtReadableFloorRatio: 2,
   });
-}
-
-const SCREEN_PATTERN_STEPS = 8;
-const SCREEN_PATTERN_PIXEL_RATIO = 2;
-const screenPatternSignatures = new Map();
-const screenPatternGenerations = new Map();
-
-function screenPatternImageId(id, zoom = map.getZoom()) {
-  const phase = screenPatternPhase(zoom, SCREEN_PATTERN_STEPS);
-  return `${svgImageId(id)}__screen_${phase.index}`;
-}
-
-function svgPatternImageId(id, style, zoom = map.getZoom()) {
-  return style.svgFill.scaleMode === "screen"
-    ? screenPatternImageId(id, zoom)
-    : svgImageId(id);
-}
-
-async function installScreenSvgPatternForFeature(id, style, options) {
-  const definition = createSvgPatternDefinition(options);
-  const signature = JSON.stringify(definition);
-  const imageIds = Array.from(
-    { length: SCREEN_PATTERN_STEPS + 1 },
-    (_, index) => `${svgImageId(id)}__screen_${index}`,
-  );
-  if (
-    screenPatternSignatures.get(id) === signature &&
-    imageIds.every((imageId) => map.hasImage(imageId))
-  ) {
-    const layerId = `${id}__pat`;
-    const imageId = screenPatternImageId(id);
-    if (map.getLayer(layerId) && map.getPaintProperty(layerId, "fill-pattern") !== imageId) {
-      map.setPaintProperty(layerId, "fill-pattern", imageId);
-    }
-    return;
-  }
-
-  const generation = (screenPatternGenerations.get(id) || 0) + 1;
-  screenPatternGenerations.set(id, generation);
-  const tile = await createSvgScatterTile({
-    ...options,
-    pixelRatio: SCREEN_PATTERN_PIXEL_RATIO,
-  });
-  if (screenPatternGenerations.get(id) !== generation) return;
-
-  imageIds.forEach((imageId, index) => {
-    if (map.hasImage(imageId)) {
-      map.updateImage(imageId, tile);
-    } else {
-      const phase = screenPatternPhase(index / SCREEN_PATTERN_STEPS, SCREEN_PATTERN_STEPS);
-      map.addImage(imageId, tile, {
-        pixelRatio: SCREEN_PATTERN_PIXEL_RATIO * phase.pixelRatioScale,
-      });
-    }
-  });
-  screenPatternSignatures.set(id, signature);
-
-  const layerId = `${id}__pat`;
-  if (map.getLayer(layerId)) {
-    map.setPaintProperty(layerId, "fill-pattern", screenPatternImageId(id));
-    map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
-  }
-  map.triggerRepaint();
 }
 
 async function syncSvgTextureForFeature(id, style) {
@@ -341,15 +586,40 @@ async function syncSvgTextureForFeature(id, style) {
     scaleJitter: style.svgFill.scaleJitter,
     seed: style.svgFill.seed,
   };
-  if (style.svgFill.scaleMode === "screen") {
-    await installScreenSvgPatternForFeature(id, style, options);
-  } else {
-    await installSvgPatternFill(map, options);
-  }
+  // Screen-sized clipped fills keep one stable image for the lifetime of the
+  // layer, just like font and geometric fills.
+  await installSvgPatternFill(map, options);
   const layerId = `${id}__pat`;
   if (map.getLayer(layerId)) {
     map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
   }
+}
+
+function liveSvgZoomVariants(style, id) {
+  return createSvgZoomVariants(style).map((variant) => ({
+    ...variant,
+    // Keep a bounded set of image names in the live workshop. Definitions
+    // change while sliders move, so content-addressed ids would otherwise
+    // leave every intermediate texture in MapLibre's image atlas.
+    imageId: `${svgImageId(id)}_z${variant.zoom}`,
+  }));
+}
+
+async function syncSvgGroundScaleForFeature(id, style) {
+  const variants = liveSvgZoomVariants(style, id);
+  // MapLibre cross-fades pattern images around integer zooms. Preloading the
+  // neighbouring sizes lets ground-scaled motifs grow continuously instead
+  // of replacing one raster abruptly after moveend.
+  await Promise.all(variants.map(({ imageId, definition }) => {
+    const { kind: _kind, ...options } = definition;
+    return installSvgPatternFill(map, { imageId, ...options });
+  }));
+  const layerId = `${id}__pat`;
+  if (map.getLayer(layerId)) {
+    map.setPaintProperty(layerId, "fill-pattern", zoomPatternExpression(variants));
+    map.setPaintProperty(layerId, "fill-opacity", style.patOpacity);
+  }
+  rememberActiveStyle();
 }
 
 async function syncSvgTexture() {
@@ -419,7 +689,9 @@ function syncSvgFill() {
   clearTimeout(svgFillSyncTimer);
   svgFillSyncTimer = setTimeout(() => {
     if (state.svgFill.noCut) syncSvgIconScatter();
-    else syncSvgTexture();
+    else if (state.svgFill.scaleMode === "map" && state.layer) {
+      syncSvgGroundScaleForFeature(state.layer.source, currentStyle());
+    } else syncSvgTexture();
   }, 40);
 }
 
@@ -431,18 +703,61 @@ function rebuildPolygonLayers(id) {
     map.addLayer({ id: bg, type: "fill", source: id, paint: { "fill-color": state.bg.color, "fill-opacity": state.bg.opacity } });
   }
 
-  if (state.svgFill.on && state.svgFill.noCut) {
+  if (state.fontFill.on) {
+    const style = currentStyle();
+    const variants = style.fontFill.scaleMode === "map"
+      ? liveFontZoomVariants(style, id)
+      : [];
+    syncFontTextureForFeature(id, style);
+    map.addLayer({
+      id: pat,
+      type: "fill",
+      source: id,
+      paint: {
+        "fill-pattern": variants.length
+          ? zoomPatternExpression(variants)
+          : fontImageId(id),
+        "fill-opacity": state.patOpacity,
+      },
+    });
+  } else if (state.svgFill.on && state.svgFill.noCut) {
     syncSvgIconScatterForFeature(id, currentStyle());
+  } else if (state.svgFill.on && state.svgFill.scaleMode === "map") {
+    const style = currentStyle();
+    const variants = liveSvgZoomVariants(style, id);
+    syncSvgGroundScaleForFeature(id, style);
+    map.addLayer({
+      id: pat,
+      type: "fill",
+      source: id,
+      paint: {
+        "fill-pattern": zoomPatternExpression(variants),
+        "fill-opacity": state.patOpacity,
+      },
+    });
   } else if (state.svgFill.on) {
     syncSvgTextureForFeature(id, currentStyle());
     map.addLayer({
       id: pat,
       type: "fill",
       source: id,
-      paint: { "fill-pattern": svgPatternImageId(id, state), "fill-opacity": state.patOpacity },
+      paint: { "fill-pattern": svgImageId(id), "fill-opacity": state.patOpacity },
     });
   } else if (state.pattern === "solid") {
     map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-color": state.patColor, "fill-opacity": state.patOpacity } });
+  } else if (state.geometricScale.mode === "map") {
+    const style = currentStyle();
+    const variants = liveGeometricZoomVariants(style, id);
+    variants.forEach(({ imageId, definition }) => installGeometricDefinition(imageId, definition));
+    map.addLayer({
+      id: pat,
+      type: "fill",
+      source: id,
+      paint: {
+        "fill-pattern": zoomPatternExpression(variants),
+        "fill-opacity": state.patOpacity,
+      },
+    });
   } else {
     syncGeomTexture();
     map.addLayer({ id: pat, type: "fill", source: id, paint: { "fill-pattern": geomImageId(), "fill-opacity": state.patOpacity } });
@@ -472,7 +787,9 @@ function repaint() {
   const { bg, pat, line } = ids();
   if (map.getLayer(pat)) {
     map.setPaintProperty(pat, "fill-opacity", state.patOpacity);
-    if (!state.svgFill.on && state.pattern === "solid") map.setPaintProperty(pat, "fill-color", state.patColor);
+    if (!state.fontFill.on && !state.svgFill.on && state.pattern === "solid") {
+      map.setPaintProperty(pat, "fill-color", state.patColor);
+    }
   }
   if (map.getLayer(bg)) {
     map.setPaintProperty(bg, "fill-color", state.bg.color);
@@ -504,8 +821,78 @@ function createSvgDefinition(style, effective) {
   });
 }
 
+function effectiveFontFill(style, zoom = map.getZoom()) {
+  const source = style.fontFill;
+  const maximumFontSize = Math.max(source.fontSize, FONT_GROUND_SCALE_MAX);
+  const effective = scalePatternForZoom({
+    mode: source.scaleMode,
+    zoom,
+    referenceZoom: source.referenceZoom,
+    visualSize: source.fontSize,
+    spacing: source.fontSize + Math.max(source.horizontalSpacing, source.verticalSpacing),
+    minReadableSize: 8,
+    maxVisualSize: maximumFontSize,
+  });
+  const atReadableFloor = effective.rawVisualSize <= effective.visualSize;
+  const gapLimit = effective.visualSize * 0.2;
+  const scaled = (value) => value * effective.scale;
+  return {
+    ...source,
+    fontSize: effective.visualSize,
+    letterSpacing: scaled(source.letterSpacing),
+    horizontalSpacing: atReadableFloor
+      ? Math.min(scaled(source.horizontalSpacing), gapLimit)
+      : scaled(source.horizontalSpacing),
+    verticalSpacing: atReadableFloor
+      ? Math.min(scaled(source.verticalSpacing), gapLimit)
+      : scaled(source.verticalSpacing),
+  };
+}
+
+function createFontDefinition(style, fontFill = style.fontFill) {
+  return createFontPatternDefinition({
+    ...fontFill,
+    color: style.patColor,
+  });
+}
+
+function createFontZoomVariants(style) {
+  const source = style.fontFill;
+  const minimumFontSize = Math.min(source.fontSize, 8);
+  const maximumFontSize = Math.max(source.fontSize, FONT_GROUND_SCALE_MAX);
+  const firstZoom = Math.max(
+    0,
+    Math.floor(source.referenceZoom + Math.log2(minimumFontSize / source.fontSize)),
+  );
+  const lastZoom = Math.min(
+    22,
+    Math.max(
+      firstZoom,
+      Math.ceil(source.referenceZoom + Math.log2(maximumFontSize / source.fontSize)),
+    ),
+  );
+  const variants = [];
+  for (let zoom = firstZoom; zoom <= lastZoom; zoom++) {
+    const definition = createFontDefinition(style, effectiveFontFill(style, zoom));
+    variants.push({
+      zoom,
+      imageId: patternDefinitionId(definition),
+      definition,
+    });
+  }
+  return variants;
+}
+
+function liveFontZoomVariants(style, id) {
+  return createFontZoomVariants(style).map((variant) => ({
+    ...variant,
+    imageId: `${fontImageId(id)}_z${variant.zoom}`,
+  }));
+}
+
 function createSvgZoomVariants(style) {
   const metrics = svgMetrics(style.svgFill);
+  const maximumVisualSize = Math.max(style.svgFill.visualSize, SVG_GROUND_SCALE_MAX);
   const minimumVisualSize = Math.min(
     style.svgFill.visualSize,
     metrics.minReadableSize,
@@ -523,7 +910,7 @@ function createSvgZoomVariants(style) {
       firstZoom,
       Math.ceil(
         style.svgFill.referenceZoom +
-        Math.log2(72 / style.svgFill.visualSize),
+        Math.log2(maximumVisualSize / style.svgFill.visualSize),
       ),
     ),
   );
@@ -537,6 +924,8 @@ function createSvgZoomVariants(style) {
       spacing: style.svgFill.spacing,
       opticalScale: metrics.opticalScale,
       minReadableSize: metrics.minReadableSize,
+      maxVisualSize: maximumVisualSize,
+      maxSpacingAtReadableFloorRatio: 2,
     });
     const definition = createSvgDefinition(style, effective);
     variants.push({
@@ -565,15 +954,51 @@ function buildExportedStyle() {
     sourceLayer: "<source-layer>",
     bg: { enabled: state.bg.on, color: state.bg.color, opacity: state.bg.opacity },
     pattern: {
-      pattern: state.svgFill.on ? "hachures" : state.pattern,
+      pattern: state.svgFill.on || state.fontFill.on ? "hachures" : state.pattern,
       tile: state.tile, color: state.patColor, opacity: state.patOpacity,
       weight: state.weight, angle: state.angle,
+      pixelRatio: geometricPixelRatio(style),
     },
     line: { enabled: state.outline.on, color: state.outline.color, width: state.outline.width, dash: state.outline.dash },
   });
-  if (!state.svgFill.on) return fragment;
-
   const exportedPatternLayerIndex = fragment.layers.findIndex((layer) => layer.id === "<source>__pat");
+  if (!state.svgFill.on && !state.fontFill.on) {
+    if (state.pattern !== "solid" && state.geometricScale.mode === "map") {
+      const variants = createGeometricZoomVariants(style);
+      const [base] = variants;
+      fragment.layers[exportedPatternLayerIndex].paint["fill-pattern"] =
+        zoomPatternExpression(variants);
+      fragment.layers[exportedPatternLayerIndex].metadata = {
+        [PATTERN_METADATA_KEY]: {
+          imageId: base.imageId,
+          definition: base.definition,
+          variants,
+        },
+      };
+    }
+    return fragment;
+  }
+
+  if (state.fontFill.on) {
+    const variants = style.fontFill.scaleMode === "map"
+      ? createFontZoomVariants(style)
+      : [];
+    const definition = variants[0]?.definition ?? createFontDefinition(style);
+    const imageId = variants[0]?.imageId ?? patternDefinitionId(definition);
+    fragment.layers[exportedPatternLayerIndex].paint["fill-pattern"] = variants.length
+      ? zoomPatternExpression(variants)
+      : imageId;
+    fragment.layers[exportedPatternLayerIndex].paint["fill-opacity"] = style.patOpacity;
+    fragment.layers[exportedPatternLayerIndex].metadata = {
+      [PATTERN_METADATA_KEY]: {
+        imageId,
+        definition,
+        ...(variants.length ? { variants } : {}),
+      },
+    };
+    return fragment;
+  }
+
   if (state.svgFill.noCut) {
     // Whole-symbol placement depends on live polygon geometry and remains an
     // experimental runtime operation, so do not export a placeholder fill.
@@ -611,20 +1036,17 @@ const MAX_FEATURES = 64;
 const MAX_SAMPLE_FEATURES = 64;
 const FEATURES = {};
 const FEATURE_META = {};
-// Simple row-major grid, wrapping every SAMPLE_GRID_COLUMNS entries, centered
-// on the origin. Spacing (see `spacingX`/`spacingY` in addFeature) is kept
-// wide enough that no two generated polygons can ever overlap.
-const SAMPLE_GRID_COLUMNS = 4;
+// A conventional reading-order grid anchored at Sample 1: fill each row
+// from left to right, then continue on the next row below. Spacing (see
+// `spacingX`/`spacingY` in addFeature) remains wide enough that generated
+// polygons cannot overlap.
+const SAMPLE_GRID_COLUMNS = 5;
 function buildGridLattice(count, columns) {
-  const rows = Math.ceil(count / columns);
   const points = [];
   for (let i = 0; i < count; i++) {
     const col = i % columns;
     const row = Math.floor(i / columns);
-    // Y offsets are in latitude, where larger is further north (up on
-    // screen). Negate so row 0 sits at the top and later rows wrap
-    // downward instead of upward.
-    points.push([col - (columns - 1) / 2, -(row - (rows - 1) / 2)]);
+    points.push([col, -row]);
   }
   return points;
 }
@@ -653,12 +1075,12 @@ function removePatternLayers(id) {
   [`${id}__line`, `${id}__pat`, `${id}__bg`, `${id}__svgscatter_layer`].forEach((l) => map.getLayer(l) && map.removeLayer(l));
   if (map.hasImage(`${id}__pat_img`)) map.removeImage(`${id}__pat_img`);
   if (map.hasImage(`${id}__svg_img`)) map.removeImage(`${id}__svg_img`);
-  for (let index = 0; index <= SCREEN_PATTERN_STEPS; index += 1) {
-    const imageId = `${id}__svg_img__screen_${index}`;
-    if (map.hasImage(imageId)) map.removeImage(imageId);
+  if (map.hasImage(`${id}__font_img`)) map.removeImage(`${id}__font_img`);
+  for (let zoom = 0; zoom <= 22; zoom++) {
+    [`${id}__svg_img_z${zoom}`, `${id}__font_img_z${zoom}`].forEach((imageId) => {
+      if (map.hasImage(imageId)) map.removeImage(imageId);
+    });
   }
-  screenPatternSignatures.delete(id);
-  screenPatternGenerations.set(id, (screenPatternGenerations.get(id) || 0) + 1);
   if (map.getSource(`${id}__svgscatter`)) map.removeSource(`${id}__svgscatter`);
 }
 
@@ -873,10 +1295,19 @@ function selectLayer(id) {
   });
   applyStateToUI();
   showSelection(id);
-  if (state.svgFill.on) syncSvgFill();
+  if (state.fontFill.on) syncFontFill();
+  else if (state.svgFill.on) syncSvgFill();
 }
 
 // UI wiring
+function updateFeaturePanelScrollMode() {
+  const activeTool = document.querySelector("#toolTabs .tool-tab.active")?.dataset.tool;
+  document.querySelector('[data-panel-body="feature"]').classList.toggle(
+    "inspector-scroll-mode",
+    activeTool === "fill" && (state.fontFill.on || state.svgFill.on),
+  );
+}
+
 function openTool(tool) {
   document.querySelectorAll("#toolTabs .tool-tab").forEach((button) => {
     button.classList.toggle("active", button.dataset.tool === tool);
@@ -884,6 +1315,7 @@ function openTool(tool) {
   document.querySelectorAll("[data-tool-panel]").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.toolPanel === tool);
   });
+  updateFeaturePanelScrollMode();
 }
 
 $("toolTabs").addEventListener("click", (event) => {
@@ -891,56 +1323,166 @@ $("toolTabs").addEventListener("click", (event) => {
   if (tool) openTool(tool);
 });
 
-function openPanelTab(tab) {
-  document.querySelectorAll("#panelTabs .panel-tab").forEach((button) => {
-    button.classList.toggle("active", button.dataset.panel === tab);
+const BASEMAP_LABELS = {
+  liberty: "OSM Liberty",
+  neutral: "Neutral",
+  streets: "Streets",
+  positron: "Light",
+  bright: "Bright",
+  aerial: "Aerial",
+};
+const BASEMAP_PREVIEW_ORDER = Object.keys(BASEMAP_LABELS);
+
+function applyBasemapToMap(targetMap, name) {
+  ["streets", "positron", "bright", "aerial"].forEach((id) => {
+    const layerId = `basemap-${id}`;
+    if (targetMap.getLayer(layerId)) {
+      targetMap.setLayoutProperty(layerId, "visibility", name === id ? "visible" : "none");
+    }
   });
-  document.querySelectorAll("[data-panel-body]").forEach((body) => {
-    body.hidden = body.dataset.panelBody !== tab;
+  libertyLayers.forEach((layer) => {
+    if (targetMap.getLayer(layer.id)) {
+      targetMap.setLayoutProperty(layer.id, "visibility", name === "liberty" ? "visible" : "none");
+    }
+  });
+  if (targetMap.getLayer("bg")) {
+    targetMap.setPaintProperty("bg", "background-color", name === "neutral" ? "#e9eeec" : "#d8dfdc");
+  }
+}
+
+function waitForBasemapPreviewFrame(previewMap) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      resolve();
+    };
+    const timeout = setTimeout(finish, 2500);
+    previewMap.once("idle", finish);
+    previewMap.triggerRepaint();
   });
 }
 
-$("panelTabs").addEventListener("click", (event) => {
-  const tab = event.target.dataset.panel;
-  if (tab) openPanelTab(tab);
-});
+let basemapPreviewPromise;
+function ensureBasemapPreviews() {
+  if (basemapPreviewPromise) return basemapPreviewPromise;
+  basemapPreviewPromise = (async () => {
+    const container = document.createElement("div");
+    container.className = "basemap-preview-renderer";
+    container.setAttribute("aria-hidden", "true");
+    document.body.append(container);
+    const previewMap = new maplibregl.Map({
+      container,
+      style: clone(basemapStyle),
+      center: SAMPLE_CENTER,
+      zoom: 11.5,
+      interactive: false,
+      attributionControl: false,
+      fadeDuration: 0,
+      preserveDrawingBuffer: true,
+    });
+    try {
+      await new Promise((resolve) => {
+        const timeout = setTimeout(resolve, 5000);
+        previewMap.once("load", () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
+      for (const name of BASEMAP_PREVIEW_ORDER) {
+        applyBasemapToMap(previewMap, name);
+        await waitForBasemapPreviewFrame(previewMap);
+        const image = document.querySelector(`[data-basemap-preview="${name}"]`);
+        if (!image) continue;
+        try {
+          image.addEventListener("load", () => image.classList.add("ready"), { once: true });
+          image.src = previewMap.getCanvas().toDataURL("image/jpeg", 0.82);
+        } catch {
+          // Keep the lightweight CSS fallback if a remote tile server does
+          // not allow its pixels to be copied from the WebGL canvas.
+        }
+      }
+    } finally {
+      previewMap.remove();
+      container.remove();
+    }
+  })();
+  return basemapPreviewPromise;
+}
+
+function updateBasemapSelection(name) {
+  document.querySelectorAll("#basemapPopover [data-basemap]").forEach((button) => {
+    const active = button.dataset.basemap === name;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-checked", String(active));
+  });
+  const label = BASEMAP_LABELS[name] || name;
+  $("basemapTrigger").setAttribute("aria-label", `Basemap: ${label}`);
+  $("basemapTrigger").title = `Basemap: ${label}`;
+}
+
+function closeBasemapPicker() {
+  $("basemapPopover").hidden = true;
+  $("basemapTrigger").setAttribute("aria-expanded", "false");
+  $("basemapTrigger").classList.remove("active");
+}
+
+function closeLayersPicker() {
+  $("layersPopover").hidden = true;
+  $("layersTrigger").setAttribute("aria-expanded", "false");
+  $("layersTrigger").classList.remove("active");
+}
 
 function setBasemap(name) {
-  ["streets", "positron", "bright", "aerial"].forEach((id) => {
-    map.setLayoutProperty(`basemap-${id}`, "visibility", name === id ? "visible" : "none");
-  });
-  libertyLayers.forEach((layer) => {
-    map.setLayoutProperty(layer.id, "visibility", name === "liberty" ? "visible" : "none");
-  });
-  map.setPaintProperty("bg", "background-color", name === "neutral" ? "#e9eeec" : "#d8dfdc");
-  document.querySelectorAll(".icon-rail [data-basemap]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.basemap === name);
-  });
+  applyBasemapToMap(map, name);
+  updateBasemapSelection(name);
 }
 // OSM Liberty is the default basemap (falls back to Neutral if it failed
 // to fetch, e.g. offline). The correct layers/bg colour are already set
 // directly in the style above; this only needs to mark the right rail
 // button as active, so it's plain DOM and never touches the MapLibre API
 // before the style has finished loading.
-document
-  .querySelector(`.icon-rail [data-basemap="${libertyIsDefault ? "liberty" : "neutral"}"]`)
-  .classList.add("active");
+updateBasemapSelection(libertyIsDefault ? "liberty" : "neutral");
 
-document.querySelector(".icon-rail").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-basemap]");
-  if (button) setBasemap(button.dataset.basemap);
+$("basemapTrigger").addEventListener("click", (event) => {
+  event.stopPropagation();
+  const willOpen = $("basemapPopover").hidden;
+  closeLayersPicker();
+  $("basemapPopover").hidden = !willOpen;
+  $("basemapTrigger").setAttribute("aria-expanded", String(willOpen));
+  $("basemapTrigger").classList.toggle("active", willOpen);
+  if (willOpen) ensureBasemapPreviews();
 });
+$("basemapPopover").addEventListener("click", (event) => {
+  event.stopPropagation();
+  const button = event.target.closest("[data-basemap]");
+  if (!button) return;
+  setBasemap(button.dataset.basemap);
+  closeBasemapPicker();
+});
+
+$("layersTrigger").addEventListener("click", (event) => {
+  event.stopPropagation();
+  const willOpen = $("layersPopover").hidden;
+  closeBasemapPicker();
+  $("layersPopover").hidden = !willOpen;
+  $("layersTrigger").setAttribute("aria-expanded", String(willOpen));
+  $("layersTrigger").classList.toggle("active", willOpen);
+});
+$("layersPopover").addEventListener("click", (event) => event.stopPropagation());
 
 // File / Help menus
 function closeMenus(except) {
   document.querySelectorAll(".menu-popover").forEach((popover) => {
     if (popover !== except) popover.hidden = true;
   });
-  document.querySelectorAll(".menu-button").forEach((button) => {
+  document.querySelectorAll(".menu > .menu-button").forEach((button) => {
     if (button.nextElementSibling !== except) button.classList.remove("open");
   });
 }
-document.querySelectorAll(".menu-button").forEach((button) => {
+document.querySelectorAll(".menu > .menu-button").forEach((button) => {
   button.addEventListener("click", (event) => {
     event.stopPropagation();
     const popover = button.nextElementSibling;
@@ -951,9 +1493,17 @@ document.querySelectorAll(".menu-button").forEach((button) => {
     button.setAttribute("aria-expanded", String(willOpen));
   });
 });
-document.addEventListener("click", () => closeMenus());
+document.addEventListener("click", () => {
+  closeMenus();
+  closeBasemapPicker();
+  closeLayersPicker();
+});
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeMenus();
+  if (event.key === "Escape") {
+    closeMenus();
+    closeBasemapPicker();
+    closeLayersPicker();
+  }
 });
 // Persistent export button, pinned to the bottom of the side panel. Its
 // own drawer, not the File menu: toggling it just flips `hidden` on a
@@ -986,6 +1536,7 @@ function wireCustomSvgPanel({ panelId, textId, fileId, applyId, onApply }) {
   $(fileId).addEventListener("change", async (e) => {
     const file = e.target.files[0]; if (!file) return;
     $(textId).value = await file.text();
+    $("svgFillCustomFileName").textContent = file.name;
   });
   $(applyId).addEventListener("click", () => {
     const text = $(textId).value.trim();
@@ -1004,20 +1555,23 @@ function renderMotifBrowser() {
   // whichever motif happens to be applied: otherwise switching to another
   // family tab left the panel stuck on screen (it only hid once a new
   // motif was actually picked), which felt like there was no way out of it.
-  $("svgFillCustomPanel").classList.toggle("hidden", activeMotifFamily !== "custom");
+  const customFamilyActive = activeMotifFamily === "custom";
+  $("svgFillCustomPanel").classList.toggle("hidden", !customFamilyActive);
+  $("motifGrid").hidden = customFamilyActive;
+  $("svgFillFieldset").hidden = customFamilyActive && state.svgFill.sample !== "custom";
   const families = [...new Map(
     SVG_PATTERN_CATALOG.map((item) => [item.family, item.familyLabel]),
   )];
-  $("motifFamilyTabs").innerHTML = families.map(([family, label]) => `
-    <button type="button" class="motif-family-button${family === activeMotifFamily ? " active" : ""}"
-      data-motif-family="${family}">${label}</button>
+  $("motifFamilySelect").innerHTML = families.map(([family, label]) => `
+    <option value="${family}">${label}</option>
   `).join("");
+  $("motifFamilySelect").value = activeMotifFamily;
   $("motifGrid").innerHTML = SVG_PATTERN_CATALOG
     .filter((item) => item.family === activeMotifFamily)
     .map((item) => {
       const preview = item.value === "custom"
         ? `<span class="motif-swatch" aria-hidden="true">SVG</span>`
-        : `<span class="motif-swatch" aria-hidden="true">${SVG_PATTERN_SAMPLES[item.value]}</span>`;
+        : `<span class="motif-swatch" aria-hidden="true">${resolveSvgFillSample({ sample: item.value }, state.patColor)}</span>`;
       const active = state.svgFill.on && item.value === state.svgFill.sample ? " active" : "";
       return `<button type="button" class="motif-choice${active}" data-svg-sample="${item.value}">
         ${preview}<span class="motif-choice-label">${item.label}</span>
@@ -1027,7 +1581,9 @@ function renderMotifBrowser() {
 
 function openSvgInspectorSection(section) {
   document.querySelectorAll("[data-svg-section-tab]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.svgSectionTab === section);
+    const active = button.dataset.svgSectionTab === section;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
   });
   document.querySelectorAll("[data-svg-section]").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.svgSection === section);
@@ -1038,11 +1594,12 @@ function selectSvgSample(sample) {
   const entry = motifCatalogEntry(sample);
   if (!entry) return;
   state.svgFill.on = true;
+  state.fontFill.on = false;
   state.svgFill.sample = sample;
   activeMotifFamily = entry.family;
   openSvgInspectorSection("appearance");
   $("svgFillToggle").checked = true;
-  setGeometricFieldsetEnabled(false);
+  updateFillModePanels();
   updateFillChoiceUI();
   updateSvgControlAvailability();
   updateSvgScaleReadout();
@@ -1052,14 +1609,32 @@ function selectSvgSample(sample) {
 
 $("patternPills").addEventListener("click", (e) => {
   const p = e.target.dataset.p; if (!p) return;
+  geometricWeightByPattern.set(state.pattern, state.weight);
   state.pattern = p;
+  state.weight = geometricWeightByPattern.get(p) ?? GEOMETRIC_DEFAULT_WEIGHTS[p] ?? 2;
+  geometricWeightByPattern.set(p, state.weight);
+  $("weight").value = state.weight;
+  $("weightVal").textContent = state.weight.toFixed(2) + " px";
+  state.fontFill.on = false;
   state.svgFill.on = false;
   $("svgFillToggle").checked = false;
-  setGeometricFieldsetEnabled(true);
+  updateFillModePanels();
   updateFillChoiceUI();
   updatePatternControlAvailability();
   updateSvgControlAvailability();
   renderPreview(); rebuildLayers();
+});
+
+$("fontModePill").addEventListener("click", () => {
+  state.fontFill.on = true;
+  state.svgFill.on = false;
+  $("svgFillToggle").checked = false;
+  updateFillModePanels();
+  updateFillChoiceUI();
+  updatePatternControlAvailability();
+  updateSvgControlAvailability();
+  renderPreview();
+  rebuildLayers();
 });
 
 $("svgModePill").addEventListener("click", () => {
@@ -1070,10 +1645,8 @@ $("svgModePill").addEventListener("click", () => {
   selectSvgSample(state.svgFill.sample);
 });
 
-$("motifFamilyTabs").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-motif-family]");
-  if (!button) return;
-  activeMotifFamily = button.dataset.motifFamily;
+$("motifFamilySelect").addEventListener("change", (event) => {
+  activeMotifFamily = event.target.value;
   renderMotifBrowser();
 });
 
@@ -1098,11 +1671,14 @@ bindColor("patColor", "patColorHex", (v) => {
   state.patColor = v;
   $("svgPatColor").value = $("svgPatColorHex").value = v;
   renderPreview();
-  if (state.pattern === "solid") repaint(); else syncGeomTexture();
+  if (state.fontFill.on) syncFontFill();
+  else if (state.pattern === "solid") repaint();
+  else syncGeomTexture();
 });
 bindColor("svgPatColor", "svgPatColorHex", (v) => {
   state.patColor = v;
   $("patColor").value = $("patColorHex").value = v;
+  renderMotifBrowser();
   if (state.svgFill.on && state.svgFill.sample !== "custom") syncSvgFill();
 });
 $("patOpacity").addEventListener("input", (e) => {
@@ -1123,19 +1699,153 @@ $("weight").addEventListener("input", (e) => {
   renderPreview(); syncGeomTexture();
 });
 $("tile").addEventListener("input", (e) => {
-  state.tile = +e.target.value; $("tileVal").textContent = state.tile + " px";
+  state.tile = +e.target.value;
+  $("tileVal").textContent = state.tile + " px";
+  updateGeometricScaleReadout();
   renderPreview(); syncGeomTexture();
+});
+$("geometricScaleModeSeg").addEventListener("click", (event) => {
+  const mode = event.target.dataset.geometricScaleMode;
+  if (!mode) return;
+  state.geometricScale.mode = mode;
+  updateGeometricScaleControls();
+  rebuildLayers();
+});
+$("geometricReferenceZoom").addEventListener("input", (event) => {
+  state.geometricScale.referenceZoom = +event.target.value;
+  $("geometricReferenceZoomVal").textContent = `z${state.geometricScale.referenceZoom.toFixed(0)}`;
+  updateGeometricScaleReadout();
+  syncGeomTexture();
+});
+$("geometricUseCurrentZoom").addEventListener("click", () => {
+  state.geometricScale.referenceZoom = Math.floor(map.getZoom());
+  $("geometricReferenceZoom").value = state.geometricScale.referenceZoom;
+  $("geometricReferenceZoomVal").textContent = `z${state.geometricScale.referenceZoom.toFixed(0)}`;
+  updateGeometricScaleReadout();
+  syncGeomTexture();
+});
+$("geometricPixelRatioSeg").addEventListener("click", (event) => {
+  const pixelRatio = event.target.dataset.geometricPixelRatio;
+  if (!pixelRatio) return;
+  state.geometricScale.pixelRatio = pixelRatio;
+  updateGeometricScaleControls();
+  syncGeomTexture();
+});
+// Font fill
+function openFontInspectorSection(section) {
+  document.querySelectorAll("[data-font-section-tab]").forEach((button) => {
+    const active = button.dataset.fontSectionTab === section;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  document.querySelectorAll("[data-font-section]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.fontSection === section);
+  });
+}
+
+$("fontInspectorTabs").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-font-section-tab]");
+  if (button) openFontInspectorSection(button.dataset.fontSectionTab);
+});
+
+function refreshFontFill() {
+  if (!state.fontFill.on || !state.fontFill.text.trim()) return;
+  renderPreview();
+  syncFontFill();
+}
+
+$("fontText").addEventListener("input", (event) => {
+  state.fontFill.text = event.target.value;
+  refreshFontFill();
+});
+$("fontText").addEventListener("blur", (event) => {
+  if (event.target.value.trim()) return;
+  event.target.value = state.fontFill.text = "A";
+  refreshFontFill();
+});
+$("fontFamily").addEventListener("change", (event) => {
+  state.fontFill.fontFamily = event.target.value;
+  refreshFontFill();
+});
+$("fontStyleSeg").addEventListener("click", (event) => {
+  const value = event.target.dataset.fontStyle;
+  if (!value) return;
+  state.fontFill.fontStyle = value;
+  document.querySelectorAll("#fontStyleSeg button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.fontStyle === value);
+  });
+  refreshFontFill();
+});
+$("fontWeightSeg").addEventListener("click", (event) => {
+  const value = event.target.dataset.fontWeight;
+  if (!value) return;
+  state.fontFill.fontWeight = value;
+  document.querySelectorAll("#fontWeightSeg button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.fontWeight === value);
+  });
+  refreshFontFill();
+});
+$("fontLayoutSeg").addEventListener("click", (event) => {
+  const value = event.target.dataset.fontLayout;
+  if (!value) return;
+  state.fontFill.stagger = value === "staggered";
+  document.querySelectorAll("#fontLayoutSeg button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.fontLayout === value);
+  });
+  refreshFontFill();
+});
+$("fontScaleModeSeg").addEventListener("click", (event) => {
+  const value = event.target.dataset.fontScaleMode;
+  if (!value) return;
+  state.fontFill.scaleMode = value;
+  updateFontScaleControls();
+  if (state.fontFill.on) rebuildLayers();
+});
+$("fontReferenceZoom").addEventListener("input", (event) => {
+  state.fontFill.referenceZoom = +event.target.value;
+  $("fontReferenceZoomVal").textContent = `z${state.fontFill.referenceZoom.toFixed(0)}`;
+  updateFontScaleReadout();
+  if (state.fontFill.on && state.fontFill.scaleMode === "map") syncFontFill();
+});
+$("fontUseCurrentZoom").addEventListener("click", () => {
+  state.fontFill.referenceZoom = Math.floor(map.getZoom());
+  $("fontReferenceZoom").value = state.fontFill.referenceZoom;
+  $("fontReferenceZoomVal").textContent = `z${state.fontFill.referenceZoom.toFixed(0)}`;
+  updateFontScaleReadout();
+  if (state.fontFill.on && state.fontFill.scaleMode === "map") syncFontFill();
+});
+[
+  ["fontSize", "fontSize", "fontSizeVal", (value) => `${value} px`],
+  ["fontLetterSpacing", "letterSpacing", "fontLetterSpacingVal", (value) => `${value} px`],
+  ["fontHorizontalSpacing", "horizontalSpacing", "fontHorizontalSpacingVal", (value) => `${value} px`],
+  ["fontVerticalSpacing", "verticalSpacing", "fontVerticalSpacingVal", (value) => `${value} px`],
+  ["fontRotation", "rotationDeg", "fontRotationVal", (value) => `${value}°`],
+].forEach(([inputId, key, valueId, format]) => {
+  $(inputId).addEventListener("input", (event) => {
+    const value = +event.target.value;
+    state.fontFill[key] = value;
+    $(valueId).textContent = format(value);
+    refreshFontFill();
+  });
 });
 
 // SVG fill
-function setGeometricFieldsetEnabled(enabled) {
-  $("geometricFieldset").classList.toggle("svg-mode", !enabled);
-  document.querySelector(".svg-settings").classList.toggle("active-mode", !enabled);
+function updateFillModePanels() {
+  $("geometricFieldset").classList.toggle("font-mode", state.fontFill.on);
+  $("geometricFieldset").classList.toggle("svg-mode", state.svgFill.on);
+  document.querySelector(".font-settings").classList.toggle("active-mode", state.fontFill.on);
+  document.querySelector(".svg-settings").classList.toggle("active-mode", state.svgFill.on);
+  updateFontScaleControls();
+  updateFeaturePanelScrollMode();
 }
 function updateFillChoiceUI() {
   document.querySelectorAll("#patternPills .pill").forEach((element) => {
-    element.classList.toggle("active", !state.svgFill.on && element.dataset.p === state.pattern);
+    element.classList.toggle(
+      "active",
+      !state.fontFill.on && !state.svgFill.on && element.dataset.p === state.pattern,
+    );
   });
+  $("fontModePill").classList.toggle("active", state.fontFill.on);
   $("svgModePill").classList.toggle("active", state.svgFill.on);
   $("svgModePill").setAttribute("aria-expanded", String(state.svgFill.on));
   // The motif browser only exists to configure the "SVG motif" fill type,
@@ -1148,16 +1858,82 @@ function updateFillChoiceUI() {
   renderMotifBrowser(); // also syncs the custom-SVG panel's visibility
 }
 function updatePatternControlAvailability() {
-  const angleEnabled = state.pattern === "hachures" || state.pattern === "cross";
-  const textureEnabled = state.pattern !== "solid";
+  const angleEnabled = !state.fontFill.on && (state.pattern === "hachures" || state.pattern === "cross");
+  const textureEnabled = state.fontFill.on || state.pattern !== "solid";
   $("angleControl").classList.toggle("is-disabled", !angleEnabled);
   document.querySelectorAll("#angleSeg button").forEach((button) => {
     button.disabled = !angleEnabled;
   });
   $("textureScaleControl").classList.toggle("is-disabled", !textureEnabled);
   $("scaleControl").classList.toggle("is-disabled", !textureEnabled);
-  $("weight").disabled = !textureEnabled;
-  $("tile").disabled = !textureEnabled;
+  $("weight").disabled = !textureEnabled || state.fontFill.on;
+  $("tile").disabled = !textureEnabled || state.fontFill.on;
+  updateGeometricScaleControls();
+}
+function updateFontScaleControls() {
+  const enabled = state.fontFill.on;
+  const mapScale = enabled && state.fontFill.scaleMode === "map";
+  document.querySelectorAll("#fontScaleModeSeg button").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      button.dataset.fontScaleMode === state.fontFill.scaleMode,
+    );
+    button.disabled = !enabled;
+  });
+  $("fontReferenceZoomControl").classList.toggle("is-disabled", !mapScale);
+  $("fontReferenceZoom").disabled = !mapScale;
+  $("fontUseCurrentZoom").disabled = !mapScale;
+  updateFontScaleReadout();
+}
+function updateFontScaleReadout() {
+  const effective = effectiveFontFill(currentStyle(), map.getZoom());
+  const atMinimum = state.fontFill.scaleMode === "map" && effective.fontSize === 8;
+  const atMaximum = state.fontFill.scaleMode === "map" &&
+    map.getZoom() > state.fontFill.referenceZoom &&
+    effective.fontSize === Math.max(state.fontFill.fontSize, FONT_GROUND_SCALE_MAX);
+  $("fontScaleReadout").textContent = state.fontFill.scaleMode === "screen"
+    ? `${state.fontFill.fontSize} px type at every zoom`
+    : `At z${map.getZoom().toFixed(1)}: ${effective.fontSize.toFixed(1)} px type${atMinimum ? " · readable minimum" : atMaximum ? " · maximum display size" : ""}`;
+}
+function effectiveGeometricStop(style, zoom = map.getZoom()) {
+  const stops = geometricZoomStops(style);
+  return stops.reduce(
+    (active, stop) => zoom >= stop.zoom ? stop : active,
+    stops[0],
+  );
+}
+function updateGeometricScaleControls() {
+  const enabled = !state.fontFill.on && !state.svgFill.on && state.pattern !== "solid";
+  const mapScale = enabled && state.geometricScale.mode === "map";
+  document.querySelectorAll("#geometricScaleModeSeg button").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      button.dataset.geometricScaleMode === state.geometricScale.mode,
+    );
+    button.disabled = !enabled;
+  });
+  document.querySelectorAll("#geometricPixelRatioSeg button").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      button.dataset.geometricPixelRatio === state.geometricScale.pixelRatio,
+    );
+    button.disabled = !enabled;
+  });
+  $("geometricReferenceZoomControl").classList.toggle("is-disabled", !mapScale);
+  $("geometricReferenceZoom").disabled = !mapScale;
+  $("geometricUseCurrentZoom").disabled = !mapScale;
+  updateGeometricScaleReadout();
+}
+function updateGeometricScaleReadout() {
+  if (state.pattern === "solid" || state.fontFill.on || state.svgFill.on) return;
+  if (state.geometricScale.mode === "screen") {
+    $("geometricScaleReadout").textContent = `${state.tile} px tile at every zoom`;
+    return;
+  }
+  const zoom = map.getZoom();
+  const stop = effectiveGeometricStop(currentStyle(), zoom);
+  $("geometricScaleReadout").textContent =
+    `At z${zoom.toFixed(2)}: ${Number(stop.tile.toFixed(2))} px tile`;
 }
 function updateSvgControlAvailability() {
   document.querySelectorAll("[data-svg-options]").forEach((group) => {
@@ -1251,7 +2027,8 @@ function updateAppearanceControlAvailability() {
 }
 $("svgFillToggle").addEventListener("change", (e) => {
   state.svgFill.on = e.target.checked;
-  setGeometricFieldsetEnabled(!state.svgFill.on);
+  if (state.svgFill.on) state.fontFill.on = false;
+  updateFillModePanels();
   updateFillChoiceUI();
   updateSvgControlAvailability();
   updateSvgScaleReadout();
@@ -1335,7 +2112,7 @@ wireCustomSvgPanel({
   panelId: "svgFillCustomPanel", textId: "svgFillCustomText", fileId: "svgFillCustomFile", applyId: "svgFillCustomApply",
   onApply: (svg) => {
     state.svgFill.customSvg = svg;
-    if (state.svgFill.on && state.svgFill.sample === "custom") syncSvgFill();
+    selectSvgSample("custom");
   },
 });
 
@@ -1632,16 +2409,19 @@ async function loadVectorFiles(fileList) {
 
 async function openVectorFiles(files) {
   const triggers = document.querySelectorAll(".import-trigger");
-  const label = $("importVector");
-  triggers.forEach((el) => { el.disabled = true; });
-  label.textContent = "Opening…";
+  triggers.forEach((el) => {
+    el.disabled = true;
+    el.setAttribute("aria-busy", "true");
+  });
   try {
     await loadVectorFiles(files);
   } catch (error) {
     toast(error instanceof Error ? error.message : "This dataset could not be opened");
   } finally {
-    triggers.forEach((el) => { el.disabled = false; });
-    label.textContent = "Open data…";
+    triggers.forEach((el) => {
+      el.disabled = false;
+      el.removeAttribute("aria-busy");
+    });
   }
 }
 
@@ -1695,6 +2475,15 @@ function tileImageToPng(tile) {
 const STATIC_PIXEL_RATIO = 2;
 
 async function buildStaticPatternPng(definition) {
+  if (definition.kind === "font") {
+    const tile = await createFontPatternTile({
+      imageId: "static-pattern",
+      ...definition,
+      pixelRatio: STATIC_PIXEL_RATIO,
+    });
+    return tileImageToPng(tile);
+  }
+
   if (definition.kind === "svg") {
     const tile = await createSvgScatterTile({
       imageId: "static-pattern",
@@ -1711,7 +2500,10 @@ async function buildStaticPatternPng(definition) {
       definition.color,
       definition.weight,
       definition.angle,
-      { pixelRatio: STATIC_PIXEL_RATIO },
+      {
+        pixelRatio: definition.pixelRatio ?? STATIC_PIXEL_RATIO,
+        stippleCount: definition.stippleCount,
+      },
     ));
   }
   throw new Error("Unsupported static pattern definition");
@@ -1744,11 +2536,13 @@ const fragment = await response.json();
 const imagesResponse = await fetch(imagesUrl);
 if (!imagesResponse.ok) throw new Error("Pattern image index could not be loaded");
 const images = await imagesResponse.json();
-for (const [imageId, relativeUrl] of Object.entries(images)) {
+for (const [imageId, descriptor] of Object.entries(images)) {
   if (!map.hasImage(imageId)) {
+    const relativeUrl = typeof descriptor === "string" ? descriptor : descriptor.path;
+    const pixelRatio = typeof descriptor === "string" ? 2 : descriptor.pixelRatio;
     const imageUrl = new URL(relativeUrl, imagesUrl);
     const loaded = await map.loadImage(imageUrl.href);
-    map.addImage(imageId, loaded.data || loaded, { pixelRatio: 2 });
+    map.addImage(imageId, loaded.data || loaded, { pixelRatio });
   }
 }
 
@@ -1833,7 +2627,12 @@ async function downloadStaticBundle() {
   for (const [imageId, definition] of unique) {
     const path = `patterns/${imageId}.png`;
     const png = await buildStaticPatternPng(definition);
-    images[imageId] = path;
+    images[imageId] = {
+      path,
+      pixelRatio: definition.kind === "geometric"
+        ? definition.pixelRatio ?? STATIC_PIXEL_RATIO
+        : STATIC_PIXEL_RATIO,
+    };
     files[`maplibre-pattern-fill/${path}`] =
       new Uint8Array(await png.arrayBuffer());
   }
@@ -1952,6 +2751,35 @@ function applyStateToUI() {
   $("svgPatOpacity").value = state.patOpacity; $("svgPatOpacityVal").textContent = (+state.patOpacity).toFixed(2);
   $("weight").value = state.weight; $("weightVal").textContent = (+state.weight).toFixed(2) + " px";
   $("tile").value = state.tile; $("tileVal").textContent = state.tile + " px";
+  $("geometricReferenceZoom").value = state.geometricScale.referenceZoom;
+  $("geometricReferenceZoomVal").textContent = `z${state.geometricScale.referenceZoom.toFixed(0)}`;
+  $("fontText").value = state.fontFill.text;
+  $("fontFamily").value = state.fontFill.fontFamily;
+  $("fontSize").value = state.fontFill.fontSize;
+  $("fontSizeVal").textContent = state.fontFill.fontSize + " px";
+  $("fontLetterSpacing").value = state.fontFill.letterSpacing;
+  $("fontLetterSpacingVal").textContent = state.fontFill.letterSpacing + " px";
+  $("fontHorizontalSpacing").value = state.fontFill.horizontalSpacing;
+  $("fontHorizontalSpacingVal").textContent = state.fontFill.horizontalSpacing + " px";
+  $("fontVerticalSpacing").value = state.fontFill.verticalSpacing;
+  $("fontVerticalSpacingVal").textContent = state.fontFill.verticalSpacing + " px";
+  $("fontRotation").value = state.fontFill.rotationDeg;
+  $("fontRotationVal").textContent = state.fontFill.rotationDeg + "°";
+  $("fontReferenceZoom").value = state.fontFill.referenceZoom;
+  $("fontReferenceZoomVal").textContent = `z${state.fontFill.referenceZoom.toFixed(0)}`;
+  document.querySelectorAll("#fontStyleSeg button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.fontStyle === state.fontFill.fontStyle);
+  });
+  document.querySelectorAll("#fontWeightSeg button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.fontWeight === state.fontFill.fontWeight);
+  });
+  document.querySelectorAll("#fontLayoutSeg button").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      button.dataset.fontLayout === (state.fontFill.stagger ? "staggered" : "regular"),
+    );
+  });
+  updateFontScaleControls();
   $("bgColor").value = $("bgColorHex").value = state.bg.color;
   $("bgOpacity").value = state.bg.opacity; $("bgOpacityVal").textContent = (+state.bg.opacity).toFixed(2);
   $("bgToggle").checked = state.bg.on;
@@ -1960,8 +2788,12 @@ function applyStateToUI() {
   $("lineToggle").checked = state.outline.on;
   $("dashInput").value = (state.outline.dash || []).join(" ");
   $("svgFillToggle").checked = state.svgFill.on;
-  const motif = motifCatalogEntry(state.svgFill.sample);
-  if (motif) activeMotifFamily = motif.family;
+  let motif = motifCatalogEntry(state.svgFill.sample);
+  if (!motif) {
+    state.svgFill.sample = SVG_PATTERN_CATALOG[0].value;
+    motif = SVG_PATTERN_CATALOG[0];
+  }
+  activeMotifFamily = motif.family;
   $("svgFillCustomText").value = state.svgFill.customSvg;
   $("svgVisualSize").value = state.svgFill.visualSize;
   $("svgVisualSizeVal").textContent = state.svgFill.visualSize.toFixed(0) + " px";
@@ -1978,7 +2810,7 @@ function applyStateToUI() {
   updateSvgDistributionControls();
   updateSvgScaleModeControls();
   updateSvgQualityHint();
-  setGeometricFieldsetEnabled(!state.svgFill.on);
+  updateFillModePanels();
   updateFillChoiceUI();
   document.querySelectorAll("#angleSeg button").forEach((b) => b.classList.toggle("active", +b.dataset.a === state.angle));
   document.querySelectorAll("#dashSeg button").forEach((button) => {
@@ -1991,41 +2823,18 @@ function applyStateToUI() {
   renderPreview();
 }
 
-let currentScreenPatternPhase = -1;
-map.on("zoom", () => {
-  const phase = screenPatternPhase(map.getZoom(), SCREEN_PATTERN_STEPS).index;
-  if (phase === currentScreenPatternPhase) return;
-  currentScreenPatternPhase = phase;
-  Object.keys(FEATURES).forEach((id) => {
-    const style = id === state.layer?.source ? currentStyle() : FEATURE_STYLES[id];
-    const layerId = `${id}__pat`;
-    if (
-      !style?.svgFill?.on ||
-      style.svgFill.noCut ||
-      style.svgFill.scaleMode !== "screen" ||
-      !map.getLayer(layerId)
-    ) return;
-    const imageId = screenPatternImageId(id);
-    if (
-      map.hasImage(imageId) &&
-      map.getPaintProperty(layerId, "fill-pattern") !== imageId
-    ) {
-      map.setPaintProperty(layerId, "fill-pattern", imageId);
-    }
-  });
-});
-
 map.on("moveend", () => {
-  if (!state.svgFill.on) return;
-  if (state.svgFill.noCut && state.svgFill.scaleMode === "screen") {
-    syncSvgIconScatter();
-  } else if (!state.svgFill.noCut && state.svgFill.scaleMode === "map") {
-    syncSvgTexture();
-  } else {
-    repaint();
+  if (state.svgFill.on) {
+    if (state.svgFill.noCut && state.svgFill.scaleMode === "screen") {
+      syncSvgIconScatter();
+    }
+    updateSvgScaleReadout();
+    updateSvgQualityHint();
+  } else if (state.fontFill.on) {
+    updateFontScaleReadout();
+  } else if (!state.fontFill.on && state.pattern !== "solid") {
+    updateGeometricScaleReadout();
   }
-  updateSvgScaleReadout();
-  updateSvgQualityHint();
 });
 
 function polygonLayerIds() {

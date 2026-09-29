@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PATTERN_METADATA_KEY,
+  createFontPatternDefinition,
   createSvgPatternDefinition,
   parsePatternDefinition,
   parsePatternMetadata,
@@ -51,9 +52,27 @@ describe("pattern definitions", () => {
     expect(definition.stagger).toBe(false);
   });
 
+  it("normalizes font pattern defaults", () => {
+    expect(createFontPatternDefinition({ text: "A" })).toEqual({
+      kind: "font",
+      text: "A",
+      fontFamily: "sans-serif",
+      fontSize: 18,
+      fontWeight: "500",
+      fontStyle: "normal",
+      letterSpacing: 0,
+      horizontalSpacing: 26,
+      verticalSpacing: 22,
+      rotationDeg: 0,
+      stagger: true,
+      color: "#000000",
+    });
+  });
+
   it("rejects malformed untrusted definitions and metadata", () => {
     expect(() => parsePatternDefinition({ ...geometric, size: 0 })).toThrow(/size/);
     expect(() => parsePatternDefinition({ ...geometric, pattern: "unknown" })).toThrow(/pattern/);
+    expect(() => createFontPatternDefinition({ text: "" })).toThrow(/text/);
     expect(() => parsePatternMetadata({ imageId: "", definition: geometric })).toThrow(/imageId/);
     expect(() => parsePatternMetadata({
       imageId: "base",
@@ -74,6 +93,23 @@ describe("pattern definitions", () => {
         { zoom: 11, imageId: "z11", definition: { ...geometric, size: 20 } },
       ],
     }).variants).toHaveLength(2);
+  });
+
+  it("preserves an optional geometric texture pixel ratio", () => {
+    expect(parsePatternDefinition({ ...geometric, pixelRatio: 1 })).toEqual({
+      ...geometric,
+      pixelRatio: 1,
+    });
+    expect(() => parsePatternDefinition({ ...geometric, pixelRatio: 0 })).toThrow(/pixelRatio/);
+  });
+
+  it("preserves a fixed stipple count for ground-scaled variants", () => {
+    expect(parsePatternDefinition({ ...geometric, pattern: "stipple", stippleCount: 7 })).toEqual({
+      ...geometric,
+      pattern: "stipple",
+      stippleCount: 7,
+    });
+    expect(() => parsePatternDefinition({ ...geometric, stippleCount: 1.5 })).toThrow(/stippleCount/);
   });
 
   it("exports the versioned metadata key", () => {

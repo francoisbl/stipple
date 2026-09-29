@@ -6,6 +6,8 @@ describe("MapLibre public API", () => {
     expect(maplibreApi).toHaveProperty("buildStyleFragment");
     expect(maplibreApi).toHaveProperty("installPatternFills");
     expect(maplibreApi).toHaveProperty("installSvgPatternFill");
+    expect(maplibreApi).toHaveProperty("installFontPatternFill");
+    expect(maplibreApi).toHaveProperty("createFontPatternTile");
 
     expect(maplibreApi).not.toHaveProperty("buildLineStyleFragment");
     expect(maplibreApi).not.toHaveProperty("buildIconStyleFragment");

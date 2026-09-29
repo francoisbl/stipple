@@ -55,6 +55,8 @@ export function buildStyleFragment(options: BuildStyleFragmentOptions) {
       color: pattern.color,
       weight: pattern.weight,
       angle: pattern.angle,
+      ...(pattern.pixelRatio === undefined ? {} : { pixelRatio: pattern.pixelRatio }),
+      ...(pattern.stippleCount === undefined ? {} : { stippleCount: pattern.stippleCount }),
     };
     const imageId = patternDefinitionId(definition);
     layers.push({

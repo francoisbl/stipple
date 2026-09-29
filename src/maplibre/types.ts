@@ -7,6 +7,10 @@ export interface PatternFillConfig {
   opacity: number;
   weight: number;
   angle: number;
+  /** Raster pixels per MapLibre layout pixel. Omit for the display ratio. */
+  pixelRatio?: number;
+  /** Optional fixed dot count for stipple zoom variants. */
+  stippleCount?: number;
 }
 
 export interface BackgroundFillConfig {
