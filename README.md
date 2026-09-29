@@ -46,7 +46,6 @@ produces the same arrangement.
 
 <!-- Add a small gallery here: geometric, font, SVG, and custom SVG. -->
 
-
 ## Do I need to write code to try it?
 
 The playground can be used without writing code. It lets you draw or import
