@@ -83,21 +83,6 @@ ignored.
 Imports are limited to 200 MB per dataset and the first 64 polygon parts.
 Formats with a known CRS are reprojected to WGS84 in the browser.
 
-## What happens when I zoom the map?
-
-Two scaling modes are available:
-
-- **Screen scale** keeps the pattern the same visual size on screen.
-- **Ground scale** makes it behave like something printed on the map itself.
-
-Ground-scaled patterns use several texture sizes and let MapLibre blend
-between them. That avoids the sudden jump you normally get at integer zoom
-levels. Stipple patterns also keep the same deterministic layout while they
-scale, so dots and symbols do not reshuffle on every zoom.
-
-By default, textures follow the display pixel ratio, capped at 2x. You can
-also force a softer 1x texture when that suits the map better.
-
 ## Installation
 
 ```sh
@@ -233,7 +218,24 @@ dependency is not suitable.
 The metadata format is documented in
 [`schema/pattern-metadata-v1.schema.json`](./schema/pattern-metadata-v1.schema.json).
 
-## Can symbols stay whole at polygon edges?
+## Rendering details
+
+### Zoom behaviour
+
+Two scaling modes are available:
+
+- **Screen scale** keeps the pattern the same visual size on screen.
+- **Ground scale** makes it behave like something printed on the map itself.
+
+Ground-scaled patterns use several texture sizes and let MapLibre blend
+between them. That avoids the sudden jump you normally get at integer zoom
+levels. Stipple patterns also keep the same deterministic layout while they
+scale, so dots and symbols do not reshuffle on every zoom.
+
+By default, textures follow the display pixel ratio, capped at 2x. You can
+also force a softer 1x texture when that suits the map better.
+
+### Symbols at polygon edges
 
 A repeating `fill-pattern` is always clipped at the polygon boundary. That is
 how MapLibre works.
