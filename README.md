@@ -46,6 +46,20 @@ produces the same arrangement.
 
 <!-- Add a small gallery here: geometric, font, SVG, and custom SVG. -->
 
+## But can’t I just ask AI to do this?
+
+Fair point. But Stipple can fit into that workflow.
+
+Whether you build maps by writing code yourself or with the help of AI,
+the playground gives you direct visual control over the result.
+Instead of refining a pattern through a back-and-forth series of prompts
+and corrections, you can adjust it interactively until it looks exactly
+the way you want.
+
+Once you're happy with the result, export the corresponding MapLibre code
+or Stipple configuration and use it directly in your project, or feed it
+back into your AI-assisted workflow.
+
 ## Do I need to write code to try it?
 
 The playground can be used without writing code. It lets you draw or import
