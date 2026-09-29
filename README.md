@@ -46,7 +46,8 @@ produces the same arrangement.
 
 <!-- Add a small gallery here: geometric, font, SVG, and custom SVG. -->
 
-<img width="1572" height="1061" alt="image" src="https://github.com/user-attachments/assets/80b78ba7-f54c-4be7-af33-77333e3e7ee1" />
+<img width="1456" height="858" alt="image" src="https://github.com/user-attachments/assets/f7d28a0f-267a-4bd3-b7a2-30b49eabf709" />
+
 
 
 ## Do I need to write code to try it?
