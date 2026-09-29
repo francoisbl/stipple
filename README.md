@@ -1,11 +1,4 @@
-<h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./assets/stipple-logo-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="./assets/stipple-logo-light.svg">
-    <img alt="" src="./assets/stipple-logo-light.svg" width="44" height="44">
-  </picture>
-  Stipple
-</h1>
+<h1><picture><source media="(prefers-color-scheme: dark)" srcset="./assets/stipple-logo-dark.svg"><source media="(prefers-color-scheme: light)" srcset="./assets/stipple-logo-light.svg"><img alt="" src="./assets/stipple-logo-light.svg" width="44" height="44" style="vertical-align:middle;"></picture> Stipple</h1>
 
 A focused library and visual playground for designing, generating, and
 installing fill patterns in
