@@ -46,6 +46,9 @@ produces the same arrangement.
 
 <!-- Add a small gallery here: geometric, font, SVG, and custom SVG. -->
 
+<img width="1572" height="1061" alt="image" src="https://github.com/user-attachments/assets/80b78ba7-f54c-4be7-af33-77333e3e7ee1" />
+
+
 ## Do I need to write code to try it?
 
 The playground can be used without writing code. It lets you draw or import
