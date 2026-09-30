@@ -54,25 +54,25 @@ produces the same arrangement.
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-hatches.png" alt="Polygon filled with diagonal hatches" width="100%"><br>
-      <sub><em>Caption to add.</em></sub>
+      <sub><em>Hatches</em></sub>
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-dots.png" alt="Polygon filled with a regular dot pattern" width="100%"><br>
-      <sub><em>Caption to add.</em></sub>
+      <sub><em>Dots</em></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="25%">
       <img src="./assets/readme/example-grid.png" alt="Polygon filled with a grid pattern" width="100%"><br>
-      <sub><em>Caption to add.</em></sub>
+      <sub><em>Grid</em></sub>
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-font-fill.png" alt="Polygon filled with repeated text" width="100%"><br>
-      <sub><em>Caption to add.</em></sub>
+      <sub><em>Font</em></sub>
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-svg-symbol.png" alt="Polygon filled with a bundled SVG motif" width="100%"><br>
-      <sub><em>SVG fill</em></sub>
+      <sub><em>SVG</em></sub>
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-custom-svg.png" alt="Polygon filled with a custom SVG motif" width="100%"><br>
