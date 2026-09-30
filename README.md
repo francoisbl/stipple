@@ -43,40 +43,37 @@ produces the same arrangement.
 
 <table>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" width="25%">
       <img src="./assets/readme/example-custom-svg.png" alt="Polygon filled with a custom SVG motif" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
-    <td align="center" width="50%">
+    <td align="center" width="25%">
       <img src="./assets/readme/example-stipple.png" alt="Polygon filled with a stipple pattern" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
+    <td align="center" width="25%">
       <img src="./assets/readme/example-grid.png" alt="Polygon filled with a grid pattern" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
-    <td align="center" width="50%">
+    <td align="center" width="25%">
       <img src="./assets/readme/example-font-fill.png" alt="Polygon filled with repeated text" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" width="25%">
       <img src="./assets/readme/example-svg-symbol.png" alt="Polygon filled with a bundled SVG motif" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
-    <td align="center" width="50%">
+    <td align="center" width="25%">
       <img src="./assets/readme/example-dots.png" alt="Polygon filled with a regular dot pattern" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2">
-      <img src="./assets/readme/example-hatches.png" alt="Polygon filled with diagonal hatches" width="50%"><br>
+    <td align="center" width="25%">
+      <img src="./assets/readme/example-hatches.png" alt="Polygon filled with diagonal hatches" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
+    <td width="25%"></td>
   </tr>
 </table>
 
