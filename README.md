@@ -68,11 +68,11 @@ produces the same arrangement.
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-font-fill.png" alt="Polygon filled with repeated text" width="100%"><br>
-      <sub><em>Font</em></sub>
+      <sub><em>Font fill</em></sub>
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-svg-symbol.png" alt="Polygon filled with a bundled SVG motif" width="100%"><br>
-      <sub><em>SVG</em></sub>
+      <sub><em>SVG fill</em></sub>
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-custom-svg.png" alt="Polygon filled with a custom SVG motif" width="100%"><br>
