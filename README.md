@@ -8,6 +8,9 @@ It supports geometric patterns, repeated text, and SVG symbols. Patterns can
 be configured in JavaScript or prepared in the playground and exported as
 MapLibre code.
 
+**[Run the playground locally](#run-the-playground-locally)** ·
+**[Install the npm package](#installation)**
+
 <img width="1456" height="858" alt="Stipple playground showing a patterned polygon on a MapLibre map" src="https://github.com/user-attachments/assets/f7d28a0f-267a-4bd3-b7a2-30b49eabf709" />
 
 ## What problem does it solve?
@@ -53,21 +56,24 @@ Once you're happy with the result, export the corresponding MapLibre code
 or Stipple configuration and use it directly in your project, or feed it
 back into your AI-assisted workflow.
 
-## Do I need to write code to try it?
+## Run the playground locally
 
-Once it is running, the playground can be used without writing code. Start
-with the included sample polygons or import your own data, try every fill
-type, switch basemaps, and export the result. Files stay in the browser; the
-playground does not upload them to a server.
-
-To run it locally:
+The latest version of the playground is currently available from the source
+repository. After cloning the repository, install the dependencies and build
+the library:
 
 ```sh
 npm install
 npm run build
 ```
 
-Then open [`demo/index.html`](./demo/index.html) in a browser.
+Then open the local [`demo/index.html`](./demo/index.html) file in your
+browser.
+
+Once open, the playground itself requires no coding. Start with the included
+sample polygons or import your own data, customize the fills visually, and
+export the result. Files are processed locally in the browser and are not
+uploaded to a server.
 
 <!-- Add a hosted playground link after the latest version is deployed. -->
 
