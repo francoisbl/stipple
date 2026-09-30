@@ -250,6 +250,7 @@ const map = new maplibregl.Map({
   center: SAMPLE_CENTER, zoom: 12,
   attributionControl: false,
 });
+map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-right");
 const attributionControl = new maplibregl.AttributionControl({ compact: true });
 map.addControl(attributionControl, "bottom-right");
 
@@ -261,7 +262,6 @@ function collapseMapAttribution() {
 
 collapseMapAttribution();
 map.once("load", collapseMapAttribution);
-map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-right");
 
 // Resizable desktop style panel. The chosen width is local UI state, so it
 // is remembered independently from the exported pattern configuration.

@@ -222,6 +222,7 @@ describe("demo pattern library", () => {
 
   it("keeps map controls compact and unambiguous", () => {
     expect(demo).toMatch(/attributionControl:\s*false/);
+    expect(demo).toMatch(/new maplibregl\.ScaleControl[\s\S]*?new maplibregl\.AttributionControl/);
     expect(demo).toMatch(/new maplibregl\.AttributionControl\(\{ compact: true \}\)/);
     expect(demo).toMatch(/function collapseMapAttribution[\s\S]*?classList\.remove\("maplibregl-compact-show"\)[\s\S]*?removeAttribute\("open"\)/);
     expect(demo).toMatch(/id="compassBtn"[^>]*hidden/);
