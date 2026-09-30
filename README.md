@@ -73,7 +73,10 @@ produces the same arrangement.
       <img src="./assets/readme/example-hatches.png" alt="Polygon filled with diagonal hatches" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
-    <td width="25%"></td>
+    <td align="center" width="25%">
+      <img src="./assets/readme/example-solid.png" alt="Polygon with a solid fill" width="100%"><br>
+      <sub><em>Caption to add.</em></sub>
+    </td>
   </tr>
 </table>
 
