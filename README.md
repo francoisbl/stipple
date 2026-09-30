@@ -8,9 +8,10 @@ It supports geometric patterns, repeated text, and SVG symbols. Patterns can
 be configured in JavaScript or prepared in the playground and exported as
 MapLibre code.
 
+<img width="1456" alt="Stipple playground showing a patterned polygon on a MapLibre map" src="./assets/readme/playground.png" />
+
 <p align="center"><strong><a href="https://stipple.pages.dev/">➞ Run the playground</a></strong></p>
 
-<img width="1456" alt="Stipple playground showing a patterned polygon on a MapLibre map" src="./assets/readme/playground.png" />
 
 ## What problem does it solve?
 
@@ -44,13 +45,23 @@ produces the same arrangement.
 <table>
   <tr>
     <td align="center" width="25%">
-      <img src="./assets/readme/example-custom-svg.png" alt="Polygon filled with a custom SVG motif" width="100%"><br>
-      <sub><em>Caption to add.</em></sub>
+      <img src="./assets/readme/example-solid.png" alt="Polygon with a solid fill" width="100%"><br>
+      <sub><em>Solid</em></sub>
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-stipple.png" alt="Polygon filled with a stipple pattern" width="100%"><br>
+      <sub><em>Stipple</em></sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="./assets/readme/example-hatches.png" alt="Polygon filled with diagonal hatches" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
+    <td align="center" width="25%">
+      <img src="./assets/readme/example-dots.png" alt="Polygon filled with a regular dot pattern" width="100%"><br>
+      <sub><em>Caption to add.</em></sub>
+    </td>
+  </tr>
+  <tr>
     <td align="center" width="25%">
       <img src="./assets/readme/example-grid.png" alt="Polygon filled with a grid pattern" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
@@ -59,23 +70,13 @@ produces the same arrangement.
       <img src="./assets/readme/example-font-fill.png" alt="Polygon filled with repeated text" width="100%"><br>
       <sub><em>Caption to add.</em></sub>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="25%">
       <img src="./assets/readme/example-svg-symbol.png" alt="Polygon filled with a bundled SVG motif" width="100%"><br>
-      <sub><em>Caption to add.</em></sub>
+      <sub><em>SVG fill</em></sub>
     </td>
     <td align="center" width="25%">
-      <img src="./assets/readme/example-dots.png" alt="Polygon filled with a regular dot pattern" width="100%"><br>
-      <sub><em>Caption to add.</em></sub>
-    </td>
-    <td align="center" width="25%">
-      <img src="./assets/readme/example-hatches.png" alt="Polygon filled with diagonal hatches" width="100%"><br>
-      <sub><em>Caption to add.</em></sub>
-    </td>
-    <td align="center" width="25%">
-      <img src="./assets/readme/example-solid.png" alt="Polygon with a solid fill" width="100%"><br>
-      <sub><em>Caption to add.</em></sub>
+      <img src="./assets/readme/example-custom-svg.png" alt="Polygon filled with a custom SVG motif" width="100%"><br>
+      <sub><em>Or even your custom SVG</em></sub>
     </td>
   </tr>
 </table>
