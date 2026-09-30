@@ -3,3 +3,4 @@ _site/
 dist/
 *.log
 .DS_Store
+*.af~lock~
