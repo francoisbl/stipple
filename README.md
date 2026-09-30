@@ -90,8 +90,7 @@ Formats with a known CRS are reprojected to WGS84 in the browser.
 
 ## Installation
 
-The npm package is being prepared for its first release and is not published
-yet. Once it is available, install it alongside MapLibre GL JS:
+Install the package alongside MapLibre GL JS:
 
 ```sh
 npm install stipple-maplibre maplibre-gl
@@ -281,8 +280,9 @@ in Node.
 
 ## Project status
 
-Version `0.1.0` is functional and being prepared for its first npm release.
-The whole-symbol scatter API is the only part currently marked experimental.
+Version `0.1.1` is available on
+[npm](https://www.npmjs.com/package/stipple-maplibre). The whole-symbol
+scatter API is the only part currently marked experimental.
 
 ## Licence
 
