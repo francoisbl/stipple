@@ -20,6 +20,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
+    "build:pages": "npm run build && node scripts/build-pages.mjs",
     "dev": "tsup --watch",
     "prepublishOnly": "npm run validate",
     "test": "vitest run",
