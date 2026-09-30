@@ -79,6 +79,11 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/\$\("motifGrid"\)\.hidden = customFamilyActive/);
     expect(demo).toMatch(/\.motif-grid\[hidden\] \{ display: none; \}/);
     expect(demo).toMatch(/state\.svgFill\.customSvg = svg;[\s\S]*?selectSvgSample\("custom"\)/);
+    expect(demo).toMatch(/function recolorCustomSvg\(svg, color\)/);
+    expect(demo).toMatch(/const paintAttributes = \["fill", "stroke", "color", "stop-color"\]/);
+    expect(demo).toMatch(/svgFill\.sample === "custom"\) return recolorCustomSvg\(svgFill\.customSvg, color\)/);
+    expect(demo).toMatch(/const colourEnabled = state\.svgFill\.on/);
+    expect(demo).toMatch(/bindColor\("svgPatColor"[\s\S]*?if \(state\.svgFill\.on\) syncSvgFill\(\)/);
 
     for (const shape of ["triangle", "hexagon", "circle", "diamond", "star"]) {
       const svg = readFileSync(join("demo", "patterns", "shapes", `${shape}.svg`), "utf8");
@@ -232,5 +237,17 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/id="locateBtn"[^>]*title="Fit polygons"/);
     expect(demo).toMatch(/\.map-controls-bl \{ left: auto; right: 12px; top: 12px; bottom: auto; \}/);
     expect(demo).toMatch(/\.map-ctrl-zoom,[\s\S]*?\.map-ctrl-compass \{ display: none; \}/);
+  });
+
+  it("gates the temporary transparent PNG export behind a debug query", () => {
+    expect(demo).toMatch(/app\.type = "module"/);
+    expect(demo).toMatch(/id="exportPngDebugBtn" hidden/);
+    expect(demo).toMatch(/PNG_EXPORT_DEBUG = new URLSearchParams\(window\.location\.search\)\.get\("debug"\) === "png"/);
+    expect(demo).toMatch(/PNG_EXPORT_DEBUG \? \{ canvasContextAttributes: \{ preserveDrawingBuffer: true \} \} : \{\}/);
+    expect(demo).toMatch(/async function downloadSelectedPolygonPng\(\)/);
+    expect(demo).toMatch(/layer\.id\.startsWith\(selectedPrefix\)[\s\S]*?: "none"/);
+    expect(demo).toMatch(/map\.setPixelRatio\(Math\.max\(2, previousPixelRatio\)\)/);
+    expect(demo).toMatch(/context\.drawImage\(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh\)/);
+    expect(demo).toMatch(/if \(PNG_EXPORT_DEBUG\) \$\("exportPngDebugBtn"\)\.hidden = false/);
   });
 });

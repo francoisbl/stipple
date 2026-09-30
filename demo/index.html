@@ -489,6 +489,10 @@
             <span class="export-option-title">Download JSON + PNG</span>
             <span class="export-option-desc">style.json plus a rendered preview image, as a .zip.</span>
           </button>
+          <button type="button" class="export-option" id="exportPngDebugBtn" hidden>
+            <span class="export-option-title">Download selected polygon · PNG</span>
+            <span class="export-option-desc">Temporary debug export: transparent, tightly cropped and rendered at 2×.</span>
+          </button>
           <button type="button" class="export-option" id="exportBtn">
             <span class="export-option-title">Copy style.json</span>
             <span class="export-option-desc">The raw MapLibre style document.</span>
@@ -526,7 +530,8 @@
       patterns.onerror = reject;
     });
     const app = document.createElement("script");
-    app.src = "./app.js?v=0.1.1-scale-order";
+    app.type = "module";
+    app.src = "./app.js?v=0.1.1-debug-png";
     document.body.append(app);
   </script>
 </body>
