@@ -8,8 +8,7 @@ It supports geometric patterns, repeated text, and SVG symbols. Patterns can
 be configured in JavaScript or prepared in the playground and exported as
 MapLibre code.
 
-**[Run the playground locally](#run-the-playground-locally)** ·
-**[Install the npm package](#installation)**
+<p align="center"><strong><a href="https://stipple.pages.dev/">Run the playground</a></strong></p>
 
 <img width="1456" height="858" alt="Stipple playground showing a patterned polygon on a MapLibre map" src="https://github.com/user-attachments/assets/f7d28a0f-267a-4bd3-b7a2-30b49eabf709" />
 
@@ -56,11 +55,17 @@ Once you're happy with the result, export the corresponding MapLibre code
 or Stipple configuration and use it directly in your project, or feed it
 back into your AI-assisted workflow.
 
-## Run the playground locally
+## Run the playground
 
-The latest version of the playground is currently available from the source
-repository. After cloning the repository, install the dependencies and build
-the library:
+[Open the Stipple playground](https://stipple.pages.dev/). No installation or
+coding is required. Start with the included sample polygons or import your own
+data, customize the fills visually, and export the result. Files are processed
+locally in the browser and are not uploaded to a server.
+
+### Run it locally
+
+To work from the source repository, install the dependencies and build the
+library:
 
 ```sh
 npm install
@@ -69,13 +74,6 @@ npm run build
 
 Then open the local [`demo/index.html`](./demo/index.html) file in your
 browser.
-
-Once open, the playground itself requires no coding. Start with the included
-sample polygons or import your own data, customize the fills visually, and
-export the result. Files are processed locally in the browser and are not
-uploaded to a server.
-
-<!-- Add a hosted playground link after the latest version is deployed. -->
 
 ## Supported file formats
 
@@ -91,6 +89,9 @@ Imports are limited to 200 MB per dataset and the first 64 polygon parts.
 Formats with a known CRS are reprojected to WGS84 in the browser.
 
 ## Installation
+
+The npm package is being prepared for its first release and is not published
+yet. Once it is available, install it alongside MapLibre GL JS:
 
 ```sh
 npm install stipple-maplibre maplibre-gl
