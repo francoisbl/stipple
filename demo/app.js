@@ -1936,7 +1936,6 @@ function updatePatternControlAvailability() {
   document.querySelectorAll("#angleSeg button").forEach((button) => {
     button.disabled = !angleEnabled;
   });
-  $("textureScaleControl").classList.toggle("is-disabled", !textureEnabled);
   $("scaleControl").classList.toggle("is-disabled", !textureEnabled);
   $("weight").disabled = !textureEnabled || state.fontFill.on;
   $("tile").disabled = !textureEnabled || state.fontFill.on;

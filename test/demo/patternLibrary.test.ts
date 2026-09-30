@@ -142,6 +142,11 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/svgFill:\s*\{[\s\S]*?scaleMode:\s*"screen"/);
   });
 
+  it("keeps opacity visually enabled for solid fills", () => {
+    expect(demo).toMatch(/<input type="range" id="patOpacity"(?![^>]*disabled)[^>]*\/?>/);
+    expect(demo).not.toMatch(/\$\("textureScaleControl"\)\.classList\.toggle\("is-disabled"/);
+  });
+
   it("uses restrained, pattern-specific defaults across the zoom range", () => {
     expect(demo).toMatch(/GEOMETRIC_DEFAULT_WEIGHTS[\s\S]*?cross:\s*1\.25/);
     expect(demo).toMatch(/horizontalSpacing:\s*26[\s\S]*?verticalSpacing:\s*22/);
