@@ -24,7 +24,6 @@ const GEOMETRIC_DEFAULT_WEIGHTS = Object.freeze({
 });
 const FONT_GROUND_SCALE_MAX = 48;
 const SVG_GROUND_SCALE_MAX = 56;
-const PNG_EXPORT_DEBUG = new URLSearchParams(window.location.search).get("debug") === "png";
 
 const $ = (id) => document.getElementById(id);
 const toast = (msg) => {
@@ -299,7 +298,6 @@ const map = new maplibregl.Map({
   style: clone(basemapStyle),
   center: SAMPLE_CENTER, zoom: 12,
   attributionControl: false,
-  ...(PNG_EXPORT_DEBUG ? { canvasContextAttributes: { preserveDrawingBuffer: true } } : {}),
 });
 map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-right");
 const attributionControl = new maplibregl.AttributionControl({ compact: true });
@@ -2543,120 +2541,6 @@ function tileImageToPng(tile) {
   });
 }
 
-function geometryPositions(geometry) {
-  const positions = [];
-  const visit = (value) => {
-    if (Array.isArray(value) && typeof value[0] === "number" && typeof value[1] === "number") {
-      positions.push(value);
-      return;
-    }
-    if (Array.isArray(value)) value.forEach(visit);
-  };
-  visit(geometry?.coordinates);
-  return positions;
-}
-
-function mapIdle() {
-  return new Promise((resolve) => map.once("idle", resolve));
-}
-
-function canvasPng(canvas) {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error("Polygon PNG could not be created"));
-    }, "image/png");
-  });
-}
-
-function safeFileName(value) {
-  const name = String(value || "polygon")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-  return name || "polygon";
-}
-
-async function downloadSelectedPolygonPng() {
-  if (!PNG_EXPORT_DEBUG) throw new Error("Enable ?debug=png to use this temporary export");
-  if (!state.layer || !FEATURES[state.layer.source]) throw new Error("Select a feature first");
-
-  const featureId = state.layer.source;
-  const feature = FEATURES[featureId].features[0];
-  const coordinates = geometryPositions(feature.geometry);
-  if (!coordinates.length) throw new Error("The selected polygon has no coordinates");
-
-  const bounds = coordinates.reduce(
-    (result, [lng, lat]) => result.extend([lng, lat]),
-    new maplibregl.LngLatBounds(coordinates[0], coordinates[0]),
-  );
-  const previousCamera = {
-    center: map.getCenter(),
-    zoom: map.getZoom(),
-    bearing: map.getBearing(),
-    pitch: map.getPitch(),
-    padding: map.getPadding(),
-  };
-  const previousPixelRatio = map.getPixelRatio();
-  const layers = map.getStyle().layers || [];
-  const previousVisibility = layers.map((layer) => ({
-    id: layer.id,
-    visibility: map.getLayoutProperty(layer.id, "visibility") || "visible",
-  }));
-
-  try {
-    const selectedPrefix = `${featureId}__`;
-    for (const layer of layers) {
-      map.setLayoutProperty(
-        layer.id,
-        "visibility",
-        layer.id.startsWith(selectedPrefix) ? previousVisibility.find((item) => item.id === layer.id).visibility : "none",
-      );
-    }
-    map.setPixelRatio(Math.max(2, previousPixelRatio));
-    map.fitBounds(bounds, { padding: 56, maxZoom: 15, duration: 0 });
-    await mapIdle();
-    map.triggerRepaint();
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-    const sourceCanvas = map.getCanvas();
-    const scaleX = sourceCanvas.width / sourceCanvas.clientWidth;
-    const scaleY = sourceCanvas.height / sourceCanvas.clientHeight;
-    const projected = coordinates.map((position) => map.project(position));
-    const cropPadding = 32;
-    const minX = Math.min(...projected.map(({ x }) => x)) - cropPadding;
-    const minY = Math.min(...projected.map(({ y }) => y)) - cropPadding;
-    const maxX = Math.max(...projected.map(({ x }) => x)) + cropPadding;
-    const maxY = Math.max(...projected.map(({ y }) => y)) + cropPadding;
-    const sx = Math.max(0, Math.floor(minX * scaleX));
-    const sy = Math.max(0, Math.floor(minY * scaleY));
-    const sw = Math.min(sourceCanvas.width - sx, Math.ceil((maxX - minX) * scaleX));
-    const sh = Math.min(sourceCanvas.height - sy, Math.ceil((maxY - minY) * scaleY));
-    const output = document.createElement("canvas");
-    output.width = sw;
-    output.height = sh;
-    const context = output.getContext("2d");
-    if (!context) throw new Error("2D canvas context unavailable");
-    context.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
-
-    const blob = await canvasPng(output);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${safeFileName(FEATURE_META[featureId]?.label)}-stipple.png`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  } finally {
-    previousVisibility.forEach(({ id, visibility }) => {
-      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visibility);
-    });
-    map.setPixelRatio(previousPixelRatio);
-    map.jumpTo(previousCamera);
-  }
-}
-
 const STATIC_PIXEL_RATIO = 2;
 
 async function buildStaticPatternPng(definition) {
@@ -2911,22 +2795,6 @@ $("downloadBundleBtn").addEventListener("click", async (event) => {
   } finally {
     button.disabled = false;
     button.textContent = label;
-  }
-});
-if (PNG_EXPORT_DEBUG) $("exportPngDebugBtn").hidden = false;
-$("exportPngDebugBtn").addEventListener("click", async (event) => {
-  const button = event.currentTarget;
-  const label = button.innerHTML;
-  button.disabled = true;
-  button.textContent = "Rendering transparent PNG";
-  try {
-    await downloadSelectedPolygonPng();
-    toast("Transparent polygon PNG downloaded");
-  } catch (error) {
-    toast(error instanceof Error ? error.message : "Polygon PNG could not be created");
-  } finally {
-    button.disabled = false;
-    button.innerHTML = label;
   }
 });
 $("copyConfigBtn").addEventListener("click", () => {

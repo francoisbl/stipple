@@ -244,15 +244,8 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/\.map-ctrl-zoom,[\s\S]*?\.map-ctrl-compass \{ display: none; \}/);
   });
 
-  it("gates the temporary transparent PNG export behind a debug query", () => {
-    expect(demo).toMatch(/app\.type = "module"/);
-    expect(demo).toMatch(/id="exportPngDebugBtn" hidden/);
-    expect(demo).toMatch(/PNG_EXPORT_DEBUG = new URLSearchParams\(window\.location\.search\)\.get\("debug"\) === "png"/);
-    expect(demo).toMatch(/PNG_EXPORT_DEBUG \? \{ canvasContextAttributes: \{ preserveDrawingBuffer: true \} \} : \{\}/);
-    expect(demo).toMatch(/async function downloadSelectedPolygonPng\(\)/);
-    expect(demo).toMatch(/layer\.id\.startsWith\(selectedPrefix\)[\s\S]*?: "none"/);
-    expect(demo).toMatch(/map\.setPixelRatio\(Math\.max\(2, previousPixelRatio\)\)/);
-    expect(demo).toMatch(/context\.drawImage\(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh\)/);
-    expect(demo).toMatch(/if \(PNG_EXPORT_DEBUG\) \$\("exportPngDebugBtn"\)\.hidden = false/);
+  it("does not ship the temporary polygon PNG debug export", () => {
+    expect(demo).not.toMatch(/exportPngDebugBtn|PNG_EXPORT_DEBUG|downloadSelectedPolygonPng/);
   });
+
 });
