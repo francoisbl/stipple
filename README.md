@@ -1,63 +1,30 @@
 <picture><source media="(prefers-color-scheme: dark)" srcset="./assets/stipple-wordmark-dark.svg"><source media="(prefers-color-scheme: light)" srcset="./assets/stipple-wordmark-light.svg"><img alt="Stipple" src="./assets/stipple-wordmark-light.svg" width="154" height="40"></picture>
 
-A focused library and visual playground for designing, generating, and
-installing fill patterns in
+Design fill patterns visually and use them in
 [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/).
 
-It supports geometric patterns, repeated text, and SVG symbols. Patterns can
-be configured in JavaScript or prepared in the playground and exported as
-MapLibre code.
+Stipple combines a visual playground with a JavaScript library. Use the
+playground to draw or import polygons, adjust a pattern by hand, and export
+the result. Use the `stipple-maplibre` package when you want to create or
+install the same patterns directly in an application.
 
-<img width="1456" height="858" alt="image" src="https://github.com/user-attachments/assets/f7d28a0f-267a-4bd3-b7a2-30b49eabf709" />
+**[Use the playground locally](#use-the-playground)** ·
+**[Install the npm package](#use-stipple-in-your-app)**
 
-## What problem does it solve?
+<img width="1456" height="858" alt="Stipple playground showing a patterned polygon on a MapLibre map" src="https://github.com/user-attachments/assets/f7d28a0f-267a-4bd3-b7a2-30b49eabf709" />
 
-MapLibre already has a `fill-pattern` property that repeats an image inside a
-polygon. That image still has to be created, made seamless, registered on the
-map, and kept at an appropriate resolution when the display or style changes.
+## Choose how you want to use Stipple
 
-Stipple generates this image from a small set of pattern parameters. It draws
-the tile in the browser, installs it with MapLibre's public `addImage` API,
-and provides the corresponding `fill-pattern` value. It does not patch or
-fork MapLibre.
+### Use the playground
 
-## What can I make with it?
+No code is needed once the playground is open:
 
-- Geometric fills: solid, stipple, hatches, crosshatch, grid, and dots.
-- Font fills: repeat a letter, an abbreviation, or a short bit of text.
-- SVG fills: repeat one of the bundled symbols or bring your own SVG.
-- A background colour and polygon outline to go with the pattern.
+1. Draw a polygon or import your own geographic data.
+2. Choose a geometric, text, or SVG pattern and adjust it visually.
+3. Export MapLibre code, a reusable Stipple configuration, a style document,
+   or generated pattern images.
 
-You can change the colour, opacity, spacing, weight, angle, scale, and layout.
-Font fills also let you choose the typeface, style, and letter spacing. SVG
-fills can use regular rows, offset rows, or a more natural-looking seeded
-distribution.
-
-The playground includes 34 SVG motifs covering vegetation, trees,
-agriculture, water, terrain, land use, and simple shapes. The same seed always
-produces the same arrangement.
-
-<!-- Add a small gallery here: geometric, font, SVG, and custom SVG. -->
-
-## But can’t I just ask AI to do this?
-
-Fair point. But Stipple can fit into that workflow.
-
-Whether you build maps by writing code yourself or with the help of AI,
-the playground gives you direct visual control over the result.
-Instead of refining a pattern through a back-and-forth series of prompts
-and corrections, you can adjust it interactively until it looks exactly
-the way you want.
-
-Once you're happy with the result, export the corresponding MapLibre code
-or Stipple configuration and use it directly in your project, or feed it
-back into your AI-assisted workflow.
-
-## Do I need to write code to try it?
-
-The playground can be used without writing code. It lets you draw or import
-polygons, try every fill type, switch basemaps, and export the result. Files
-stay in the browser; the demo does not upload them to a server.
+Files stay in the browser; the playground does not upload them to a server.
 
 To run it locally:
 
@@ -68,22 +35,9 @@ npm run build
 
 Then open [`demo/index.html`](./demo/index.html) in a browser.
 
-<!-- Add a short GIF or three-step screenshot sequence of the playground here. -->
+### Use Stipple in your app
 
-## Supported file formats
-
-The basic input is GeoJSON. The playground also understands GeoPackage,
-GeoParquet, Shapefile (loose or zipped), FlatGeobuf, KML, GPX, GML, DXF, and
-other common vector formats.
-
-Polygon and MultiPolygon features are supported. If a file contains several
-polygon parts, each one can have its own style. Non-polygon features are
-ignored.
-
-Imports are limited to 200 MB per dataset and the first 64 polygon parts.
-Formats with a known CRS are reprojected to WGS84 in the browser.
-
-## Installation
+Install the library alongside MapLibre GL JS:
 
 ```sh
 npm install stipple-maplibre maplibre-gl
@@ -92,10 +46,8 @@ npm install stipple-maplibre maplibre-gl
 `maplibre-gl` is a peer dependency. Stipple currently supports MapLibre GL JS
 versions 4, 5, and 6.
 
-## Basic usage
-
-This adds a 45-degree hatch texture to an existing GeoJSON source called
-`my-polygons`:
+This example adds a 45-degree hatch texture to an existing GeoJSON source
+called `my-polygons`:
 
 ```js
 import maplibregl from "maplibre-gl";
@@ -131,10 +83,27 @@ map.on("load", () => {
 The generated texture is registered as `my-hatches`, and that same name is
 used in the layer's `fill-pattern` property.
 
+## What can I make?
+
+- Geometric fills: solid, stipple, hatches, crosshatch, grid, and dots.
+- Font fills: repeat a letter, an abbreviation, or a short bit of text.
+- SVG fills: repeat one of the bundled symbols or bring your own SVG.
+- A background colour and polygon outline to go with the pattern.
+
+You can change the colour, opacity, spacing, weight, angle, scale, and layout.
+Font fills also let you choose the typeface, style, and letter spacing. SVG
+fills can use regular rows, offset rows, or a more natural-looking seeded
+distribution.
+
+The playground includes 34 SVG motifs covering vegetation, trees,
+agriculture, water, terrain, land use, and simple shapes. The same seed always
+produces the same arrangement.
+
+<!-- Add a small gallery here: geometric, font, SVG, and custom SVG. -->
+
 ## SVG patterns
 
-Yes. Pass Stipple an SVG string and choose how the symbols should be spread
-out:
+Pass Stipple an SVG string and choose how the symbols should be spread out:
 
 ```js
 import { installSvgPatternFill } from "stipple-maplibre";
@@ -153,7 +122,7 @@ also accepts pasted SVG markup or an uploaded `.svg` file.
 
 ## Font patterns
 
-Yes. Font fills are rasterized after the requested web font is ready:
+Font fills are rasterized after the requested web font is ready:
 
 ```js
 import { installFontPatternFill } from "stipple-maplibre";
@@ -174,14 +143,19 @@ await installFontPatternFill(map, {
 
 Use `vineyard-letters` as the layer's `fill-pattern` in the same way.
 
-## What does the playground export?
+## From the playground to MapLibre
 
-It can give you MapLibre code, a reusable Stipple configuration, a style
-document, or a bundle containing the generated pattern images.
+The playground can export:
+
+- ready-to-use MapLibre code;
+- a reusable Stipple configuration;
+- a MapLibre style document;
+- a bundle containing the generated pattern images.
 
 For code-driven styles, `buildStyleFragment` creates the background, pattern,
-and outline layers together. `installPatternFills` reads the Stipple metadata
-after the style loads and installs every texture it needs.
+and outline layers together. The resulting style metadata carries the pattern
+recipe. After the style loads, `installPatternFills` reads those recipes and
+installs every texture the map needs:
 
 ```js
 import { installPatternFills } from "stipple-maplibre";
@@ -191,7 +165,8 @@ map.on("load", async () => {
 });
 ```
 
-If your app replaces styles while it is running, use one observer instead:
+If your application replaces styles while it is running, use one observer to
+keep the patterns installed:
 
 ```js
 import { observePatternFills } from "stipple-maplibre";
@@ -203,17 +178,40 @@ map.on("load", () => patterns.refresh());
 patterns.dispose();
 ```
 
-## Is the exported style just normal MapLibre JSON?
+## Importing geographic data
+
+The basic input is GeoJSON. The playground also understands GeoPackage,
+GeoParquet, Shapefile (loose or zipped), FlatGeobuf, KML, GPX, GML, DXF, and
+other common vector formats.
+
+Polygon and MultiPolygon features are supported. If a file contains several
+polygon parts, each one can have its own style. Non-polygon features are
+ignored.
+
+Imports are limited to 200 MB per dataset and the first 64 polygon parts.
+Formats with a known CRS are reprojected to WGS84 in the browser.
+
+## How it works
+
+MapLibre already has a `fill-pattern` property that repeats an image inside a
+polygon. That image still has to be created, made seamless, registered on the
+map, and kept at an appropriate resolution when the display or style changes.
+
+Stipple generates that image from a small set of pattern parameters. It draws
+the tile in the browser, installs it through MapLibre's public `addImage` API,
+and provides the corresponding `fill-pattern` value. It does not patch or
+fork MapLibre.
+
+### Are exported styles normal MapLibre JSON?
 
 The layers are normal MapLibre layers, with one additional runtime step:
 generated textures cannot live inside plain style JSON. Stipple stores their
 recipes in versioned layer metadata, then recreates and installs the images
 when the style loads.
 
-That means MapLibre, Maputnik, and MapLibre Native will not interpret the
-`maplibre-pattern-fills:v1` metadata on their own. Call
-`installPatternFills`, or export the generated PNG bundle when a runtime
-dependency is not suitable.
+MapLibre, Maputnik, and MapLibre Native do not interpret the
+`maplibre-pattern-fills:v1` metadata on their own. Call `installPatternFills`,
+or export the generated PNG bundle when a runtime dependency is not suitable.
 
 The metadata format is documented in
 [`schema/pattern-metadata-v1.schema.json`](./schema/pattern-metadata-v1.schema.json).
@@ -258,6 +256,14 @@ must allow `blob:` in `img-src`.
 The package targets modern evergreen browsers and Node.js 18 or newer. SVG
 and font rasterization need a browser; the geometric pattern engine also runs
 in Node.
+
+## Can I use Stipple with AI-assisted development?
+
+Yes. The playground gives you direct visual control over the result, whether
+you write the surrounding map code yourself or generate it with AI. Adjust
+the pattern interactively, then export the corresponding MapLibre code or
+Stipple configuration and use it directly or feed it back into your
+AI-assisted workflow.
 
 ## Repository structure
 
