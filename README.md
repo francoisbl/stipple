@@ -30,15 +30,6 @@ and provides the corresponding `fill-pattern` value.
 - SVG fills: repeat one of the bundled symbols or bring your own SVG.
 - A background colour and polygon outline to go with the pattern.
 
-You can change the colour, opacity, spacing, weight, angle, scale, and layout.
-Font fills also let you choose the typeface, style, and letter spacing. SVG
-fills can use regular rows, offset rows, or a more natural-looking seeded
-distribution.
-
-The playground includes 34 SVG motifs covering vegetation, trees,
-agriculture, water, terrain, land use, and simple shapes. The same seed always
-produces the same arrangement.
-
 ### Examples
 
 <table>
@@ -79,6 +70,16 @@ produces the same arrangement.
     </td>
   </tr>
 </table>
+
+You can change the colour, opacity, spacing, weight, angle, scale, and layout.
+Font fills also let you choose the typeface, style, and letter spacing. SVG
+fills can use regular rows, offset rows, or a more natural-looking seeded
+distribution.
+
+The playground includes 34 SVG motifs covering vegetation, trees,
+agriculture, water, terrain, land use, and simple shapes. The same seed always
+produces the same arrangement.
+
 
 ## But can’t I just ask AI to do this?
 
