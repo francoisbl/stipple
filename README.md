@@ -21,8 +21,7 @@ map, and kept at an appropriate resolution when the display or style changes.
 
 Stipple generates this image from a small set of pattern parameters. It draws
 the tile in the browser, installs it with MapLibre's public `addImage` API,
-and provides the corresponding `fill-pattern` value. It does not patch or
-fork MapLibre.
+and provides the corresponding `fill-pattern` value.
 
 ## What can I make with it?
 
