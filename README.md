@@ -10,7 +10,7 @@ MapLibre code.
 
 <p align="center"><strong><a href="https://stipple.pages.dev/">➞ Run the playground</a></strong></p>
 
-<img width="1456" alt="Stipple playground showing a patterned polygon on a MapLibre map" src="https://raw.githubusercontent.com/francoisbl/stipple/main/assets/readme/playground.png" />
+<img width="1456" alt="Stipple playground showing a patterned polygon on a MapLibre map" src="./assets/readme/playground.png" />
 
 ## What problem does it solve?
 
