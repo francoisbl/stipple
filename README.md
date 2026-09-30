@@ -39,7 +39,46 @@ The playground includes 34 SVG motifs covering vegetation, trees,
 agriculture, water, terrain, land use, and simple shapes. The same seed always
 produces the same arrangement.
 
-<!-- Add a small gallery here: geometric, font, SVG, and custom SVG. -->
+### Examples
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/readme/example-custom-svg.png" alt="Polygon filled with a custom SVG motif" width="100%"><br>
+      <sub><em>Caption to add.</em></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/readme/example-stipple.png" alt="Polygon filled with a stipple pattern" width="100%"><br>
+      <sub><em>Caption to add.</em></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/readme/example-grid.png" alt="Polygon filled with a grid pattern" width="100%"><br>
+      <sub><em>Caption to add.</em></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/readme/example-font-fill.png" alt="Polygon filled with repeated text" width="100%"><br>
+      <sub><em>Caption to add.</em></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/readme/example-svg-symbol.png" alt="Polygon filled with a bundled SVG motif" width="100%"><br>
+      <sub><em>Caption to add.</em></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/readme/example-dots.png" alt="Polygon filled with a regular dot pattern" width="100%"><br>
+      <sub><em>Caption to add.</em></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="./assets/readme/example-hatches.png" alt="Polygon filled with diagonal hatches" width="50%"><br>
+      <sub><em>Caption to add.</em></sub>
+    </td>
+  </tr>
+</table>
 
 ## But can’t I just ask AI to do this?
 
