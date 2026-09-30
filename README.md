@@ -8,7 +8,7 @@ It supports geometric patterns, repeated text, and SVG symbols. Patterns can
 be configured in JavaScript or prepared in the playground and exported as
 MapLibre code.
 
-<p align="center"><strong><a href="https://stipple.pages.dev/">Run the playground</a></strong></p>
+<p align="center"><strong><a href="https://stipple.pages.dev/">↳ Run the playground</a></strong></p>
 
 <img width="1456" height="858" alt="Stipple playground showing a patterned polygon on a MapLibre map" src="https://github.com/user-attachments/assets/f7d28a0f-267a-4bd3-b7a2-30b49eabf709" />
 
