@@ -248,7 +248,19 @@ const map = new maplibregl.Map({
   container: "map",
   style: clone(basemapStyle),
   center: SAMPLE_CENTER, zoom: 12,
+  attributionControl: false,
 });
+const attributionControl = new maplibregl.AttributionControl({ compact: true });
+map.addControl(attributionControl, "bottom-right");
+
+function collapseMapAttribution() {
+  const attribution = map.getContainer().querySelector(".maplibregl-ctrl-attrib");
+  attribution?.classList.remove("maplibregl-compact-show");
+  attribution?.removeAttribute("open");
+}
+
+collapseMapAttribution();
+map.once("load", collapseMapAttribution);
 map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-right");
 
 // Resizable desktop style panel. The chosen width is local UI state, so it
@@ -1523,6 +1535,14 @@ $("zoomInBtn").addEventListener("click", () => map.zoomIn());
 $("zoomOutBtn").addEventListener("click", () => map.zoomOut());
 $("compassBtn").addEventListener("click", () => map.easeTo({ bearing: 0, pitch: 0, duration: 250 }));
 $("locateBtn").addEventListener("click", () => fitAllFeatures());
+
+function syncCompassControl() {
+  $("compassBtn").hidden = Math.abs(map.getBearing()) < 0.01 && Math.abs(map.getPitch()) < 0.01;
+}
+
+map.on("rotate", syncCompassControl);
+map.on("pitch", syncCompassControl);
+syncCompassControl();
 
 function bindColor(colorId, hexId, apply) {
   const col = $(colorId), hex = $(hexId);

@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet" />
-  <link href="./styles.css?v=0.1.0-control-hierarchy" rel="stylesheet" />
+  <link href="./styles.css?v=0.1.1-map-controls" rel="stylesheet" />
 </head>
 <body>
   <div id="app">
@@ -126,18 +126,18 @@
         <div id="map"></div>
         <div class="vector-drop-overlay" id="vectorDropOverlay">Drop vector data to open</div>
         <div class="map-controls map-controls-bl">
-          <button type="button" class="map-ctrl-btn" id="zoomInBtn" title="Zoom in">
+          <button type="button" class="map-ctrl-btn map-ctrl-zoom" id="zoomInBtn" title="Zoom in" aria-label="Zoom in">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 3.5v11M3.5 9h11" /></svg>
           </button>
-          <button type="button" class="map-ctrl-btn" id="zoomOutBtn" title="Zoom out">
+          <button type="button" class="map-ctrl-btn map-ctrl-zoom" id="zoomOutBtn" title="Zoom out" aria-label="Zoom out">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 9h11" /></svg>
           </button>
-          <button type="button" class="map-ctrl-btn" id="compassBtn" title="Reset bearing">
+          <button type="button" class="map-ctrl-btn map-ctrl-compass" id="compassBtn" title="Reset north" aria-label="Reset north" hidden>
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="9" r="6" /><path d="M9 4.5 11 9l-2 4.5L7 9Z" fill="currentColor" stroke="none" /></svg>
           </button>
-          <button type="button" class="map-ctrl-btn" id="locateBtn" title="Fit to data">
-            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6">
-              <circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none" /><path d="M9 2.5v2.4M9 13.1v2.4M2.5 9h2.4M13.1 9h2.4" /><circle cx="9" cy="9" r="4.3" />
+          <button type="button" class="map-ctrl-btn map-ctrl-fit" id="locateBtn" title="Fit polygons" aria-label="Fit polygons">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 3H3v4M11 3h4v4M15 11v4h-4M7 15H3v-4" />
             </svg>
           </button>
         </div>
@@ -526,7 +526,7 @@
       patterns.onerror = reject;
     });
     const app = document.createElement("script");
-    app.src = "./app.js?v=0.1.0-row-major-origin";
+    app.src = "./app.js?v=0.1.1-map-controls";
     document.body.append(app);
   </script>
 </body>

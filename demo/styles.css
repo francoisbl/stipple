@@ -684,6 +684,7 @@ textarea {
   cursor: pointer;
 }
 .map-ctrl-btn svg { width: 15px; height: 15px; }
+.map-ctrl-btn[hidden] { display: none; }
 .map-ctrl-btn:hover { color: var(--accent); background: var(--surface-soft); }
 .map-ctrl-btn + .map-ctrl-btn { border-top: 1px solid var(--line); }
 .maplibregl-ctrl-scale {
@@ -939,6 +940,10 @@ input:disabled { cursor: not-allowed; }
   .workspace { grid-template-columns: 40px minmax(0, 1fr); grid-template-rows: minmax(220px, 46vh) auto; }
   .icon-rail { grid-column: 1; grid-row: 1; }
   .map-shell { grid-column: 2; grid-row: 1; }
+  .map-controls-bl { left: auto; right: 12px; top: 12px; bottom: auto; }
+  .map-ctrl-zoom,
+  .map-ctrl-compass { display: none; }
+  .map-ctrl-fit { border-top: 0 !important; }
   .side-panel {
     grid-column: 1 / -1;
     grid-row: 2;

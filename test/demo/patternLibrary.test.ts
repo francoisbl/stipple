@@ -89,7 +89,7 @@ describe("demo pattern library", () => {
 
   it("keeps MapLibre pattern cross-fading enabled in the workshop", () => {
     const mainMapOptions = demo.match(
-      /const map = new maplibregl\.Map\(\{([\s\S]*?)\n\}\);\nmap\.addControl/,
+      /const map = new maplibregl\.Map\(\{([\s\S]*?)\n\}\);/,
     )?.[1];
     expect(mainMapOptions).toBeDefined();
     expect(mainMapOptions).not.toMatch(/fadeDuration:\s*0/);
@@ -218,5 +218,18 @@ describe("demo pattern library", () => {
     expect(demo).toMatch(/const SAMPLE_GRID_COLUMNS = 5/);
     expect(demo).toMatch(/points\.push\(\[col, -row\]\);[\s\S]*?return points;/);
     expect(demo).not.toMatch(/return points\.sort/);
+  });
+
+  it("keeps map controls compact and unambiguous", () => {
+    expect(demo).toMatch(/attributionControl:\s*false/);
+    expect(demo).toMatch(/new maplibregl\.AttributionControl\(\{ compact: true \}\)/);
+    expect(demo).toMatch(/function collapseMapAttribution[\s\S]*?classList\.remove\("maplibregl-compact-show"\)[\s\S]*?removeAttribute\("open"\)/);
+    expect(demo).toMatch(/id="compassBtn"[^>]*hidden/);
+    expect(demo).toMatch(/\.map-ctrl-btn\[hidden\] \{ display: none; \}/);
+    expect(demo).toMatch(/map\.on\("rotate", syncCompassControl\)/);
+    expect(demo).toMatch(/map\.on\("pitch", syncCompassControl\)/);
+    expect(demo).toMatch(/id="locateBtn"[^>]*title="Fit polygons"/);
+    expect(demo).toMatch(/\.map-controls-bl \{ left: auto; right: 12px; top: 12px; bottom: auto; \}/);
+    expect(demo).toMatch(/\.map-ctrl-zoom,[\s\S]*?\.map-ctrl-compass \{ display: none; \}/);
   });
 });
