@@ -104,16 +104,17 @@ locally in the browser and are not uploaded to a server.
 
 ### Run it locally
 
-To work from the source repository, install the dependencies and build the
-library:
+From a clone of this repository, install the development dependencies and
+build Stipple:
 
 ```sh
 npm install
 npm run build
 ```
 
-Then open the local [`demo/index.html`](./demo/index.html) file in your
-browser.
+The repository itself is the `stipple-maplibre` package, so you do not need to
+install it separately. Then open the local
+[`demo/index.html`](./demo/index.html) file in your browser.
 
 ## Supported file formats
 
