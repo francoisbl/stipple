@@ -149,6 +149,11 @@ describe("demo pattern library", () => {
 
   it("uses restrained, pattern-specific defaults across the zoom range", () => {
     expect(demo).toMatch(/GEOMETRIC_DEFAULT_WEIGHTS[\s\S]*?cross:\s*1\.25/);
+    expect(demo).toMatch(/GEOMETRIC_DEFAULT_TILE_SIZE\s*=\s*33/);
+    expect(demo).toMatch(/tile:\s*GEOMETRIC_DEFAULT_TILE_SIZE/);
+    expect(demo).toMatch(/id="tileVal">33 px/);
+    expect(demo).toMatch(/id="tile"[^>]*value="33"/);
+    expect(demo).toMatch(/id="geometricScaleReadout">33 px tile at every zoom/);
     expect(demo).toMatch(/horizontalSpacing:\s*26[\s\S]*?verticalSpacing:\s*22/);
     expect(demo).toMatch(/FONT_GROUND_SCALE_MAX\s*=\s*48/);
     expect(demo).toMatch(/SVG_GROUND_SCALE_MAX\s*=\s*56/);

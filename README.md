@@ -157,7 +157,7 @@ map.on("load", () => {
   syncPatternTexture(map, {
     imageId: "my-hatches",
     pattern: "hachures",
-    size: 16,
+    size: 33,
     color: "#2c6a5b",
     weight: 2,
     angle: 45,

@@ -11,8 +11,8 @@ export interface MakeTileOptions {
   stippleCount?: number;
 }
 
-// Seven dots give the default 16 px stipple tile an irregular but still open
-// texture. Keeping that count independent of the tile dimensions is
+// Seven dots give the playground's default 33 px stipple tile an irregular,
+// open texture. Keeping that count independent of the tile dimensions is
 // important: tile size is the density/scale control, so making a tile larger
 // must not silently inject more dots and turn it into a solid-looking fill.
 const DEFAULT_STIPPLE_COUNT = 7;

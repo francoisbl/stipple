@@ -24,6 +24,7 @@ const GEOMETRIC_DEFAULT_WEIGHTS = Object.freeze({
 });
 const FONT_GROUND_SCALE_MAX = 48;
 const SVG_GROUND_SCALE_MAX = 56;
+const GEOMETRIC_DEFAULT_TILE_SIZE = 33;
 
 const $ = (id) => document.getElementById(id);
 const toast = (msg) => {
@@ -42,7 +43,7 @@ const state = {
   patColor: "#2c6a5b",
   patOpacity: 1,
   weight: 2,
-  tile: 16,
+  tile: GEOMETRIC_DEFAULT_TILE_SIZE,
   geometricScale: {
     mode: "screen",
     referenceZoom: 12,
@@ -152,10 +153,10 @@ function rememberActiveStyle() {
 }
 const DEFAULT_STYLE = currentStyle();
 const FEATURE_PRESETS = [
-  { pattern: "stipple", patColor: "#2c6a5b", tile: 16, bg: { color: "#dce8e3", opacity: 0.38 } },
-  { pattern: "hachures", patColor: "#d65f45", angle: 45, tile: 20, weight: 1.5, bg: { color: "#f3ded7", opacity: 0.42 } },
-  { pattern: "dots", patColor: "#315f86", tile: 22, weight: 2.4, bg: { color: "#dce7ef", opacity: 0.4 } },
-  { pattern: "cross", patColor: "#675d4d", angle: 0, tile: 18, weight: 1.3, bg: { color: "#ebe6d9", opacity: 0.44 } },
+  { pattern: "stipple", patColor: "#2c6a5b", tile: GEOMETRIC_DEFAULT_TILE_SIZE, bg: { color: "#dce8e3", opacity: 0.38 } },
+  { pattern: "hachures", patColor: "#d65f45", angle: 45, tile: GEOMETRIC_DEFAULT_TILE_SIZE, weight: 1.5, bg: { color: "#f3ded7", opacity: 0.42 } },
+  { pattern: "dots", patColor: "#315f86", tile: GEOMETRIC_DEFAULT_TILE_SIZE, weight: 2.4, bg: { color: "#dce7ef", opacity: 0.4 } },
+  { pattern: "cross", patColor: "#675d4d", angle: 0, tile: GEOMETRIC_DEFAULT_TILE_SIZE, weight: 1.3, bg: { color: "#ebe6d9", opacity: 0.44 } },
 ];
 
 function featureStyleFor(index) {
