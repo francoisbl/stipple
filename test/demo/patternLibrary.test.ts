@@ -268,4 +268,15 @@ describe("demo pattern library", () => {
     expect(demo).not.toMatch(/button\.textContent = "Preparing bundle"/);
   });
 
+  it("copies only the layers needed by the MapLibre integration snippet", () => {
+    expect(demo).toMatch(/JSON\.stringify\(\{ layers: buildExportedStyle\(\)\.layers \}, null, 2\)/);
+    expect(demo).toMatch(/import \{ addPatternFill \} from "stipple-maplibre"/);
+    expect(demo).toMatch(/await addPatternFill\(map, \{/);
+    expect(demo).not.toMatch(/structuredClone\(exportedLayer\)/);
+  });
+
+  it("rejects the standard code export for whole-symbol SVG placement", () => {
+    expect(demo).toMatch(/state\.svgFill\.on && state\.svgFill\.noCut[\s\S]*?cannot use the standard MapLibre code export/);
+  });
+
 });

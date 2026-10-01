@@ -2718,53 +2718,25 @@ async function downloadStaticBundle() {
 }
 
 function buildIntegrationSnippet() {
-  const fragment = JSON.stringify(buildExportedStyle(), null, 2);
+  const pattern = JSON.stringify({ layers: buildExportedStyle().layers }, null, 2);
   return `// Put this import at the top of the module that creates your map.
 // Install the package first with: npm install stipple-maplibre
-import { installPatternFills } from "stipple-maplibre";
+import { addPatternFill } from "stipple-maplibre";
 
-// Use the id of a polygon source that already exists in your map.
-const SOURCE_ID = "my-polygons";
+const pattern = ${pattern};
 
-// Keep null for a GeoJSON source. For a vector source, enter its source-layer.
-const SOURCE_LAYER = null;
-
-const patternFill = ${fragment};
-
-async function addPatternFill(map) {
-if (!map.getSource(SOURCE_ID)) {
-  throw new Error(\`MapLibre source "\${SOURCE_ID}" was not found\`);
-}
-
-const layers = patternFill.layers.map((exportedLayer) => {
-  const layer = structuredClone(exportedLayer);
-  layer.id = layer.id.replace("<source>", SOURCE_ID);
-  layer.source = SOURCE_ID;
-
-  if (SOURCE_LAYER) {
-    layer["source-layer"] = SOURCE_LAYER;
-  } else {
-    delete layer["source-layer"];
-  }
-
-  return layer;
+// Put this after the source has been added to the map.
+await addPatternFill(map, {
+  sourceId: "my-polygons",
+  sourceLayer: null, // Keep null for GeoJSON; use the source-layer for vector tiles.
+  pattern,
 });
-
-await installPatternFills(map, { layers });
-for (const layer of layers) {
-  map.addLayer(layer);
-}
-}
-
-// Put this after: const map = new maplibregl.Map({ ... })
-if (map.isStyleLoaded()) {
-addPatternFill(map);
-} else {
-map.once("load", () => addPatternFill(map));
-}
 `;
 }
 $("exportJsBtn").addEventListener("click", () => {
+  if (state.svgFill.on && state.svgFill.noCut) {
+    return toast("Whole-symbol SVG placement needs polygon geometry and cannot use the standard MapLibre code export");
+  }
   $("ioArea").value = buildIntegrationSnippet();
   navigator.clipboard?.writeText($("ioArea").value);
   toast("Code for an existing MapLibre map copied");

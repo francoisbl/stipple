@@ -28,6 +28,14 @@ export type { BuildStyleFragmentOptions } from "./buildStyleFragment";
 export { installPatternFills } from "./installPatternFills";
 export type { StyleLike } from "./installPatternFills";
 
+export { addPatternFill } from "./addPatternFill";
+export type {
+  AddPatternFillOptions,
+  AddedPatternFill,
+  PatternFillFragment,
+  PatternFillLayerTemplate,
+} from "./addPatternFill";
+
 export { observePatternFills } from "./observePatternFills";
 export type { ObservePatternFillsOptions, PatternFillObserver } from "./observePatternFills";
 

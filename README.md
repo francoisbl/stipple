@@ -227,12 +227,30 @@ The playground can export:
 
 - ready-to-use MapLibre code;
 - a reusable Stipple configuration;
-- a MapLibre style document;
-- a bundle containing the generated pattern images.
+- a static bundle containing style layers, generated pattern images, and an
+  integration helper.
 
-For code-driven styles, `buildStyleFragment` creates the background, pattern,
-and outline layers together. The resulting style metadata carries the pattern
-recipe. After the style loads, `installPatternFills` reads those recipes and
+The copied code uses `addPatternFill`, which waits for the map style, installs
+the generated textures, adapts the exported layers to an existing source, and
+adds them in order:
+
+```js
+import { addPatternFill } from "stipple-maplibre";
+
+await addPatternFill(map, {
+  sourceId: "my-polygons",
+  sourceLayer: null, // Use the source-layer name for vector tiles.
+  pattern: exportedPattern,
+});
+```
+
+The source must already exist in the map. An optional `beforeId` places the
+pattern layers below an existing label or symbol layer. The returned
+`layerIds` list contains every layer added to the map.
+
+For lower-level, code-driven styles, `buildStyleFragment` creates the
+background, pattern, and outline layers together. The resulting style metadata
+carries the pattern recipe. `installPatternFills` reads those recipes and
 installs every texture the map needs:
 
 ```js
@@ -321,7 +339,7 @@ in Node.
 
 ## Project status
 
-Version `0.2.0` is available on
+Version `0.3.0` is available on
 [npm](https://www.npmjs.com/package/stipple-maplibre). The whole-symbol
 scatter API is the only part currently marked experimental.
 
