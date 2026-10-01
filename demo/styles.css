@@ -754,8 +754,31 @@ body.is-resizing-panel {
 .panel-body.inspector-scroll-mode > .dock-context,
 .panel-body.inspector-scroll-mode > .tool-tabs,
 .panel-body.inspector-scroll-mode > .fill-base { flex: 0 0 auto; }
-.panel-body.inspector-scroll-mode > .font-settings.active.active-mode,
+.panel-body.inspector-scroll-mode > .font-settings.active.active-mode {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
 .panel-body.inspector-scroll-mode > .svg-settings.active.active-mode {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-body.inspector-scroll-mode > .svg-settings.active.active-mode > #svgFillFieldset {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.panel-body.inspector-scroll-mode > .svg-settings.active.active-mode .svg-inspector-head {
+  flex: 0 0 auto;
+}
+.panel-body.inspector-scroll-mode > .svg-settings.active.active-mode .svg-layout {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;

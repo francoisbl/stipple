@@ -204,10 +204,15 @@ describe("demo pattern library", () => {
     expect(demo).not.toMatch(/document\.querySelectorAll\("\.menu-button"\)/);
   });
 
-  it("keeps scrollbar gutters inside the Font and SVG inspectors", () => {
+  it("keeps inspector scrolling inside the content areas", () => {
+    expect(demo).toContain('styles.css?v=0.1.1-svg-fixed-toolbar');
     expect(demo).not.toMatch(/\.panel-body \{[^}]*scrollbar-gutter/);
     expect(demo).toMatch(/\.panel-body\.inspector-scroll-mode \{[^}]*overflow: hidden;/);
-    expect(demo).toMatch(/\.panel-body\.inspector-scroll-mode > \.font-settings\.active\.active-mode,[\s\S]*?\.svg-settings\.active\.active-mode \{[^}]*overflow-y: auto;[^}]*scrollbar-gutter: stable;/);
+    expect(demo).toMatch(/\.panel-body\.inspector-scroll-mode > \.font-settings\.active\.active-mode \{[^}]*overflow-y: auto;[^}]*scrollbar-gutter: stable;/);
+    expect(demo).toMatch(/\.panel-body\.inspector-scroll-mode > \.svg-settings\.active\.active-mode \{[^}]*display: flex !important;[^}]*overflow: hidden;/);
+    expect(demo).toMatch(/\.svg-settings\.active\.active-mode > #svgFillFieldset \{[^}]*display: flex;[^}]*flex-direction: column;/);
+    expect(demo).toMatch(/\.svg-settings\.active\.active-mode \.svg-inspector-head \{[^}]*flex: 0 0 auto;/);
+    expect(demo).toMatch(/\.svg-settings\.active\.active-mode \.svg-layout \{[^}]*overflow-y: auto;[^}]*scrollbar-gutter: stable;/);
     expect(demo).toMatch(/activeTool === "fill" && \(state\.fontFill\.on \|\| state\.svgFill\.on\)/);
   });
 
