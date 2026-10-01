@@ -66,7 +66,7 @@ and provides the corresponding `fill-pattern` value.
     </td>
     <td align="center" width="25%">
       <img src="./assets/readme/example-custom-svg.png" alt="Polygon filled with a custom SVG motif" width="100%"><br>
-      <sub><em>Or even your custom SVG</em></sub>
+      <sub><em>Custom SVG</em></sub>
     </td>
   </tr>
 </table>
