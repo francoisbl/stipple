@@ -2717,19 +2717,6 @@ async function downloadStaticBundle() {
   URL.revokeObjectURL(url);
 }
 
-$("exportBtn").addEventListener("click", () => {
-  if (!state.layer) return toast("Select a feature first");
-  $("ioArea").value = JSON.stringify(buildExportedStyle(), null, 2);
-  navigator.clipboard?.writeText($("ioArea").value);
-  if (state.svgFill.on) {
-    toast(state.svgFill.noCut
-      ? "style.json copied. Note: whole-symbol placement needs live polygon geometry, so it isn't in the metadata schema; wire installSvgIconScatter() manually"
-      : "runtime-extended style copied. installPatternFills will restore its SVG texture");
-  } else {
-    toast("Polygon style.json copied to clipboard");
-  }
-});
-
 function buildIntegrationSnippet() {
   const fragment = JSON.stringify(buildExportedStyle(), null, 2);
   return `// Put this import at the top of the module that creates your map.
@@ -2785,9 +2772,10 @@ $("exportJsBtn").addEventListener("click", () => {
 $("downloadBundleBtn").addEventListener("click", async (event) => {
   if (!state.layer) return toast("Select a feature first");
   const button = event.currentTarget;
-  const label = button.textContent;
+  const title = button.querySelector(".export-option-title");
+  const label = title.textContent;
   button.disabled = true;
-  button.textContent = "Preparing bundle";
+  title.textContent = "Preparing bundle";
   try {
     await downloadStaticBundle();
     toast("Static JSON + PNG bundle downloaded");
@@ -2795,7 +2783,7 @@ $("downloadBundleBtn").addEventListener("click", async (event) => {
     toast(error instanceof Error ? error.message : "Static bundle could not be created");
   } finally {
     button.disabled = false;
-    button.textContent = label;
+    title.textContent = label;
   }
 });
 $("copyConfigBtn").addEventListener("click", () => {

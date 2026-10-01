@@ -258,4 +258,14 @@ describe("demo pattern library", () => {
     expect(demo).not.toMatch(/exportPngDebugBtn|PNG_EXPORT_DEBUG|downloadSelectedPolygonPng/);
   });
 
+  it("does not offer a misleading standalone style.json copy", () => {
+    expect(demo).not.toMatch(/id="exportBtn"|\$\("exportBtn"\)/);
+    expect(demo).not.toMatch(/Copy style\.json|raw MapLibre style document/);
+  });
+
+  it("preserves the download button markup while preparing a bundle", () => {
+    expect(demo).toMatch(/const title = button\.querySelector\("\.export-option-title"\)/);
+    expect(demo).not.toMatch(/button\.textContent = "Preparing bundle"/);
+  });
+
 });
