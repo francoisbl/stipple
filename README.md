@@ -1,6 +1,6 @@
 <picture><source media="(prefers-color-scheme: dark)" srcset="./assets/stipple-wordmark-dark.svg"><source media="(prefers-color-scheme: light)" srcset="./assets/stipple-wordmark-light.svg"><img alt="Stipple" src="./assets/stipple-wordmark-light.svg" width="154" height="40"></picture>
 
-A visual playground and library for designing and generating customizable fill patterns in MapLibre GL JS.
+A visual playground and library for designing and generating customizable fill patterns in
 [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/).
 
 It supports geometric patterns, repeated text, and SVG symbols. Patterns can
