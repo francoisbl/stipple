@@ -107,38 +107,6 @@ classification or map layout. Applications bind existing numeric classes or
 category values to the generated patterns; Stipple does not calculate Jenks,
 quantiles, or equal intervals.
 
-## From visual design to MapLibre
-
-Design visually, then export the configuration you need for MapLibre GL JS:
-
-```text
-Single pattern  polygon       → custom pattern
-Categorized     residential   → dots
-                industrial    → hatch
-                forest        → SVG
-Graduated       0–20          → sparse
-                20–40         → medium
-                40–60         → dense
-```
-
-The copied code uses `addPatternFill`, which waits for the map style, installs
-the generated textures, adapts the exported layers to an existing source, and
-adds them in order:
-
-```js
-import { addPatternFill } from "stipple-maplibre";
-
-await addPatternFill(map, {
-  sourceId: "my-polygons",
-  sourceLayer: null, // Use the source-layer name for vector tiles.
-  pattern: exportedPattern,
-});
-```
-
-The source must already exist in the map. An optional `beforeId` places the
-pattern layers below an existing label or symbol layer. The returned
-`layerIds` list contains every layer added to the map.
-
 ## What problem does it solve?
 
 MapLibre provides the primitives for patterned polygon fills, but designing
@@ -166,6 +134,40 @@ the way you want.
 Once you're happy with the result, export the corresponding MapLibre code
 or Stipple configuration and use it directly in your project, or feed it
 back into your AI-assisted workflow.
+
+## From visual design to MapLibre
+
+Design visually, then export the configuration you need for MapLibre GL JS:
+
+```text
+Single pattern  polygon       → custom pattern
+
+Categorized     residential   → dots
+                industrial    → hatch
+                forest        → SVG
+
+Graduated       0–20          → sparse
+                20–40         → medium
+                40–60         → dense
+```
+
+The copied code uses `addPatternFill`, which waits for the map style, installs
+the generated textures, adapts the exported layers to an existing source, and
+adds them in order:
+
+```js
+import { addPatternFill } from "stipple-maplibre";
+
+await addPatternFill(map, {
+  sourceId: "my-polygons",
+  sourceLayer: null, // Use the source-layer name for vector tiles.
+  pattern: exportedPattern,
+});
+```
+
+The source must already exist in the map. An optional `beforeId` places the
+pattern layers below an existing label or symbol layer. The returned
+`layerIds` list contains every layer added to the map.
 
 ## Run the playground
 
