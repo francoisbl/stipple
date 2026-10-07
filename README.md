@@ -102,7 +102,7 @@ coherent low-to-high visual progression.
 
 <img width="1456" alt="Stipple playground showing a five-class graduated dot sequence on a regional country map" src="./assets/readme/playground-graduated.png" />
 
-`PatternSequence` and `PatternSet` describe styling—not statistical
+`PatternSequence` and `PatternSet` describe styling, not statistical
 classification or map layout. Applications bind existing numeric classes or
 category values to the generated patterns; Stipple does not calculate Jenks,
 quantiles, or equal intervals.
@@ -182,8 +182,8 @@ contiguous administrative coverage for close pattern comparison. These are
 preview geometries only; imported features remain ordinary user data.
 
 The compact transfer icon beside the active map-legend swatch copies the
-complete selected style—including its pattern, background, outline, placement,
-and scale—between Single pattern and individual Categorized entries without
+complete selected style, including its pattern, background, outline, placement,
+and scale, between Single pattern and individual Categorized entries without
 changing geometry or category keys.
 
 ### Run it locally
