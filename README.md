@@ -15,7 +15,7 @@ graduated pattern sequences—then export them for MapLibre GL JS.
 
 | Single pattern | Categorized | Graduated |
 | --- | --- | --- |
-| Design and customize patterns independently. | Assign distinct patterns to discrete categories. | Create ordered pattern sequences from numeric values. |
+| Design and customize patterns independently. | Style each category independently with its own pattern. | Create ordered pattern sequences from numeric values. |
 
 Choose how your data should be styled, then design the patterns: use one
 pattern independently, organize patterns by category, or turn a pattern into a
@@ -89,10 +89,11 @@ produces the same arrangement.
 
 ## Build categorized styles
 
-Create a distinct pattern for each category while keeping full control over
-every class. Each entry can use its own pattern type, colours, parameters,
-background, outline, placement, or SVG symbol and can be refined independently
-while the complete qualitative palette remains visible on the map.
+Create an independent style for each category. Every category can use its own
+pattern type, colours, parameters, background, outline, placement, or SVG
+symbol. Styles can remain visually balanced or be deliberately emphasized to
+reflect your cartographic intent while the complete set remains visible on the
+map.
 
 ## Create graduated pattern sequences
 
