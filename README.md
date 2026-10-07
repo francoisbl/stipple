@@ -215,7 +215,8 @@ Formats with a known CRS are reprojected to WGS84 in the browser.
 
 ## Installation
 
-Install the package alongside MapLibre GL JS:
+Install [`stipple-maplibre`](https://www.npmjs.com/package/stipple-maplibre)
+alongside MapLibre GL JS:
 
 ```sh
 npm install stipple-maplibre maplibre-gl
