@@ -10,6 +10,7 @@ graduated pattern sequences—then export them for MapLibre GL JS.
 
 <a href="https://stipple.pages.dev/"><img width="1456" alt="Stipple playground showing a categorized polygon style built from distinct fill patterns" src="./assets/readme/playground-categorized.png" /></a>
 
+
 ## Three ways to style polygon data
 
 | Single pattern | Categorized | Graduated |
