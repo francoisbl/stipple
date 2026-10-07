@@ -39,6 +39,40 @@ export type {
 export { observePatternFills } from "./observePatternFills";
 export type { ObservePatternFillsOptions, PatternFillObserver } from "./observePatternFills";
 
+export { createPatternSetExpression } from "./patternSetExpression";
+export type {
+  CreatePatternSetExpressionOptions,
+  PatternSetMatchExpression,
+} from "./patternSetExpression";
+
+export { createPatternSequenceExpression } from "./patternSequenceExpression";
+export type {
+  CreatePatternSequenceExpressionOptions,
+  PatternSequenceMatchExpression,
+} from "./patternSequenceExpression";
+
+export { createPatternTile } from "./patternTile";
+export type { CreatePatternTileOptions } from "./patternTile";
+
+export { installPatternTexture } from "./installPatternTexture";
+export type { InstallPatternTextureOptions } from "./installPatternTexture";
+
+export {
+  CANONICAL_PATTERN_METADATA_KEY,
+  createPatternSequenceStyleFragment,
+  createPatternSetStyleFragment,
+  createPatternStyleFragment,
+  parseCanonicalPatternMetadata,
+  patternImageId,
+} from "./patternStyle";
+export type {
+  CanonicalPatternMetadataV1,
+  CanonicalPatternRegistration,
+  CreatePatternCollectionStyleOptions,
+  CreatePatternStyleOptions,
+  PatternStyleFragment,
+} from "./patternStyle";
+
 export { createSvgScatterTile, installSvgPatternFill } from "./svgPattern";
 export type { SvgPatternOptions } from "./svgPattern";
 

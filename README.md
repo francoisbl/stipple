@@ -1,35 +1,42 @@
 <picture><source media="(prefers-color-scheme: dark)" srcset="./assets/stipple-wordmark-dark.svg"><source media="(prefers-color-scheme: light)" srcset="./assets/stipple-wordmark-light.svg"><img alt="Stipple" src="./assets/stipple-wordmark-light.svg" width="154" height="40"></picture>
 
-A visual playground and library for designing and generating customizable fill patterns in
-[MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/).
+**Pattern-based polygon styling for
+[MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/).**
 
-It supports geometric patterns, repeated text, and SVG symbols. Patterns can
-be configured in JavaScript or prepared in the playground and exported as
-MapLibre code.
+Design customizable fill patterns, build categorized styles, and create
+graduated pattern sequences—then export them for MapLibre GL JS.
 
-<img width="1456" alt="Stipple playground showing pattern customization on a MapLibre map" src="./assets/readme/playground.png" />
+<p><a href="https://stipple.pages.dev/"><strong>Open playground</strong></a> · <a href="https://www.npmjs.com/package/stipple-maplibre">npm</a></p>
 
-<p align="center"><strong><a href="https://stipple.pages.dev/">➞ Run the playground</a></strong></p>
+<a href="https://stipple.pages.dev/"><img width="1456" alt="Stipple playground showing a categorized polygon style built from distinct fill patterns" src="./assets/readme/playground-categorized.png" /></a>
 
+## Three ways to style polygon data
 
-## What problem does it solve?
+| Single pattern | Categorized | Graduated |
+| --- | --- | --- |
+| Design and customize patterns independently. | Assign distinct patterns to discrete categories. | Create ordered pattern sequences from numeric values. |
 
-MapLibre already has a `fill-pattern` property that repeats an image inside a
-polygon. That image still has to be created, made seamless, registered on the
-map, and kept at an appropriate resolution when the display or style changes.
+Choose how your data should be styled, then design the patterns: use one
+pattern independently, organize patterns by category, or turn a pattern into a
+visual scale.
 
-Stipple generates this image from a small set of pattern parameters. It draws
-the tile in the browser, installs it with MapLibre's public `addImage` API,
-and provides the corresponding `fill-pattern` value.
+## Design patterns visually
 
-## What can I make with it?
+Build patterns from hatches, dots, grids, marks, text, or SVG symbols and adjust
+their visual properties directly on the map. The same pattern engine powers
+all three styling modes.
 
-- Geometric fills: solid, stipple, hatches, crosshatch, grid, and dots.
+<img width="1456" alt="Stipple single-pattern designer showing an SVG palm fill with a custom background and outline" src="./assets/readme/playground-single.png" />
+
+### Pattern types
+
+- Line fills: horizontal, vertical, diagonal and reverse-diagonal hatches,
+  crosshatch, grid, dashed hatch, zigzag, and wave.
+- Mark fills: dots and dense stipple, squares, diamonds, crosses, X marks,
+  triangles, and chevrons in regular, offset, or brick-like arrangements.
 - Font fills: repeat a letter, an abbreviation, or a short bit of text.
 - SVG fills: repeat one of the bundled symbols or bring your own SVG.
 - A background colour and polygon outline to go with the pattern.
-
-### Examples
 
 <table>
   <tr>
@@ -70,14 +77,79 @@ and provides the corresponding `fill-pattern` value.
   </tr>
 </table>
 
-You can change the colour, opacity, spacing, weight, angle, scale, and layout.
-Font fills also let you choose the typeface, style, and letter spacing. SVG
-fills can use regular rows, offset rows, or a more natural-looking seeded
-distribution.
+Adjust colour, opacity, spacing, weight, angle, scale, foreground, background,
+outline, and layout. Font fills also let you choose the typeface, style, and
+letter spacing. SVG fills can use regular rows, offset rows, or a more
+natural-looking seeded distribution.
 
 The playground includes 34 SVG motifs covering vegetation, trees,
 agriculture, water, terrain, land use, and simple shapes. The same seed always
 produces the same arrangement.
+
+## Build categorized styles
+
+Create a distinct pattern for each category while keeping full control over
+every class. Each entry can use its own pattern type, colours, parameters,
+background, outline, placement, or SVG symbol and can be refined independently
+while the complete qualitative palette remains visible on the map.
+
+## Create graduated pattern sequences
+
+Create sequential or diverging pattern scales by varying density, weight, or
+opacity across classes. Change the number of classes while preserving a
+coherent low-to-high visual progression.
+
+<img width="1456" alt="Stipple playground showing a five-class graduated dot sequence on a regional country map" src="./assets/readme/playground-graduated.png" />
+
+`PatternSequence` and `PatternSet` describe styling—not statistical
+classification or map layout. Applications bind existing numeric classes or
+category values to the generated patterns; Stipple does not calculate Jenks,
+quantiles, or equal intervals.
+
+## From visual design to MapLibre
+
+Design visually, then export the configuration you need for MapLibre GL JS:
+
+```text
+Single pattern  polygon       → custom pattern
+Categorized     residential   → dots
+                industrial    → hatch
+                forest        → SVG
+Graduated       0–20          → sparse
+                20–40         → medium
+                40–60         → dense
+```
+
+The copied code uses `addPatternFill`, which waits for the map style, installs
+the generated textures, adapts the exported layers to an existing source, and
+adds them in order:
+
+```js
+import { addPatternFill } from "stipple-maplibre";
+
+await addPatternFill(map, {
+  sourceId: "my-polygons",
+  sourceLayer: null, // Use the source-layer name for vector tiles.
+  pattern: exportedPattern,
+});
+```
+
+The source must already exist in the map. An optional `beforeId` places the
+pattern layers below an existing label or symbol layer. The returned
+`layerIds` list contains every layer added to the map.
+
+## What problem does it solve?
+
+MapLibre provides the primitives for patterned polygon fills, but designing
+and managing a complete pattern-based cartographic style still requires a lot
+of manual work. Each repeated image must be created, made seamless, registered
+with `addImage`, kept at an appropriate resolution, and connected to the right
+style expressions and layers.
+
+Stipple provides the visual workflow on top of those primitives. It generates
+textures from compact pattern parameters, draws them in the browser, installs
+them through MapLibre's public API, and keeps categorized and graduated styles
+coherent as they evolve.
 
 
 ## But can’t I just ask AI to do this?
@@ -100,6 +172,16 @@ back into your AI-assisted workflow.
 coding is required. Start with the included sample polygons or import your own
 data, customize the fills visually, and export the result. Files are processed
 locally in the browser and are not uploaded to a server.
+
+The built-in previews match the design task: Single pattern uses one neutral
+polygon, Graduated uses a regional country map, and Categorized uses complete
+contiguous administrative coverage for close pattern comparison. These are
+preview geometries only; imported features remain ordinary user data.
+
+The compact transfer icon beside the active map-legend swatch copies the
+complete selected style—including its pattern, background, outline, placement,
+and scale—between Single pattern and individual Categorized entries without
+changing geometry or category keys.
 
 ### Run it locally
 
@@ -220,7 +302,7 @@ await installFontPatternFill(map, {
 
 Use `vineyard-letters` as the layer's `fill-pattern` in the same way.
 
-## From the playground to MapLibre
+## Export and runtime integration
 
 The playground can export:
 
@@ -228,24 +310,6 @@ The playground can export:
 - a reusable Stipple configuration;
 - a static bundle containing style layers, generated pattern images, and an
   integration helper.
-
-The copied code uses `addPatternFill`, which waits for the map style, installs
-the generated textures, adapts the exported layers to an existing source, and
-adds them in order:
-
-```js
-import { addPatternFill } from "stipple-maplibre";
-
-await addPatternFill(map, {
-  sourceId: "my-polygons",
-  sourceLayer: null, // Use the source-layer name for vector tiles.
-  pattern: exportedPattern,
-});
-```
-
-The source must already exist in the map. An optional `beforeId` places the
-pattern layers below an existing label or symbol layer. The returned
-`layerIds` list contains every layer added to the map.
 
 For lower-level, code-driven styles, `buildStyleFragment` creates the
 background, pattern, and outline layers together. The resulting style metadata

@@ -1,6 +1,8 @@
 import type { Map as MaplibreMap } from "maplibre-gl";
-import { createSvgScatterLayout } from "../engine/svgScatterLayout";
-import type { SvgDistributionMode } from "../engine/svgScatterLayout";
+import {
+  createPlacementLayout,
+  type PlacementDistribution,
+} from "../engine/placementLayout";
 import type { TileImage } from "../engine/types";
 import { loadSvgImage } from "./loadSvgImage";
 import {
@@ -29,7 +31,7 @@ export interface SvgPatternOptions {
   /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout (orchard/marsh map fills). Default true. */
   stagger?: boolean;
   /** Regular grid, offset rows, or seamless blue-noise placement. */
-  distribution?: SvgDistributionMode;
+  distribution?: PlacementDistribution;
   /** Minimum gap between symbols in natural mode, in layout px. Default 0. */
   minSpacing?: number;
   /** Raster pixels per MapLibre layout pixel. Defaults to the display ratio, capped at 2 when installed. */
@@ -71,7 +73,6 @@ export async function createSvgScatterTile(options: SvgPatternOptions): Promise<
     rotationJitterDeg,
     scaleJitter,
     positionJitter,
-    stagger,
     distribution,
     minSpacing,
   } = definition;
@@ -86,15 +87,15 @@ export async function createSvgScatterTile(options: SvgPatternOptions): Promise<
   ctx.clearRect(0, 0, physicalTileSize, physicalTileSize);
   ctx.scale(renderScale, renderScale);
 
-  const placements = createSvgScatterLayout({
+  const placements = createPlacementLayout({
     tileSize,
-    stampSize,
-    density,
+    markSize: stampSize,
+    spacing: { mode: "density", value: density },
     seed,
     rotationJitterDeg,
     scaleJitter,
-    positionJitter,
-    stagger,
+    // Preserve the legacy rule that regular SVG rows are exact.
+    positionJitter: distribution === "regular" ? 0 : positionJitter,
     distribution,
     minSpacing,
   });

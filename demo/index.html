@@ -8,11 +8,11 @@
   <link href="https://unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl.css" rel="stylesheet" />
   <!-- Run `npm run build` after editing anything under ../src. The generated
        browser bundle stays local and is not committed. -->
-  <script src="../dist/index.global.js?v=0.1.0-zoom-priorities"></script>
+  <script src="../dist/index.global.js?v=0.7.9-accessible-pattern-workflows"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet" />
-  <link href="./styles.css?v=0.1.1-svg-fixed-toolbar" rel="stylesheet" />
+  <link href="./styles.css?v=0.8.0-categorized-randomization" rel="stylesheet" />
 </head>
 <body>
   <div id="app">
@@ -33,6 +33,13 @@
           </svg>
           <span>Documentation</span>
         </a>
+        <a class="menu-button topbar-link" href="https://www.npmjs.com/package/stipple-maplibre" target="_blank" rel="noopener" aria-label="stipple-maplibre package on npm">
+          <svg class="npm-mark" viewBox="0 0 16 16" aria-hidden="true">
+            <path fill="currentColor" d="M0 16V0h16v16ZM3 3v10h5V5h3v8h2V3Z" />
+            <path fill="#fff" d="M3 3h10v10h-2V5H8v8H3Z" />
+          </svg>
+          <span>Package</span>
+        </a>
         <div class="menu" id="resourcesMenu">
           <button type="button" class="menu-button" id="resourcesMenuButton" aria-haspopup="true" aria-expanded="false">Resources</button>
           <div class="menu-popover resources-popover" id="resourcesMenuPopover" hidden>
@@ -45,6 +52,13 @@
             <a class="menu-item resource-link" href="https://maputnik.github.io/" target="_blank" rel="noopener">
               <strong>Maputnik</strong><small>Edit the surrounding map style</small>
             </a>
+            <div class="menu-separator" role="separator"></div>
+            <a class="menu-item resource-link" href="https://colorbrewer2.org/" target="_blank" rel="noopener">
+              <strong>ColorBrewer</strong><small>Cartographic colour schemes</small>
+            </a>
+            <a class="menu-item resource-link" href="https://arxiv.org/abs/2508.02639" target="_blank" rel="noopener">
+              <strong>Reframing Pattern</strong><small>Pattern as a composite visual variable</small>
+            </a>
           </div>
         </div>
       </nav>
@@ -52,7 +66,7 @@
 
     <main class="workspace">
       <nav class="icon-rail" aria-label="Layers, data and basemap">
-        <span class="rail-group-label">Layers</span>
+        <span class="rail-group-label" id="layersRailLabel">Layers</span>
         <div class="layers-picker" id="layersPicker">
           <button type="button" class="icon-button" id="layersTrigger" aria-label="Open layers" aria-haspopup="dialog" aria-expanded="false" aria-controls="layersPopover" title="Layers">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
@@ -64,7 +78,6 @@
             <div class="layers-popover-title">Layers</div>
             <div class="table-toolbar">
               <span id="polygonCount">1 polygon</span>
-              <button type="button" id="reloadCatalog">Add sample</button>
             </div>
             <p class="hint" id="srcHint"></p>
             <table class="feature-table">
@@ -73,7 +86,7 @@
             <p class="drop-note">Drop GeoJSON, GeoPackage or GeoParquet. For Shapefile, use a ZIP or select .shp, .dbf, .shx and .prj together.</p>
           </section>
         </div>
-        <div class="rail-separator"></div>
+        <div class="rail-separator" id="layersRailSeparator"></div>
         <span class="rail-group-label">Data</span>
         <button type="button" class="icon-button import-trigger" id="importVectorRail" aria-label="Open data" title="Open data: import GeoJSON, Shapefile, GeoPackage, and more">
           <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -110,6 +123,10 @@
               <span class="basemap-swatch basemap-swatch--positron" aria-hidden="true"><img class="basemap-preview-image" data-basemap-preview="positron" alt="" /></span>
               <span><strong>Light</strong><small>Minimal, low contrast</small></span>
             </button>
+            <button type="button" class="basemap-option" data-basemap="softblue" role="menuitemradio" aria-checked="false">
+              <span class="basemap-swatch basemap-swatch--softblue" aria-hidden="true"><img class="basemap-preview-image" data-basemap-preview="softblue" alt="" /></span>
+              <span><strong>OSM Soft blue</strong><small>Pale water, no labels</small></span>
+            </button>
             <button type="button" class="basemap-option" data-basemap="bright" role="menuitemradio" aria-checked="false">
               <span class="basemap-swatch basemap-swatch--bright" aria-hidden="true"><img class="basemap-preview-image" data-basemap-preview="bright" alt="" /></span>
               <span><strong>Bright</strong><small>Colourful streets</small></span>
@@ -125,6 +142,33 @@
       <div class="map-shell">
         <div id="map"></div>
         <div class="vector-drop-overlay" id="vectorDropOverlay">Drop vector data to open</div>
+        <section class="design-legend map-legend" id="designLegend" aria-label="Symbology legend" hidden>
+          <div class="design-legend-actions" id="designLegendActions">
+            <strong class="design-legend-actions-label" id="designLegendActionsLabel">Single pattern</strong>
+            <div class="design-legend-tools">
+              <label class="design-legend-count" id="designLegendCategoryCount" for="categoryCountInput" hidden>
+                <input type="number" id="categoryCountInput" min="2" max="24" value="11" aria-label="Category count" />
+                <span aria-hidden="true">/ 24</span>
+              </label>
+              <label class="design-legend-count" id="designLegendSequenceCount" for="sequenceSteps" hidden>
+                <input type="number" id="sequenceSteps" min="3" max="12" value="5" aria-label="Class count" />
+                <span aria-hidden="true">/ 12</span>
+              </label>
+              <div class="design-legend-stepper" role="group" aria-label="Number of samples">
+                <button type="button" class="design-legend-action design-legend-remove" id="designLegendRemove" aria-label="Remove selected sample">−</button>
+                <button type="button" class="design-legend-action design-legend-add" id="designLegendAdd" aria-label="Add sample">+</button>
+              </div>
+              <button type="button" class="design-legend-refresh" id="randomizeCategoriesButton" aria-label="Randomize categories" title="Randomize patterns and colours" hidden>
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14.6 6A6 6 0 0 0 4 4.5L2.5 6" />
+                  <path d="M2.5 2.7V6h3.3M3.4 12A6 6 0 0 0 14 13.5l1.5-1.5" />
+                  <path d="M15.5 15.3V12h-3.3" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="design-legend-items" id="designLegendItems"></div>
+        </section>
         <div class="map-controls map-controls-bl">
           <button type="button" class="map-ctrl-btn map-ctrl-zoom" id="zoomInBtn" title="Zoom in" aria-label="Zoom in">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 3.5v11M3.5 9h11" /></svg>
@@ -152,39 +196,131 @@
         aria-orientation="vertical"
         aria-valuemin="280"
         aria-valuemax="720"
-        aria-valuenow="320"
+        aria-valuenow="360"
         title="Drag to resize the panel · Double-click to reset"
       ></div>
 
-      <section id="panel" class="side-panel" aria-label="Polygon style editor">
+      <section id="panel" class="side-panel pattern-context" aria-label="Polygon style editor">
         <div class="panel-body" data-panel-body="feature">
+          <nav class="design-context-tabs" id="designContextTabs" aria-label="Design context">
+            <button type="button" class="active" data-design-context="pattern" aria-label="Single pattern">
+              <span>Single pattern</span>
+            </button>
+            <button type="button" data-design-context="set" aria-label="Categorized">
+              <span>Categorized</span>
+            </button>
+            <button type="button" data-design-context="sequence" aria-label="Graduated">
+              <span>Graduated</span>
+            </button>
+          </nav>
+          <section class="sequence-controls" id="sequenceControls" aria-label="Sequence settings" hidden>
+            <span class="control-title">Classification</span>
+            <div class="sequence-scheme-row">
+              <div class="sequence-scheme-picker" id="sequenceSchemePicker" aria-label="Class scheme">
+                <button type="button" class="active" data-sequence-scheme="sequential">Sequential</button>
+                <button type="button" data-sequence-scheme="diverging">Diverging</button>
+              </div>
+              <button type="button" class="sequence-invert-switch" id="sequenceInvertButton" role="switch" aria-checked="false" aria-label="Invert class order" title="Invert class order">
+                <span class="sequence-invert-label">Invert</span>
+                <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </button>
+            </div>
+            <div class="sequence-diverging-colours" id="sequenceDivergingColours" hidden>
+              <label>Low hue
+                <span class="row tight">
+                  <input type="color" id="sequenceLowColor" value="#2f6fa3" />
+                  <input type="text" id="sequenceLowColorHex" value="#2f6fa3" />
+                </span>
+              </label>
+              <label>High hue
+                <span class="row tight">
+                  <input type="color" id="sequenceHighColor" value="#b33d52" />
+                  <input type="text" id="sequenceHighColorHex" value="#b33d52" />
+                </span>
+              </label>
+            </div>
+            <span class="control-title">Variation</span>
+            <div class="sequence-variation-picker" id="sequenceVariationPicker" aria-label="Graduated variation">
+              <button type="button" class="active" data-sequence-parameter="weight" title="Increase mark or line weight">Weight</button>
+              <button type="button" data-sequence-parameter="spacing" title="Increase texture density">Density</button>
+              <button type="button" data-sequence-parameter="opacity" title="Increase opacity">Opacity</button>
+            </div>
+            <select id="sequenceParameter" hidden aria-hidden="true">
+              <option value="weight" selected>Line or mark weight</option>
+              <option value="spacing">Density / spacing</option>
+              <option value="opacity">Opacity</option>
+            </select>
+            <span class="control-title sequence-pattern-title">Pattern</span>
+            <div class="sequence-preset-grid" id="sequencePresetRamps" aria-label="Graduated pattern family">
+              <button type="button" data-sequence-preset="dots" title="Dots · sparse to dense" aria-label="Dots, sparse to dense"><span class="mini-ramp ramp-dots"></span><small>Dots</small></button>
+              <button type="button" data-sequence-preset="hatch" title="Hatch · wide to tight" aria-label="Hatch, wide to tight"><span class="mini-ramp ramp-hatch"></span><small>Hatch</small></button>
+              <button type="button" data-sequence-preset="dashed" title="Dashed lines · wide to tight" aria-label="Dashed lines, wide to tight"><span class="mini-ramp ramp-dashed"></span><small>Dashed</small></button>
+              <button type="button" data-sequence-preset="crosshatch" title="Crosshatch · light to dense" aria-label="Crosshatch, light to dense"><span class="mini-ramp ramp-cross"></span><small>Cross</small></button>
+              <button type="button" data-sequence-preset="grid" title="Grid · coarse to fine" aria-label="Grid, coarse to fine"><span class="mini-ramp ramp-grid"></span><small>Grid</small></button>
+              <button type="button" data-sequence-preset="zigzag" title="Zigzag · wide to tight" aria-label="Zigzag, wide to tight"><span class="mini-ramp ramp-zigzag">⌁⌁</span><small>Zigzag</small></button>
+              <button type="button" data-sequence-preset="wave" title="Waves · wide to tight" aria-label="Waves, wide to tight"><span class="mini-ramp ramp-wave">∿∿</span><small>Wave</small></button>
+              <button type="button" data-sequence-preset="squares" title="Squares · sparse to dense" aria-label="Squares, sparse to dense"><span class="mini-ramp ramp-squares">■ · ■</span><small>Squares</small></button>
+              <button type="button" data-sequence-preset="diamonds" title="Diamonds · sparse to dense" aria-label="Diamonds, sparse to dense"><span class="mini-ramp ramp-diamonds">◆ · ◆</span><small>Diamonds</small></button>
+              <button type="button" data-sequence-preset="crosses" title="Crosses · sparse to dense" aria-label="Crosses, sparse to dense"><span class="mini-ramp ramp-marks">+ · +</span><small>Crosses</small></button>
+              <button type="button" data-sequence-preset="chevrons" title="Chevrons · sparse to dense" aria-label="Chevrons, sparse to dense"><span class="mini-ramp ramp-marks">⌃ · ⌃</span><small>Chevrons</small></button>
+              <button type="button" data-sequence-preset="triangles" title="Triangles · sparse to dense" aria-label="Triangles, sparse to dense"><span class="mini-ramp ramp-marks">▲ · ▲</span><small>Triangles</small></button>
+            </div>
+            <input type="hidden" id="sequenceStart" value="0.8" />
+            <input type="hidden" id="sequenceEnd" value="9.5" />
+            <span id="sequenceStartValue" hidden>Open</span>
+            <span id="sequenceEndValue" hidden>Dense</span>
+            <p class="sequence-direction-note" id="sequenceDirectionNote">Geometric · even visual steps · texture becomes denser.</p>
+            <button type="button" class="sequence-customize-toggle" id="sequenceCustomizeToggle" aria-expanded="false">Style all classes</button>
+            <p class="sequence-global-style-note" id="sequenceGlobalStyleNote" hidden>Global styling · progression stays intact.</p>
+          </section>
+          <nav class="tool-tabs" id="toolTabs" aria-label="Style sections">
+            <button type="button" class="tool-tab active" data-tool="fill">Pattern</button>
+            <button type="button" class="tool-tab" data-tool="appearance">Background &amp; outline</button>
+          </nav>
           <div class="dock-context">
-            <span>Feature:</span>
+            <canvas id="activePatternSwatch" class="active-pattern-swatch" width="64" height="40" aria-hidden="true"></canvas>
+            <span id="activeContextLabel">Pattern:</span>
             <strong id="activePolygonLabel">Polygon 1</strong>
           </div>
-          <nav class="tool-tabs" id="toolTabs" aria-label="Style sections">
-            <button type="button" class="tool-tab active" data-tool="fill">Fill</button>
-            <button type="button" class="tool-tab" data-tool="appearance">Background &amp; line</button>
-          </nav>
 
         <div class="tool-panel fill-base active" data-tool-panel="fill">
           <fieldset id="geometricFieldset">
             <legend>Fill pattern</legend>
             <div class="geometry-grid">
-              <div class="control-block">
-                <span class="control-title">Choose a fill</span>
-                <span class="family-label">Fill type</span>
+              <div class="control-block pattern-picker-block">
+                <span class="workflow-kicker pattern-picker-heading">Pattern</span>
                 <div class="pill-group" id="patternPills">
-                  <div class="pill" data-p="solid">Solid</div>
-                  <div class="pill" data-p="stipple">Stipple</div>
-                  <div class="pill" data-p="hachures">Hatches</div>
-                  <div class="pill" data-p="cross">Crosshatch</div>
-                  <div class="pill" data-p="grid">Grid</div>
-                  <div class="pill" data-p="dots">Dots</div>
-                  <button type="button" class="pill" id="fontModePill">Font fill</button>
-                  <button type="button" class="pill svg-mode-pill" id="svgModePill" aria-expanded="false" aria-controls="motifBrowserSection">
-                    SVG fill
-                  </button>
+                  <div class="pattern-family-grid">
+                    <button type="button" class="pill pattern-family-tile" data-pattern-family="solid" data-p="solid" title="Solid fill" aria-label="Solid fill"><span class="pattern-family-preview preview-solid"></span><small>Solid</small></button>
+                    <button type="button" class="pill pattern-family-tile" data-pattern-family="dots" data-p="dots" title="Regular dots" aria-label="Regular dots"><span class="pattern-family-preview preview-dots"></span><small>Dots</small></button>
+                    <button type="button" class="pill pattern-family-tile" data-pattern-family="stipple" data-p="stipple" title="Irregular stipple" aria-label="Irregular stipple"><span class="pattern-family-preview preview-stipple"><svg viewBox="0 0 72 34" aria-hidden="true"><circle cx="6" cy="6" r="1.05"/><circle cx="15" cy="10" r="1.05"/><circle cx="24" cy="4" r="1.05"/><circle cx="34" cy="8" r="1.05"/><circle cx="44" cy="4" r="1.05"/><circle cx="54" cy="10" r="1.05"/><circle cx="65" cy="5" r="1.05"/><circle cx="9" cy="18" r="1.05"/><circle cx="20" cy="15" r="1.05"/><circle cx="29" cy="21" r="1.05"/><circle cx="39" cy="15" r="1.05"/><circle cx="49" cy="20" r="1.05"/><circle cx="60" cy="16" r="1.05"/><circle cx="68" cy="22" r="1.05"/><circle cx="4" cy="28" r="1.05"/><circle cx="15" cy="25" r="1.05"/><circle cx="24" cy="30" r="1.05"/><circle cx="37" cy="27" r="1.05"/><circle cx="48" cy="30" r="1.05"/><circle cx="58" cy="26" r="1.05"/><circle cx="68" cy="31" r="1.05"/></svg></span><small>Stipple</small></button>
+                    <button type="button" class="pill pattern-family-tile" data-pattern-family="lines" data-p="hachures" title="Line patterns" aria-label="Line patterns"><span class="pattern-family-preview preview-lines"></span><small>Lines</small></button>
+                    <button type="button" class="pill pattern-family-tile" data-pattern-family="grid" data-p="grid" title="Grid" aria-label="Grid"><span class="pattern-family-preview preview-grid"></span><small>Grid</small></button>
+                    <button type="button" class="pill pattern-family-tile" data-pattern-family="marks" data-cartographic-preset="squares" title="Geometric marks" aria-label="Geometric marks"><span class="pattern-family-preview preview-marks"><svg viewBox="0 0 72 24" aria-hidden="true"><path d="M10 6v12M4 12h12M30 6l12 12M42 6 30 18"/><path class="mark-diamond" d="m60 5 7 7-7 7-7-7Z"/></svg></span><small>Marks</small></button>
+                    <button type="button" class="pill pattern-family-tile" data-pattern-family="text" id="fontModePill" title="Repeated text" aria-label="Repeated text"><span class="pattern-family-preview preview-text">Aa</span><small>Text</small></button>
+                    <button type="button" class="pill pattern-family-tile svg-mode-pill" data-pattern-family="svg" id="svgModePill" title="SVG motifs" aria-label="SVG motifs" aria-expanded="false" aria-controls="motifBrowserSection"><span class="pattern-family-preview preview-svg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h8l4 4V20.5H6Z"/><path d="M14 3.5v4h4M10.5 11l-2 2 2 2M13.5 11l2 2-2 2"/></svg></span><small>SVG</small></button>
+                  </div>
+                  <div class="pattern-subtype-panel" data-pattern-subtypes="lines" hidden>
+                    <span class="family-label">Line style</span>
+                    <div class="pattern-subtype-grid">
+                      <button type="button" class="pill pattern-subtype" data-p="hachures" title="Straight lines" aria-label="Straight lines"><span class="subtype-preview subtype-straight"></span><small>Straight</small></button>
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="dashed-hatch" title="Dashed hatch" aria-label="Dashed hatch"><span class="subtype-preview subtype-dashed"></span><small>Dashed</small></button>
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="dotted-line" title="Dotted line" aria-label="Dotted line"><span class="subtype-preview subtype-dotted"></span><small>Dotted</small></button>
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="zigzag" title="Zigzag" aria-label="Zigzag"><span class="subtype-preview subtype-zigzag">⌁</span><small>Zigzag</small></button>
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="wave" title="Wave" aria-label="Wave"><span class="subtype-preview subtype-wave">∿</span><small>Wave</small></button>
+                    </div>
+                  </div>
+                  <div class="pattern-subtype-panel" data-pattern-subtypes="marks" hidden>
+                    <span class="family-label">Mark shape</span>
+                    <div class="pattern-subtype-grid">
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="squares" title="Squares" aria-label="Squares"><span class="subtype-preview glyph-preview">■</span><small>Square</small></button>
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="diamonds" title="Diamonds" aria-label="Diamonds"><span class="subtype-preview glyph-preview">◆</span><small>Diamond</small></button>
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="crosses" title="Crosses" aria-label="Crosses"><span class="subtype-preview glyph-preview">+</span><small>Cross</small></button>
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="x-marks" title="X marks" aria-label="X marks"><span class="subtype-preview glyph-preview">×</span><small>X mark</small></button>
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="triangles" title="Triangles" aria-label="Triangles"><span class="subtype-preview glyph-preview">▲</span><small>Triangle</small></button>
+                      <button type="button" class="pill pattern-subtype" data-cartographic-preset="chevrons" title="Chevrons" aria-label="Chevrons"><span class="subtype-preview glyph-preview">⌃</span><small>Chevron</small></button>
+                    </div>
+                  </div>
                 </div>
                 <div id="motifBrowserSection" hidden>
                   <span class="family-label">Motifs</span>
@@ -208,7 +344,11 @@
                 </div>
               </div>
 
-              <div class="control-block">
+              <div class="control-block pattern-tune-block">
+                <div class="workflow-section-heading">
+                  <span class="workflow-kicker" id="patternTuneStageLabel">Tune</span>
+                  <strong id="patternTuneTitle" hidden>Lines</strong>
+                </div>
                 <div class="parameter-group" id="angleControl">
                   <span class="control-title">Direction</span>
                   <div class="seg" id="angleSeg">
@@ -218,47 +358,56 @@
                     <button data-a="-45">-45°</button>
                   </div>
                 </div>
-                <label>Pattern colour</label>
-                <div class="row tight">
-                  <input type="color" id="patColor" value="#2c6a5b" style="flex:0 0 auto" />
-                  <input type="text" id="patColorHex" value="#2c6a5b" />
-                </div>
-              </div>
-
-              <div class="control-block parameter-group" id="textureScaleControl">
-                <span class="control-title">Tile preview</span>
-                <div class="row" style="align-items:flex-start">
-                  <canvas class="preview-canvas" id="tilePreview"></canvas>
+                <div class="colour-opacity-grid">
                   <div>
-                    <label style="margin-top:0">Opacity <span class="val" id="patOpacityVal">1.00</span></label>
+                    <label>Colour</label>
+                    <div class="row tight">
+                      <input type="color" id="patColor" value="#2c6a5b" style="flex:0 0 auto" />
+                      <input type="text" id="patColorHex" value="#2c6a5b" />
+                    </div>
+                  </div>
+                  <div id="opacityControl">
+                    <label>Opacity <span class="val" id="patOpacityVal">1.00</span></label>
                     <input type="range" id="patOpacity" min="0" max="1" step="0.05" value="1" />
+                  </div>
+                </div>
+                <div class="parameter-group" id="scaleControl">
+                  <div id="weightControl">
+                    <label><span id="weightLabel">Line weight</span> <span class="val" id="weightVal">2.00 px</span></label>
+                    <input type="range" id="weight" min="0.1" max="12" step="0.05" value="2" />
+                  </div>
+                  <div id="tileControl">
+                    <label><span id="tileLabel">Spacing</span> <span class="val" id="tileVal">33 px</span></label>
+                    <input type="range" id="tile" min="3" max="72" step="1" value="33" />
                   </div>
                 </div>
               </div>
 
-              <div class="control-block parameter-group" id="scaleControl">
-                <span class="control-title">Scale</span>
-                <label style="margin-top:0">Stroke weight <span class="val" id="weightVal">2.00 px</span></label>
-                <input type="range" id="weight" min="0.1" max="8" step="0.05" value="2" />
-                <label>Tile size <span class="val" id="tileVal">33 px</span></label>
-                <input type="range" id="tile" min="3" max="72" step="1" value="33" />
-                <label>Scale unit</label>
-                <div class="seg scale-mode-seg" id="geometricScaleModeSeg">
-                  <button type="button" data-geometric-scale-mode="screen" class="active">Screen · px</button>
-                  <button type="button" data-geometric-scale-mode="map">Ground scale</button>
+              <details class="pattern-fine-tune" id="patternFineTune">
+                <summary>Advanced</summary>
+                <div class="pattern-fine-tune-body">
+                  <canvas class="preview-canvas advanced-tile-preview" id="tilePreview" aria-hidden="true"></canvas>
+                  <div class="control-block parameter-group" id="textureScaleControl">
+                    <span class="control-title">Map behaviour</span>
+                    <label>Scale unit</label>
+                    <div class="seg scale-mode-seg" id="geometricScaleModeSeg">
+                      <button type="button" data-geometric-scale-mode="screen" class="active">Screen · px</button>
+                      <button type="button" data-geometric-scale-mode="map">Ground scale</button>
+                    </div>
+                    <div id="geometricReferenceZoomControl" class="parameter-group is-disabled">
+                      <label>Reference zoom <span class="val" id="geometricReferenceZoomVal">z12</span></label>
+                      <input type="range" id="geometricReferenceZoom" min="0" max="22" step="1" value="12" disabled />
+                      <button type="button" class="action ghost scale-reference-action" id="geometricUseCurrentZoom" disabled>Use current zoom</button>
+                    </div>
+                    <p class="scale-readout" id="geometricScaleReadout">33 px tile at every zoom</p>
+                    <label>Rendering</label>
+                    <div class="seg two-up" id="geometricPixelRatioSeg">
+                      <button type="button" data-geometric-pixel-ratio="auto" class="active">Auto Retina</button>
+                      <button type="button" data-geometric-pixel-ratio="1x">Soft · 1×</button>
+                    </div>
+                  </div>
                 </div>
-                <div id="geometricReferenceZoomControl" class="parameter-group is-disabled">
-                  <label>Reference zoom <span class="val" id="geometricReferenceZoomVal">z12</span></label>
-                  <input type="range" id="geometricReferenceZoom" min="0" max="22" step="1" value="12" disabled />
-                  <button type="button" class="action ghost scale-reference-action" id="geometricUseCurrentZoom" disabled>Use current zoom</button>
-                </div>
-                <p class="scale-readout" id="geometricScaleReadout">33 px tile at every zoom</p>
-                <label>Texture rendering</label>
-                <div class="seg two-up" id="geometricPixelRatioSeg">
-                  <button type="button" data-geometric-pixel-ratio="auto" class="active">Auto Retina</button>
-                  <button type="button" data-geometric-pixel-ratio="1x">Soft · 1×</button>
-                </div>
-              </div>
+              </details>
             </div>
           </fieldset>
         </div>
@@ -491,12 +640,12 @@
           </button>
           <div class="menu-separator"></div>
           <button type="button" class="export-option" id="copyConfigBtn">
-            <span class="export-option-title">Copy preset</span>
-            <span class="export-option-desc">This editor's settings, to restore or share later.</span>
+            <span class="export-option-title">Copy configuration</span>
+            <span class="export-option-desc">The canonical Pattern, Sequence, or Set configuration.</span>
           </button>
           <button type="button" class="export-option" id="importConfigBtn">
-            <span class="export-option-title">Load preset</span>
-            <span class="export-option-desc">Paste a preset JSON below, then use this to restore it.</span>
+            <span class="export-option-title">Load configuration</span>
+            <span class="export-option-desc">Restore a canonical configuration or a legacy playground preset.</span>
           </button>
           <textarea id="ioArea" class="menu-output" placeholder="Exported style or preset JSON appears here."></textarea>
         </div>
@@ -523,7 +672,7 @@
     });
     const app = document.createElement("script");
     app.type = "module";
-    app.src = "./app.js?v=0.1.1-tile-33";
+    app.src = "./app.js?v=0.8.0-categorized-randomization";
     document.body.append(app);
   </script>
 </body>

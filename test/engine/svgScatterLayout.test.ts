@@ -16,6 +16,41 @@ const options: SvgScatterLayoutOptions = {
 };
 
 describe("createSvgScatterLayout", () => {
+  it("keeps legacy SVG placement byte-for-byte stable through the compatibility wrapper", () => {
+    const hash = (value: string) => {
+      let result = 0x811c9dc5;
+      for (let index = 0; index < value.length; index++) {
+        result ^= value.charCodeAt(index);
+        result = Math.imul(result, 0x01000193);
+      }
+      return (result >>> 0).toString(16).padStart(8, "0");
+    };
+    const cases: Array<[SvgScatterLayoutOptions, string]> = [
+      [options, "ffdbdc14"],
+      [{
+        ...options,
+        tileSize: 192,
+        stampSize: 20,
+        density: 2.7,
+        positionJitter: 0,
+        rotationJitterDeg: 0,
+        scaleJitter: 0,
+      }, "85192395"],
+      [{
+        ...options,
+        tileSize: 192,
+        stampSize: 18,
+        density: 3,
+        scaleJitter: 0,
+        distribution: "natural",
+        minSpacing: 4,
+      }, "2d0708af"],
+    ];
+    for (const [layoutOptions, expected] of cases) {
+      expect(hash(JSON.stringify(createSvgScatterLayout(layoutOptions)))).toBe(expected);
+    }
+  });
+
   it("is deterministic", () => {
     expect(createSvgScatterLayout(options)).toEqual(createSvgScatterLayout(options));
     expect(createSvgScatterLayout({ ...options, seed: "other" })).not.toEqual(

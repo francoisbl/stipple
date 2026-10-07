@@ -98,16 +98,17 @@ export function makeTile(
 
   // Parallel lines at the given angle (0 / 45 / 90 / -45), swept from -size to
   // 2*size so the tile edges line up seamlessly with their neighbours.
-  const drawHachures = (deg: number) => {
-    ctx.beginPath();
-    const step = Math.max(physicalSize / 2, 4 * renderScale);
+  const appendStraightLines = (deg: number, step: number, includeEnd = true) => {
+    const withinTile = (offset: number) => includeEnd
+      ? offset <= physicalSize
+      : offset < physicalSize;
     if (deg === 0) {
-      for (let y = 0; y <= physicalSize; y += step) {
+      for (let y = 0; withinTile(y); y += step) {
         ctx.moveTo(0, y + 0.5 * renderScale);
         ctx.lineTo(physicalSize, y + 0.5 * renderScale);
       }
     } else if (deg === 90) {
-      for (let x = 0; x <= physicalSize; x += step) {
+      for (let x = 0; withinTile(x); x += step) {
         ctx.moveTo(x + 0.5 * renderScale, 0);
         ctx.lineTo(x + 0.5 * renderScale, physicalSize);
       }
@@ -122,25 +123,48 @@ export function makeTile(
         ctx.lineTo(o, physicalSize);
       }
     }
-    ctx.stroke();
   };
+
+  const drawLineComposition = (
+    layers: Array<{ angle: number; spacing: number; includeEnd?: boolean }>,
+    singlePass = false,
+  ) => {
+    if (singlePass) {
+      ctx.beginPath();
+      for (const layer of layers) {
+        appendStraightLines(layer.angle, layer.spacing, layer.includeEnd);
+      }
+      ctx.stroke();
+      return;
+    }
+    for (const layer of layers) {
+      ctx.beginPath();
+      appendStraightLines(layer.angle, layer.spacing, layer.includeEnd);
+      ctx.stroke();
+    }
+  };
+
+  const hachureSpacing = Math.max(physicalSize / 2, 4 * renderScale);
 
   switch (pattern) {
     case "hachures":
-      drawHachures(angle);
+      drawLineComposition([{ angle, spacing: hachureSpacing }]);
       break;
     case "cross":
-      drawHachures(angle);
-      drawHachures(((angle + 90 + 45) % 180) - 45);
+      drawLineComposition([
+        { angle, spacing: hachureSpacing },
+        { angle: ((angle + 90 + 45) % 180) - 45, spacing: hachureSpacing },
+      ]);
       break;
     case "grid": {
-      // Stroke on two edges only so it lines up with the neighbouring tile.
-      ctx.beginPath();
-      ctx.moveTo(0.5 * renderScale, 0);
-      ctx.lineTo(0.5 * renderScale, physicalSize);
-      ctx.moveTo(0, 0.5 * renderScale);
-      ctx.lineTo(physicalSize, 0.5 * renderScale);
-      ctx.stroke();
+      // Two straight-line families, kept in one stroke pass to preserve the
+      // legacy grid's exact intersection antialiasing. The requested angle
+      // rotates both axes together, so 45 degrees produces a true diagonal
+      // crosshatch rather than leaving the grid visually unchanged.
+      drawLineComposition([
+        { angle: ((angle + 90 + 45) % 180) - 45, spacing: physicalSize, includeEnd: false },
+        { angle, spacing: physicalSize, includeEnd: false },
+      ], true);
       break;
     }
     case "stipple": {

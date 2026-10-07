@@ -1,7 +1,7 @@
 import type { Map as MaplibreMap } from "maplibre-gl";
 import type { Ring } from "../engine/scatterPoints";
 import { scatterPointsInPolygon } from "../engine/scatterPoints";
-import type { SvgDistributionMode } from "../engine/svgScatterLayout";
+import type { PlacementDistribution } from "../engine/placementLayout";
 
 export type PolygonGeometry =
   | { type: "Polygon"; coordinates: number[][][] }
@@ -38,7 +38,7 @@ export interface ScatterIconPointsOptions {
   /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
   stagger?: boolean;
   /** Regular grid, offset rows, or natural non-overlapping scatter. */
-  distribution?: SvgDistributionMode;
+  distribution?: PlacementDistribution;
   /** Extra minimum gap in screen pixels for natural distribution. */
   minSpacing?: number;
   /** Only generate points inside the visible canvas plus this pixel margin. Omit to process the complete polygon. */

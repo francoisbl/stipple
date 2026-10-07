@@ -7,16 +7,20 @@ import {
 import { installSvgPatternFill } from "./svgPattern";
 import { installFontPatternFill } from "./fontPattern";
 import { syncPatternTexture } from "./syncPatternTexture";
+import {
+  CANONICAL_PATTERN_METADATA_KEY,
+  parseCanonicalPatternMetadata,
+} from "./patternStyle";
+import { installPatternTexture } from "./installPatternTexture";
 
 export interface StyleLike {
   layers: Array<{ metadata?: Record<string, unknown> }>;
 }
 
 /**
- * Scans a style (or `map.getStyle()`) for layers carrying the
- * versioned metadata produced by {@link buildStyleFragment}, validates it,
- * and installs each distinct geometric or SVG texture. Custom metadata is
- * not interpreted by MapLibre itself.
+ * Scans a style (or `map.getStyle()`) for legacy or canonical Stipple
+ * metadata, validates it, and installs each distinct texture. Custom
+ * metadata is not interpreted by MapLibre itself.
  */
 export async function installPatternFills(map: MaplibreMap, style: StyleLike): Promise<void> {
   const installed = new Map<string, string>();
@@ -25,6 +29,20 @@ export async function installPatternFills(map: MaplibreMap, style: StyleLike): P
   for (const layer of style.layers) {
     const metadata = layer.metadata;
     if (!metadata) continue;
+    const canonical = metadata[CANONICAL_PATTERN_METADATA_KEY];
+    if (canonical) {
+      const registration = parseCanonicalPatternMetadata(canonical);
+      for (const item of registration.patterns) {
+        const signature = `canonical:${JSON.stringify(item.pattern)}`;
+        const previous = installed.get(item.imageId);
+        if (previous && previous !== signature) {
+          throw new Error(`Conflicting pattern definitions use image id "${item.imageId}"`);
+        }
+        if (previous) continue;
+        installed.set(item.imageId, signature);
+        pending.push(installPatternTexture(map, item));
+      }
+    }
     const rawDefinition = metadata[PATTERN_METADATA_KEY];
     if (!rawDefinition) continue;
     const registration = parsePatternMetadata(rawDefinition);
@@ -34,7 +52,7 @@ export async function installPatternFills(map: MaplibreMap, style: StyleLike): P
       ...(registration.variants ?? []),
     ];
     for (const item of definitions) {
-      const signature = serializePatternDefinition(item.definition);
+      const signature = `legacy:${serializePatternDefinition(item.definition)}`;
       const previous = installed.get(item.imageId);
       if (previous && previous !== signature) {
         throw new Error(`Conflicting pattern definitions use image id "${item.imageId}"`);

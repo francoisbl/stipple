@@ -1,5 +1,6 @@
 export * from "./engine";
 export * from "./maplibre";
+export * from "./model";
 export { scatterIconPoints } from "./maplibre/scatterIconPoints";
 export type {
   PointFeature,

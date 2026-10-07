@@ -1,5 +1,5 @@
 import { hashStringToSeed, mulberry32 } from "./seededRandom";
-import type { SvgDistributionMode } from "./svgScatterLayout";
+import type { PlacementDistribution } from "./placementLayout";
 
 /** A closed ring of [x, y] planar coordinates in any consistent unit. */
 export type Ring = Array<[number, number]>;
@@ -29,7 +29,7 @@ export interface ScatterPointsOptions {
   /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
   stagger?: boolean;
   /** Point layout. Defaults to offset for backward compatibility. */
-  distribution?: SvgDistributionMode;
+  distribution?: PlacementDistribution;
   /** Extra minimum gap between natural-layout icon envelopes. Default 0. */
   minSpacing?: number;
   /** Optional planar bounds limiting generated point centres. Polygon containment and edge clearance still use every ring. */

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Map as MaplibreMap } from "maplibre-gl";
 import { installPatternFills } from "../../src/maplibre/installPatternFills";
+import { CANONICAL_PATTERN_METADATA_KEY } from "../../src/maplibre/patternStyle";
 import {
   PATTERN_METADATA_KEY,
   patternDefinitionId,
@@ -78,5 +79,54 @@ describe("installPatternFills", () => {
       }],
     });
     expect(map.addImage).toHaveBeenCalledTimes(2);
+  });
+
+  it("installs canonical Pattern metadata alongside legacy v1 metadata", async () => {
+    const { map } = createMapMock();
+    await installPatternFills(map, {
+      layers: [{
+        metadata: {
+          [CANONICAL_PATTERN_METADATA_KEY]: {
+            patterns: [{
+              imageId: "canonical-diamond",
+              pattern: {
+                version: 1,
+                kind: "pattern",
+                id: "diamond",
+                fill: {
+                  family: "glyph",
+                  glyph: "diamond",
+                  color: "#1f4e79",
+                  size: 6,
+                  rotation: 0,
+                  opacity: 1,
+                  placement: {
+                    kind: "lattice",
+                    tileSize: 24,
+                    spacing: { mode: "explicit", horizontal: 12, vertical: 12 },
+                    rowOffset: 0,
+                    columnOffset: 0,
+                    gridAngle: 0,
+                    positionJitter: 0,
+                    rotationJitter: 0,
+                    scaleJitter: 0,
+                    seed: 1,
+                  },
+                },
+                opacity: 1,
+                scale: { mode: "screen" },
+                render: { pixelRatio: 1 },
+              },
+            }],
+          },
+        },
+      }],
+    });
+    expect(map.addImage).toHaveBeenCalledTimes(1);
+    expect(map.addImage).toHaveBeenCalledWith(
+      "canonical-diamond",
+      expect.objectContaining({ width: 24, height: 24 }),
+      { pixelRatio: 1 },
+    );
   });
 });

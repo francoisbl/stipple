@@ -8,7 +8,7 @@ import type {
 import { addSvgIcon } from "./svgIcon";
 import type { PolygonGeometry } from "./scatterIconPoints";
 import { scatterIconPoints } from "./scatterIconPoints";
-import type { SvgDistributionMode } from "../engine/svgScatterLayout";
+import type { PlacementDistribution } from "../engine/placementLayout";
 import type { PointFeature, PointFeatureCollection } from "./scatterIconPoints";
 
 export type IconScaleMode = "screen" | "map";
@@ -34,7 +34,7 @@ export interface InstallSvgIconScatterOptions {
   /** Offset alternate rows by half a cell (quincunx), the classic regular cartographic symbol layout. Default true. */
   stagger?: boolean;
   /** Regular grid, offset rows, or natural non-overlapping scatter. */
-  distribution?: SvgDistributionMode;
+  distribution?: PlacementDistribution;
   /** Extra minimum gap in screen pixels for natural distribution. */
   minSpacing?: number;
   /** Symbol opacity. Default 1. */

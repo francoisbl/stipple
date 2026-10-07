@@ -1,6 +1,6 @@
 {
   "name": "stipple-maplibre",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Runtime-generated geometric and SVG fill patterns for MapLibre GL JS, with deterministic styling and a visual playground.",
   "license": "MIT",
   "type": "module",

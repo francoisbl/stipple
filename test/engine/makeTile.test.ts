@@ -2,6 +2,37 @@ import { describe, expect, it } from "vitest";
 import { makeTile } from "../../src/engine/makeTile";
 
 describe("makeTile", () => {
+  it("keeps the legacy raster output stable", () => {
+    const expected = {
+      solid: "1f116dc5",
+      stipple: "beb746ad",
+      hachures: "04b4f4bd",
+      cross: "7bafdc55",
+      grid: "13a8aa8d",
+      dots: "a4b393d5",
+    } as const;
+    const hash = (data: Uint8Array) => {
+      let value = 0x811c9dc5;
+      for (const byte of data) {
+        value ^= byte;
+        value = Math.imul(value, 0x01000193);
+      }
+      return (value >>> 0).toString(16).padStart(8, "0");
+    };
+
+    for (const pattern of Object.keys(expected) as Array<keyof typeof expected>) {
+      const tile = makeTile(pattern, 16, "#1f4e79", 2, 45);
+      expect(hash(tile.data), pattern).toBe(expected[pattern]);
+    }
+  });
+
+  it("rotates a grid into a diagonal crosshatch at 45 degrees", () => {
+    const orthogonal = makeTile("grid", 16, "#1f4e79", 2, 0);
+    const diagonal = makeTile("grid", 16, "#1f4e79", 2, 45);
+
+    expect(diagonal.data).not.toEqual(orthogonal.data);
+  });
+
   it.each(["hachures", "cross", "grid", "stipple", "dots"] as const)(
     "renders a deterministic %s RGBA tile in Node",
     (pattern) => {

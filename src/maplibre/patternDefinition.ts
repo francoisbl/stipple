@@ -1,5 +1,5 @@
 import type { PatternType } from "../engine/types";
-import type { SvgDistributionMode } from "../engine/svgScatterLayout";
+import type { PlacementDistribution } from "../engine/placementLayout";
 
 export const PATTERN_METADATA_KEY = "maplibre-pattern-fills:v1" as const;
 
@@ -29,7 +29,7 @@ export interface SvgPatternDefinition {
   scaleJitter: number;
   positionJitter: number;
   stagger: boolean;
-  distribution: SvgDistributionMode;
+  distribution: PlacementDistribution;
   minSpacing: number;
 }
 
@@ -250,7 +250,7 @@ export function createSvgPatternDefinition(options: {
   scaleJitter?: number;
   positionJitter?: number;
   stagger?: boolean;
-  distribution?: SvgDistributionMode;
+  distribution?: PlacementDistribution;
   minSpacing?: number;
 }): SvgPatternDefinition {
   const distribution = options.distribution ?? (options.stagger === false ? "regular" : "offset");
