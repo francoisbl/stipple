@@ -6,8 +6,7 @@
 Design customizable fill patterns, build categorized styles, and create
 graduated pattern sequences—then export them for MapLibre GL JS.
 
-<p><a href="https://stipple.pages.dev/"><strong>Open playground</strong></a> · <a href="https://www.npmjs.com/package/stipple-maplibre">npm</a></p>
-
+<p align="center"><strong><a href="https://stipple.pages.dev/">➞ Run the playground</a></strong></p>
 <a href="https://stipple.pages.dev/"><img width="1456" alt="Stipple playground showing a categorized polygon style built from distinct fill patterns" src="./assets/readme/playground-categorized.png" /></a>
 
 
