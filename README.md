@@ -107,34 +107,6 @@ classification or map layout. Applications bind existing numeric classes or
 category values to the generated patterns; Stipple does not calculate Jenks,
 quantiles, or equal intervals.
 
-## What problem does it solve?
-
-MapLibre provides the primitives for patterned polygon fills, but designing
-and managing a complete pattern-based cartographic style still requires a lot
-of manual work. Each repeated image must be created, made seamless, registered
-with `addImage`, kept at an appropriate resolution, and connected to the right
-style expressions and layers.
-
-Stipple provides the visual workflow on top of those primitives. It generates
-textures from compact pattern parameters, draws them in the browser, installs
-them through MapLibre's public API, and keeps categorized and graduated styles
-coherent as they evolve.
-
-
-## But can’t I just ask AI to do this?
-
-Fair point. But Stipple can fit into that workflow.
-
-Whether you build maps by writing code yourself or with the help of AI,
-the playground gives you direct visual control over the result.
-Instead of refining a pattern through a back-and-forth series of prompts
-and corrections, you can adjust it interactively until it looks exactly
-the way you want.
-
-Once you're happy with the result, export the corresponding MapLibre code
-or Stipple configuration and use it directly in your project, or feed it
-back into your AI-assisted workflow.
-
 ## From visual design to MapLibre
 
 Design visually, then export the configuration you need for MapLibre GL JS:
@@ -168,6 +140,34 @@ await addPatternFill(map, {
 The source must already exist in the map. An optional `beforeId` places the
 pattern layers below an existing label or symbol layer. The returned
 `layerIds` list contains every layer added to the map.
+
+## What problem does it solve?
+
+MapLibre provides the primitives for patterned polygon fills, but designing
+and managing a complete pattern-based cartographic style still requires a lot
+of manual work. Each repeated image must be created, made seamless, registered
+with `addImage`, kept at an appropriate resolution, and connected to the right
+style expressions and layers.
+
+Stipple provides the visual workflow on top of those primitives. It generates
+textures from compact pattern parameters, draws them in the browser, installs
+them through MapLibre's public API, and keeps categorized and graduated styles
+coherent as they evolve.
+
+
+## But can’t I just ask AI to do this?
+
+Fair point. But Stipple can fit into that workflow.
+
+Whether you build maps by writing code yourself or with the help of AI,
+the playground gives you direct visual control over the result.
+Instead of refining a pattern through a back-and-forth series of prompts
+and corrections, you can adjust it interactively until it looks exactly
+the way you want.
+
+Once you're happy with the result, export the corresponding MapLibre code
+or Stipple configuration and use it directly in your project, or feed it
+back into your AI-assisted workflow.
 
 ## Run the playground
 
