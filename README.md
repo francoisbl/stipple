@@ -445,7 +445,7 @@ in Node.
 
 ## Project status
 
-Version `0.4.0` is available on
+Version `0.5.0` is available on
 [npm](https://www.npmjs.com/package/stipple-maplibre). The whole-symbol
 scatter API is the only part currently marked experimental.
 
