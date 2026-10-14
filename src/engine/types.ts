@@ -1,4 +1,6 @@
 export type PatternType = "solid" | "stipple" | "hachures" | "cross" | "grid" | "dots";
+/** Dot placement used by the legacy geometric stipple renderer. */
+export type StippleLayout = "seeded" | "staggered";
 /** Tile edge length in px. MapLibre does not require power-of-two fill-pattern images. Larger tiles read as a lower-density pattern. */
 export type TileSize = number;
 export type HachureAngle = 0 | 45 | 90 | -45;

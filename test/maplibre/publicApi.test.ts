@@ -27,6 +27,7 @@ describe("MapLibre public API", () => {
     expect(publicApi).toHaveProperty("materializePatternPlacement");
     expect(publicApi).toHaveProperty("composeTileImages");
     expect(publicApi).toHaveProperty("createGeometricPatternTile");
+    expect(publicApi).toHaveProperty("tileToDataUrl");
     expect(publicApi.PATTERN_SET_VERSION).toBe(1);
     expect(publicApi).toHaveProperty("parsePatternSet");
     expect(publicApi).toHaveProperty("serializePatternSet");

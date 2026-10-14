@@ -1,4 +1,4 @@
-import type { PatternType, TileSize } from "../engine/types";
+import type { PatternType, StippleLayout, TileSize } from "../engine/types";
 
 export interface PatternFillConfig {
   pattern: PatternType;
@@ -11,6 +11,8 @@ export interface PatternFillConfig {
   pixelRatio?: number;
   /** Optional fixed dot count for stipple zoom variants. */
   stippleCount?: number;
+  /** Dot placement for stipple tiles. Defaults to "seeded". */
+  stippleLayout?: StippleLayout;
 }
 
 export interface BackgroundFillConfig {

@@ -71,6 +71,7 @@ export async function installPatternFills(map: MaplibreMap, style: StyleLike): P
           angle: p.angle,
           pixelRatio: p.pixelRatio,
           stippleCount: p.stippleCount,
+          stippleLayout: p.stippleLayout,
         });
       } else if (p.kind === "svg") {
         pending.push(installSvgPatternFill(map, { imageId: item.imageId, ...p }));

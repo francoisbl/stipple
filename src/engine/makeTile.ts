@@ -1,6 +1,6 @@
 import { createMiniContext } from "./miniContext";
 import { hashStringToSeed, mulberry32 } from "./seededRandom";
-import type { PatternType, TileContext, TileImage } from "./types";
+import type { PatternType, StippleLayout, TileContext, TileImage } from "./types";
 
 export interface MakeTileOptions {
   /** Override how the drawing context is created. Mainly useful for tests. */
@@ -9,6 +9,8 @@ export interface MakeTileOptions {
   pixelRatio?: number;
   /** Fixed dot count for a stipple tile, useful when the tile itself scales with zoom. */
   stippleCount?: number;
+  /** Dot placement for stipple tiles. Defaults to the deterministic seeded scatter. */
+  stippleLayout?: StippleLayout;
 }
 
 // Seven dots give the playground's default 33 px stipple tile an irregular,
@@ -83,6 +85,13 @@ export function makeTile(
     (!Number.isInteger(options.stippleCount) || options.stippleCount <= 0)
   ) {
     throw new RangeError("stippleCount must be a positive integer");
+  }
+  if (
+    options.stippleLayout !== undefined &&
+    options.stippleLayout !== "seeded" &&
+    options.stippleLayout !== "staggered"
+  ) {
+    throw new TypeError('stippleLayout must be "seeded" or "staggered"');
   }
   if (typeof color !== "string" || color.trim().length === 0) {
     throw new TypeError("color must be a non-empty string");
@@ -168,6 +177,41 @@ export function makeTile(
       break;
     }
     case "stipple": {
+      if (options.stippleLayout === "staggered") {
+        const radius = weight * 0.6;
+        const renderedRadius = radius * renderScale;
+        const cells = size <= 8 ? 2 : size <= 16 ? 3 : 4;
+        const spacing = size / cells;
+
+        for (let row = 0; row < cells; row++) {
+          for (let column = 0; column < cells; column++) {
+            const logicalX = (
+              (column + (row % 2 ? 0.75 : 0.25)) * spacing
+            ) % size;
+            const logicalY = ((row + 0.5) * spacing) % size;
+            const x = logicalX * renderScale;
+            const y = logicalY * renderScale;
+            const minShiftX = Math.ceil((-renderedRadius - x) / physicalSize);
+            const maxShiftX = Math.floor((physicalSize + renderedRadius - x) / physicalSize);
+            const minShiftY = Math.ceil((-renderedRadius - y) / physicalSize);
+            const maxShiftY = Math.floor((physicalSize + renderedRadius - y) / physicalSize);
+            for (let shiftY = minShiftY; shiftY <= maxShiftY; shiftY++) {
+              for (let shiftX = minShiftX; shiftX <= maxShiftX; shiftX++) {
+                ctx.beginPath();
+                ctx.arc(
+                  x + shiftX * physicalSize,
+                  y + shiftY * physicalSize,
+                  renderedRadius,
+                  0,
+                  Math.PI * 2,
+                );
+                ctx.fill();
+              }
+            }
+          }
+        }
+        break;
+      }
       // A true stipple: a seeded, irregular scatter of dots, not a grid.
       // Best-candidate sampling (the same idea as the SVG "natural"
       // distribution in svgScatterLayout.ts) spreads dots out without the

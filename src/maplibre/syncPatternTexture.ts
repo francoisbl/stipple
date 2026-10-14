@@ -1,6 +1,6 @@
 import type { Map as MaplibreMap } from "maplibre-gl";
 import { makeTile } from "../engine/makeTile";
-import type { PatternType, TileSize } from "../engine/types";
+import type { PatternType, StippleLayout, TileSize } from "../engine/types";
 
 interface InstalledPattern {
   signature: string;
@@ -24,6 +24,8 @@ export interface SyncPatternTextureOptions {
   pixelRatio?: number;
   /** Fixed dot count for stipple tiles that change size across zoom levels. */
   stippleCount?: number;
+  /** Dot placement for stipple tiles. Defaults to "seeded". */
+  stippleLayout?: StippleLayout;
 }
 
 function resolvePixelRatio(value?: number): number {
@@ -44,7 +46,7 @@ function resolvePixelRatio(value?: number): number {
  * Safe to call on every UI change (colour picker, slider drag, etc).
  */
 export function syncPatternTexture(map: MaplibreMap, options: SyncPatternTextureOptions): void {
-  const { imageId, pattern, size, color, weight, angle, stippleCount } = options;
+  const { imageId, pattern, size, color, weight, angle, stippleCount, stippleLayout } = options;
   if (pattern === "solid") return;
   const pixelRatio = resolvePixelRatio(options.pixelRatio);
 
@@ -54,11 +56,24 @@ export function syncPatternTexture(map: MaplibreMap, options: SyncPatternTexture
     installedPatterns.set(map, byImage);
   }
 
-  const signature = JSON.stringify({ pattern, size, color, weight, angle, pixelRatio, stippleCount });
+  const signature = JSON.stringify({
+    pattern,
+    size,
+    color,
+    weight,
+    angle,
+    pixelRatio,
+    stippleCount,
+    stippleLayout,
+  });
   const previous = byImage.get(imageId);
   if (map.hasImage(imageId) && previous?.signature === signature) return;
 
-  const tile = makeTile(pattern, size, color, weight, angle, { pixelRatio, stippleCount });
+  const tile = makeTile(pattern, size, color, weight, angle, {
+    pixelRatio,
+    stippleCount,
+    stippleLayout,
+  });
 
   if (
     map.hasImage(imageId) &&

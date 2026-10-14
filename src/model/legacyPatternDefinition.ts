@@ -99,6 +99,32 @@ function geometricFill(definition: GeometricPatternDefinition): Pattern["fill"] 
       },
     };
   }
+  if (definition.stippleLayout === "staggered") {
+    const cells = definition.size <= 8 ? 2 : definition.size <= 16 ? 3 : 4;
+    const spacing = definition.size / cells;
+    return {
+      family: "glyph",
+      glyph: "circle",
+      color: definition.color,
+      size: definition.weight * 1.2,
+      rotation: definition.angle,
+      opacity: 1,
+      placement: {
+        kind: "lattice",
+        tileSize: definition.size,
+        spacing: { mode: "explicit", horizontal: spacing, vertical: spacing },
+        rowOffset: 0.5,
+        columnOffset: 0,
+        gridAngle: 0,
+        originX: 0.25,
+        originY: 0.5,
+        positionJitter: 0,
+        rotationJitter: 0,
+        scaleJitter: 0,
+        seed: 1,
+      },
+    };
+  }
   const count = definition.stippleCount ?? DEFAULT_STIPPLE_COUNT;
   return {
     family: "glyph",
@@ -280,12 +306,34 @@ function glyphDefinition(pattern: Pattern, fill: GlyphFill): GeometricPatternDef
   }
   if (fill.placement.kind === "lattice") {
     const placement = fill.placement;
+    const cells = placement.tileSize <= 8 ? 2 : placement.tileSize <= 16 ? 3 : 4;
+    const staggeredSpacing = placement.tileSize / cells;
+    if (
+      placement.spacing.mode === "explicit" &&
+      placement.spacing.horizontal === staggeredSpacing &&
+      placement.spacing.vertical === staggeredSpacing &&
+      placement.rowOffset === 0.5 && placement.columnOffset === 0 &&
+      placement.gridAngle === 0 && placement.originX === 0.25 &&
+      (placement.originY ?? 0.5) === 0.5 && placement.positionJitter === 0 &&
+      placement.rotationJitter === 0 && placement.scaleJitter === 0
+    ) {
+      return {
+        kind: "geometric",
+        pattern: "stipple",
+        size: placement.tileSize,
+        ...geometricBase(pattern, fill.color),
+        weight: fill.size / 1.2,
+        angle: fill.rotation,
+        stippleLayout: "staggered",
+      };
+    }
     if (
       placement.spacing.mode !== "explicit" ||
       placement.spacing.horizontal !== placement.tileSize ||
       placement.spacing.vertical !== placement.tileSize ||
       placement.rowOffset !== 0 || placement.columnOffset !== 0 ||
-      placement.gridAngle !== 0 || placement.positionJitter !== 0 ||
+      placement.gridAngle !== 0 || placement.originX !== undefined ||
+      placement.originY !== undefined || placement.positionJitter !== 0 ||
       placement.rotationJitter !== 0 || placement.scaleJitter !== 0
     ) {
       throw new Error("circle lattice is not representable as legacy dots");

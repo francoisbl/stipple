@@ -68,6 +68,22 @@ describe("canonical Pattern", () => {
     expect(composite.fill.family).toBe("composite");
   });
 
+  it("serializes optional lattice origins used by staggered stipple", () => {
+    const staggered = parsePattern({
+      ...dots,
+      fill: {
+        ...dots.fill,
+        placement: {
+          ...dots.fill.placement,
+          originX: 0.25,
+          originY: 0.5,
+        },
+      },
+    });
+    expect(serializePattern(staggered)).toContain('"originX":0.25');
+    expect(serializePattern(staggered)).toContain('"originY":0.5');
+  });
+
   it("validates versioned untrusted data strictly", () => {
     expect(() => parsePattern({ ...dots, version: 2 })).toThrow(/version/);
     expect(() => parsePattern({ ...dots, opacity: 1.5 })).toThrow(/opacity/);

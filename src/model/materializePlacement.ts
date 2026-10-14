@@ -53,5 +53,7 @@ export function materializePatternPlacement(
     rowOffset: placement.rowOffset,
     columnOffset: placement.columnOffset,
     gridAngle: placement.gridAngle,
+    originX: placement.originX,
+    originY: placement.originY,
   });
 }

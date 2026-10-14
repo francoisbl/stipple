@@ -23,6 +23,10 @@ export interface PlacementLayoutOptions {
   columnOffset?: number;
   /** Rotation of the placement lattice, in degrees. */
   gridAngle?: number;
+  /** First-column origin as a fraction of one cell. Defaults to 0.5. */
+  originX?: number;
+  /** First-row origin as a fraction of one cell. Defaults to 0.5. */
+  originY?: number;
 }
 
 export interface MarkPlacement {
@@ -138,6 +142,8 @@ function createLatticePositions(
   const cellHeight = options.tileSize / rows;
   const rowOffset = options.rowOffset ?? (options.distribution === "offset" ? 0.5 : 0);
   const columnOffset = options.columnOffset ?? 0;
+  const originX = options.originX ?? 0.5;
+  const originY = options.originY ?? 0.5;
   const jitterAmount = options.positionJitter;
   const angle = (options.gridAngle ?? 0) * Math.PI / 180;
   const cos = Math.cos(angle);
@@ -150,12 +156,12 @@ function createLatticePositions(
     for (let column = 0; column < columns; column++) {
       const offsetY = column % 2 === 1 ? cellHeight * columnOffset : 0;
       const unrotatedX = modulo(
-        column * cellWidth + cellWidth / 2 + offsetX +
+        (column + originX) * cellWidth + offsetX +
           (rand() - 0.5) * cellWidth * jitterAmount,
         options.tileSize,
       );
       const unrotatedY = modulo(
-        row * cellHeight + cellHeight / 2 + offsetY +
+        (row + originY) * cellHeight + offsetY +
           (rand() - 0.5) * cellHeight * jitterAmount,
         options.tileSize,
       );
@@ -181,6 +187,8 @@ export function createPlacementLayout(options: PlacementLayoutOptions): MarkPlac
   const rowOffset = options.rowOffset ?? (options.distribution === "offset" ? 0.5 : 0);
   const columnOffset = options.columnOffset ?? 0;
   const gridAngle = options.gridAngle ?? 0;
+  const originX = options.originX ?? 0.5;
+  const originY = options.originY ?? 0.5;
 
   positiveFinite("tileSize", options.tileSize);
   positiveFinite("markSize", options.markSize);
@@ -190,6 +198,8 @@ export function createPlacementLayout(options: PlacementLayoutOptions): MarkPlac
   nonNegativeFinite("minSpacing", minSpacing);
   fraction("rowOffset", rowOffset);
   fraction("columnOffset", columnOffset);
+  fraction("originX", originX);
+  fraction("originY", originY);
   if (!Number.isFinite(gridAngle)) throw new TypeError("gridAngle must be a finite number");
   if (!(["regular", "offset", "natural"] as const).includes(options.distribution)) {
     throw new TypeError("distribution must be regular, offset, or natural");

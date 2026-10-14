@@ -1,4 +1,4 @@
-import type { PatternType } from "../engine/types";
+import type { PatternType, StippleLayout } from "../engine/types";
 import type { PlacementDistribution } from "../engine/placementLayout";
 
 export const PATTERN_METADATA_KEY = "maplibre-pattern-fills:v1" as const;
@@ -16,6 +16,8 @@ export interface GeometricPatternDefinition {
   pixelRatio?: number;
   /** Fixed dot count used by ground-scaled stipple variants. */
   stippleCount?: number;
+  /** Dot placement used by stipple. Defaults to the seeded scatter. */
+  stippleLayout?: StippleLayout;
 }
 
 export interface SvgPatternDefinition {
@@ -127,6 +129,12 @@ export function parsePatternDefinition(value: unknown): PatternDefinition {
         throw new RangeError("stippleCount must be a positive integer");
       }
       definition.stippleCount = stippleCount;
+    }
+    if (value.stippleLayout !== undefined) {
+      if (value.stippleLayout !== "seeded" && value.stippleLayout !== "staggered") {
+        throw new TypeError('stippleLayout must be "seeded" or "staggered"');
+      }
+      definition.stippleLayout = value.stippleLayout;
     }
     return definition;
   }

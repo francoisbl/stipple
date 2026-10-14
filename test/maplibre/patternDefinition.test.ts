@@ -112,6 +112,17 @@ describe("pattern definitions", () => {
     expect(() => parsePatternDefinition({ ...geometric, stippleCount: 1.5 })).toThrow(/stippleCount/);
   });
 
+  it("preserves and validates the optional stipple layout", () => {
+    const staggered = { ...geometric, pattern: "stipple" as const, stippleLayout: "staggered" as const };
+    expect(parsePatternDefinition(staggered)).toEqual(staggered);
+    expect(serializePatternDefinition(staggered)).toContain('"stippleLayout":"staggered"');
+    expect(() => parsePatternDefinition({
+      ...geometric,
+      pattern: "stipple",
+      stippleLayout: "random",
+    })).toThrow(/stippleLayout/);
+  });
+
   it("exports the versioned metadata key", () => {
     expect(PATTERN_METADATA_KEY).toBe("maplibre-pattern-fills:v1");
   });

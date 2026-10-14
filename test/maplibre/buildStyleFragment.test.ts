@@ -54,4 +54,24 @@ describe("buildStyleFragment v1 metadata", () => {
     );
     expect(metadata.definition).toMatchObject({ pixelRatio: 1 });
   });
+
+  it("exports a staggered stipple layout in v1 metadata", () => {
+    const result = buildStyleFragment({
+      source: "staggered",
+      sourceLayer: "staggered",
+      pattern: {
+        pattern: "stipple",
+        tile: 16,
+        color: "#315f86",
+        opacity: 1,
+        weight: 2,
+        angle: 0,
+        stippleLayout: "staggered",
+      },
+    });
+    const metadata = parsePatternMetadata(
+      (result.layers[0].metadata as Record<string, unknown>)[PATTERN_METADATA_KEY],
+    );
+    expect(metadata.definition).toMatchObject({ stippleLayout: "staggered" });
+  });
 });

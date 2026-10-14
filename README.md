@@ -264,6 +264,45 @@ map.on("load", () => {
 The generated texture is registered as `my-hatches`, and that same name is
 used in the layer's `fill-pattern` property.
 
+## Stipple layouts
+
+Stipple supports two deterministic dot layouts. The default, `seeded`, spreads
+dots irregularly for a natural-looking texture and preserves the rendering of
+earlier releases. Choose `staggered` for a regular offset grid, commonly used
+for regulatory zones and other conventional cartographic symbology:
+
+```js
+syncPatternTexture(map, {
+  imageId: "ecological-link",
+  pattern: "stipple",
+  size: 16,
+  color: "#315f2f",
+  weight: 2,
+  angle: 0,
+  stippleLayout: "staggered",
+});
+```
+
+Omitting `stippleLayout` is equivalent to `stippleLayout: "seeded"`.
+`stippleCount` controls only the seeded layout; the staggered layout derives
+its regular cell count from the tile size.
+
+To reuse the exact rendered tile in a browser legend, convert it directly to a
+data URL:
+
+```js
+import { makeTile, tileToDataUrl } from "stipple-maplibre";
+
+const tile = makeTile("stipple", 16, "#315f2f", 2, 0, {
+  pixelRatio: window.devicePixelRatio,
+  stippleLayout: "staggered",
+});
+const legendDataUrl = tileToDataUrl(tile); // PNG by default
+```
+
+`tileToDataUrl` uses the browser canvas API and throws a clear error when it is
+called in an environment without a browser canvas.
+
 ## SVG patterns
 
 Pass Stipple an SVG string and choose how the symbols should be spread out:

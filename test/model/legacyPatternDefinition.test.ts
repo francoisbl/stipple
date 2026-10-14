@@ -11,6 +11,7 @@ import {
 const definitions: PatternDefinition[] = [
   { kind: "geometric", pattern: "stipple", size: 33, color: "#234c46", weight: 2, angle: 45 },
   { kind: "geometric", pattern: "stipple", size: 16, color: "#234c46", weight: 1, angle: 0, stippleCount: 4, pixelRatio: 2 },
+  { kind: "geometric", pattern: "stipple", size: 16, color: "#234c46", weight: 2, angle: 0, stippleLayout: "staggered" },
   { kind: "geometric", pattern: "hachures", size: 32, color: "#d65f45", weight: 1.5, angle: -45 },
   { kind: "geometric", pattern: "cross", size: 28, color: "#675d4d", weight: 1.25, angle: 0 },
   { kind: "geometric", pattern: "grid", size: 20, color: "#315f86", weight: 2, angle: 0 },
@@ -86,7 +87,11 @@ describe("legacy PatternDefinition adapters", () => {
   });
 
   it("rejects canonical features that the legacy recipe cannot express", () => {
-    const pattern = patternFromLegacyDefinition(definitions[5], { id: "square" });
+    const dots = definitions.find(
+      (definition) => definition.kind === "geometric" && definition.pattern === "dots",
+    );
+    if (!dots) throw new Error("expected dots fixture");
+    const pattern = patternFromLegacyDefinition(dots, { id: "square" });
     if (pattern.fill.family !== "glyph") throw new Error("expected glyph adapter");
     pattern.fill.glyph = "square";
     expect(() => patternToLegacyDefinition(pattern)).toThrow(/circle glyphs/);

@@ -1,5 +1,46 @@
 import { describe, expect, it } from "vitest";
+import { createMiniContext } from "../../src/engine/miniContext";
 import { makeTile } from "../../src/engine/makeTile";
+
+function referenceStaggeredTile(
+  size: number,
+  pixelRatio: number,
+  weight = 2,
+  color = "#1f4e79",
+) {
+  const physicalSize = Math.max(1, Math.round(size * pixelRatio));
+  const renderScale = physicalSize / size;
+  const radius = weight * 0.6 * renderScale;
+  const cells = size <= 8 ? 2 : size <= 16 ? 3 : 4;
+  const spacing = size / cells;
+  const { ctx, toTileImage } = createMiniContext(physicalSize);
+  ctx.fillStyle = color;
+
+  for (let row = 0; row < cells; row++) {
+    for (let column = 0; column < cells; column++) {
+      const x = (((column + (row % 2 ? 0.75 : 0.25)) * spacing) % size) * renderScale;
+      const y = (((row + 0.5) * spacing) % size) * renderScale;
+      const minShiftX = Math.ceil((-radius - x) / physicalSize);
+      const maxShiftX = Math.floor((physicalSize + radius - x) / physicalSize);
+      const minShiftY = Math.ceil((-radius - y) / physicalSize);
+      const maxShiftY = Math.floor((physicalSize + radius - y) / physicalSize);
+      for (let shiftY = minShiftY; shiftY <= maxShiftY; shiftY++) {
+        for (let shiftX = minShiftX; shiftX <= maxShiftX; shiftX++) {
+          ctx.beginPath();
+          ctx.arc(
+            x + shiftX * physicalSize,
+            y + shiftY * physicalSize,
+            radius,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+        }
+      }
+    }
+  }
+  return toTileImage();
+}
 
 describe("makeTile", () => {
   it("keeps the legacy raster output stable", () => {
@@ -61,6 +102,42 @@ describe("makeTile", () => {
   });
 
   describe("stipple", () => {
+    it("keeps the seeded layout byte-identical when selected explicitly", () => {
+      const defaultTile = makeTile("stipple", 16, "#1f4e79", 2, 45);
+      const seededTile = makeTile("stipple", 16, "#1f4e79", 2, 45, {
+        stippleLayout: "seeded",
+      });
+      expect(seededTile).toEqual(defaultTile);
+    });
+
+    it.each([
+      [8, 1], [8, 2], [16, 1], [16, 2], [24, 1], [24, 2],
+    ] as const)(
+      "matches the staggered reference at size %i and pixel ratio %i",
+      (size, pixelRatio) => {
+        const tile = makeTile("stipple", size, "#1f4e79", 2, 0, {
+          pixelRatio,
+          stippleLayout: "staggered",
+        });
+        expect(tile).toEqual(referenceStaggeredTile(size, pixelRatio));
+      },
+    );
+
+    it("wraps staggered dots across every tile edge instead of clipping them", () => {
+      const size = 8;
+      const tile = makeTile("stipple", size, "#000000", 4, 0, {
+        stippleLayout: "staggered",
+      });
+      const alphaAt = (x: number, y: number) => tile.data[(y * size + x) * 4 + 3];
+
+      // The row at y=6 has a centre at x=7, whose wrapped copy reaches x=0.
+      expect(alphaAt(0, 6)).toBeGreaterThan(0);
+      expect(alphaAt(size - 1, 6)).toBeGreaterThan(0);
+      // The same periodic-copy rule applies vertically.
+      expect(alphaAt(3, 0)).toBeGreaterThan(0);
+      expect(alphaAt(3, size - 1)).toBeGreaterThan(0);
+    });
+
     it("keeps every dot's full ink even when its centre sits at the tile edge (no clipping)", () => {
       // Regression: the previous offset-grid renderer clipped any dot whose
       // radius crossed the tile boundary instead of wrapping it.
@@ -150,6 +227,12 @@ describe("makeTile", () => {
 
     it.each([0, -1, 1.5])("rejects a stipple count of %p", (stippleCount) => {
       expect(() => makeTile("stipple", 16, "#000", 2, 0, { stippleCount })).toThrow(RangeError);
+    });
+
+    it("rejects an unknown stipple layout", () => {
+      expect(() => makeTile("stipple", 16, "#000", 2, 0, {
+        stippleLayout: "random" as "seeded",
+      })).toThrow(/stippleLayout/);
     });
 
     it.each([Number.NaN, Number.POSITIVE_INFINITY])("rejects an angle of %p", (angle) => {

@@ -42,6 +42,10 @@ export interface LatticePlacement {
   /** Alternate-column vertical offset as a fraction of one cell. */
   columnOffset: number;
   gridAngle: number;
+  /** First-column origin as a fraction of one cell. Defaults to 0.5. */
+  originX?: number;
+  /** First-row origin as a fraction of one cell. Defaults to 0.5. */
+  originY?: number;
   positionJitter: number;
   rotationJitter: number;
   scaleJitter: number;
@@ -244,7 +248,7 @@ function parsePlacement(value: unknown): PatternPlacement {
   if (input.kind === "lattice") {
     keys(input, [
       "kind", "tileSize", "spacing", "rowOffset", "columnOffset", "gridAngle",
-      "positionJitter", "rotationJitter", "scaleJitter", "seed",
+      "originX", "originY", "positionJitter", "rotationJitter", "scaleJitter", "seed",
     ], "fill.placement");
     const scaleJitter = nonNegative(input.scaleJitter ?? 0, "fill.placement.scaleJitter");
     if (scaleJitter >= 1) throw new RangeError("fill.placement.scaleJitter must be less than 1");
@@ -255,6 +259,12 @@ function parsePlacement(value: unknown): PatternPlacement {
       rowOffset: offset(input.rowOffset ?? 0, "fill.placement.rowOffset"),
       columnOffset: offset(input.columnOffset ?? 0, "fill.placement.columnOffset"),
       gridAngle: finite(input.gridAngle ?? 0, "fill.placement.gridAngle"),
+      ...(input.originX === undefined
+        ? {}
+        : { originX: offset(input.originX, "fill.placement.originX") }),
+      ...(input.originY === undefined
+        ? {}
+        : { originY: offset(input.originY, "fill.placement.originY") }),
       positionJitter: nonNegative(input.positionJitter ?? 0, "fill.placement.positionJitter"),
       rotationJitter: nonNegative(input.rotationJitter ?? 0, "fill.placement.rotationJitter"),
       scaleJitter,

@@ -1258,6 +1258,7 @@ function installGeometricDefinition(imageId, definition) {
     angle: definition.angle,
     pixelRatio: definition.pixelRatio,
     stippleCount: definition.stippleCount,
+    stippleLayout: definition.stippleLayout,
   });
 }
 
@@ -4590,6 +4591,7 @@ async function buildStaticPatternPng(definition) {
       {
         pixelRatio: definition.pixelRatio ?? STATIC_PIXEL_RATIO,
         stippleCount: definition.stippleCount,
+        stippleLayout: definition.stippleLayout,
       },
     ));
   }
